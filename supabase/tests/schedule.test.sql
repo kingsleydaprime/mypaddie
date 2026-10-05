@@ -3,6 +3,12 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select set_config('search_path', current_setting('search_path') || ', ' || n.nspname, true)
   from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgtap';
+
+-- Only this suite's test devices: on a real database, collect_nudges also sees
+-- the real user's tasks and subscriptions, which these assertions must ignore.
+create function pg_temp.mine(t timestamptz) returns setof jsonb language sql as $$
+  select n from jsonb_array_elements(private.collect_nudges(t)) n where n->>'endpoint' like 'https://push.example/%'
+$$;
 select plan(11);
 
 select ok(private.is_quiet('23:30', '22:00', '07:00') and private.is_quiet('06:59', '22:00', '07:00') and not private.is_quiet('07:00', '22:00', '07:00'),
@@ -22,7 +28,7 @@ insert into public.settings (user_id, key, value) values ('11111111-1111-1111-11
 
 create function pg_temp.kinds_at(t timestamptz) returns text language sql as $$
   select coalesce(string_agg(split_part(n->>'endpoint', '/', 4) || ':' || (n->>'kind') || coalesce('/' || (n->>'title'), ''), ',' order by n->>'endpoint', n->>'kind'), '')
-  from jsonb_array_elements(private.collect_nudges(t)) n
+  from pg_temp.mine(t) n
 $$;
 
 select is(pg_temp.kinds_at('2026-10-06 06:45+01'), 'owl:brief', '06:45: the owl''s brief; the lark is still in quiet hours');

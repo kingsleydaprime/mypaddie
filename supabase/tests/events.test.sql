@@ -3,6 +3,12 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select set_config('search_path', current_setting('search_path') || ', ' || n.nspname, true)
   from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgtap';
+
+-- Only this suite's test devices: on a real database, collect_nudges also sees
+-- the real user's tasks and subscriptions, which these assertions must ignore.
+create function pg_temp.mine(t timestamptz) returns setof jsonb language sql as $$
+  select n from jsonb_array_elements(private.collect_nudges(t)) n where n->>'endpoint' like 'https://push.example/%'
+$$;
 select plan(20);
 
 -- ── event_occurrence ───────────────────────────────────────────────────────
@@ -28,7 +34,7 @@ insert into public.events (user_id, title, kind, starts_at, all_day, yearly, per
 
 create function pg_temp.events_at(t timestamptz) returns text language sql as $$
   select coalesce(string_agg((n->>'title') || ':' || (n->>'level'), ',' order by n->>'title', n->>'level'), '')
-  from jsonb_array_elements(private.collect_nudges(t)) n where n->>'kind' = 'event'
+  from pg_temp.mine(t) n where n->>'kind' = 'event'
 $$;
 
 select is(pg_temp.events_at('2026-10-07 09:00+01'), '', '8 days out: nothing yet');
@@ -43,7 +49,7 @@ select is(pg_temp.events_at('2026-10-15 18:50+01'), '', 'no repeats');
 -- Birthday (yearly, all day, not marked important): evening before + morning of.
 select is(pg_temp.events_at('2026-10-19 20:00+01'), 'Tolu''s birthday:2', 'birthday: the evening before');
 select is(pg_temp.events_at('2026-10-20 09:00+01'), 'Tolu''s birthday:3', 'birthday: the morning of, even though not marked important');
-select is((select n->>'person' from jsonb_array_elements(private.collect_nudges('2026-10-20 09:01+01')) n where n->>'kind' = 'event'), null,
+select is((select n->>'person' from pg_temp.mine('2026-10-20 09:01+01') n where n->>'kind' = 'event'), null,
   'and only once that day');
 
 -- Next year it comes round again.

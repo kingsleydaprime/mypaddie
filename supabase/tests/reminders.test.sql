@@ -3,6 +3,12 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select set_config('search_path', current_setting('search_path') || ', ' || n.nspname, true)
   from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgtap';
+
+-- Only this suite's test devices: on a real database, collect_nudges also sees
+-- the real user's tasks and subscriptions, which these assertions must ignore.
+create function pg_temp.mine(t timestamptz) returns setof jsonb language sql as $$
+  select n from jsonb_array_elements(private.collect_nudges(t)) n where n->>'endpoint' like 'https://push.example/%'
+$$;
 select plan(18);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com');
@@ -22,7 +28,7 @@ insert into public.tasks (id, user_id, title, due_at, recurrence, series_id, occ
 
 create function pg_temp.reminders_at(t timestamptz) returns text language sql as $$
   select coalesce(string_agg(n->>'title' || ':' || (n->>'level'), ',' order by n->>'title'), '')
-  from jsonb_array_elements(private.collect_nudges(t)) n where n->>'kind' = 'reminder'
+  from pg_temp.mine(t) n where n->>'kind' = 'reminder'
 $$;
 
 -- ── The ladder for a one-off ───────────────────────────────────────────────
@@ -64,7 +70,7 @@ insert into private.nudges (user_id, kind, level, day, sent_at) values
 
 create function pg_temp.nudges_at(t timestamptz) returns text language sql as $$
   select coalesce(string_agg(n->>'title' || ':' || (n->>'level'), ','), '')
-  from jsonb_array_elements(private.collect_nudges(t)) n where n->>'kind' = 'nudge'
+  from pg_temp.mine(t) n where n->>'kind' = 'nudge'
 $$;
 select is(pg_temp.nudges_at('2026-10-14 12:00+01'), '', 'before it turns must-do: no nudges');
 select is(pg_temp.nudges_at('2026-10-15 09:05+01'), 'Text the boss:1', 'once it''s a must-do, it escalates — even before its due date');
@@ -75,7 +81,7 @@ select is(pg_temp.nudges_at('2026-10-16 08:00+01'), 'Text the boss:1', 'escalati
 insert into public.tasks (user_id, title, due_at, reminder_note) values
   ('11111111-1111-1111-1111-111111111111', 'Bank visit', '2026-10-20 11:00+01', 'Bring the signed form and your ID');
 insert into private.nudges (user_id, kind, level, day, sent_at) values ('11111111-1111-1111-1111-111111111111', 'brief', 1, '2026-10-20', now());
-select is((select n->>'note' from jsonb_array_elements(private.collect_nudges('2026-10-20 10:52+01')) n where n->>'title' = 'Bank visit'),
+select is((select n->>'note' from pg_temp.mine('2026-10-20 10:52+01') n where n->>'title' = 'Bank visit'),
   'Bring the signed form and your ID', 'the reminder carries his note');
 
 select * from finish();

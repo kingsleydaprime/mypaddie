@@ -12,7 +12,8 @@
     "db:start": "supabase db start",
     "db:reset": "supabase db reset --local",
     "db:test": "supabase test db",
-    "db:types": "supabase gen types typescript --linked --schema public > src/shared/supabase/database.types.ts"
+    "db:types": "supabase gen types typescript --linked --schema public > src/shared/supabase/database.types.ts",
+    "db:test:hosted": "bun scripts/test-db-hosted.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.3.1",
