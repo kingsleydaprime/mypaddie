@@ -1,6 +1,7 @@
 import { eventBlocksOn } from "@/features/events/events.repo";
 import { DEFAULT_DURATION, roomOn } from "@/features/tasks/capacity";
-import { loadCapacity, loadDayTasks, updateTask } from "@/features/tasks/tasks.repo";
+import { projectedOccurrences } from "@/features/tasks/recurrence";
+import { loadCapacity, loadDayTasks, loadSeriesTemplates, updateTask } from "@/features/tasks/tasks.repo";
 import { DEFAULT_CONFIG } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, localTimeOf, zonedInstant } from "@/shared/time";
@@ -36,7 +37,7 @@ export async function proposeDay(db: Db, day: string, now: Date) {
   const isToday = day === dayKey(now, tz);
   const cols = "id, title, due_at, duration_minutes, is_non_negotiable, must_from, base_xp, series_id, occurs_on, items(tier)";
 
-  const [onDay, habitsAnyTime, undated, events, schedule] = await Promise.all([
+  const [onDay, habitsAnyTime, undated, events, schedule, templates] = await Promise.all([
     db.from("tasks").select(cols).eq("status", "pending").gte("due_at", from).lt("due_at", to).returns<Row[]>(),
     db.from("tasks").select(cols).eq("status", "pending").eq("occurs_on", day).is("due_at", null).returns<Row[]>(),
     isToday
@@ -44,6 +45,7 @@ export async function proposeDay(db: Db, day: string, now: Date) {
       : Promise.resolve({ data: [] as Row[], error: null }),
     eventBlocksOn(db, day),
     loadSchedule(db),
+    loadSeriesTemplates(db),
   ]);
   for (const r of [onDay, habitsAnyTime, undated] as { error: { message: string } | null }[]) if (r.error) throw new Error(`loading the day: ${r.error.message}`);
 
@@ -69,6 +71,13 @@ export async function proposeDay(db: Db, day: string, now: Date) {
     else fixed.push({ id: r.id, title: r.title, start: due, minutes: r.duration_minutes ?? DEFAULT_DURATION, kind: "task" });
   }
   for (const r of habitsAnyTime.data!) flexible.push(flex(r));
+
+  // Habit days not created yet (planning ahead): timed ones are fixed, the
+  // rest are suggestions — like any habit, planning never writes their time.
+  for (const p of projectedOccurrences(templates, day)) {
+    if (p.dueAt) fixed.push({ id: p.id, title: p.title, start: p.dueAt, minutes: p.durationMinutes ?? DEFAULT_DURATION, kind: "task" });
+    else flexible.push({ id: p.id, title: p.title, minutes: p.durationMinutes ?? DEFAULT_DURATION, must: false, need: false, chore: false, habit: true, undated: false });
+  }
 
   // Undated tasks join today's plan only while capacity allows, most important first.
   const overCapacity: { id: string; title: string; minutes: number }[] = [];

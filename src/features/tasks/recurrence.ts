@@ -100,3 +100,33 @@ export function planOccurrences(
   }
   return out;
 }
+
+export interface SeriesTemplate {
+  seriesId: string;
+  title: string;
+  rule: string;
+  lastOccursOn: string;
+  lastDueAt: Date | null;
+  durationMinutes: number | null;
+}
+
+/**
+ * Habit days that will happen but haven't been created yet (rows are created
+ * each morning). Capacity and clash checks for future days need them, or a
+ * day full of habits looks empty. Days already created are real rows, so only
+ * days after the latest row are projected.
+ */
+export function projectedOccurrences(series: readonly SeriesTemplate[], day: string, config: EngineConfig = DEFAULT_CONFIG) {
+  return series.flatMap((s) => {
+    if (day <= s.lastOccursOn || !occursOn(parseRecurrence(s.rule), day)) return [];
+    return [
+      {
+        id: `habit:${s.seriesId}:${day}`,
+        title: s.title,
+        dueAt: s.lastDueAt ? zonedInstant(day, localTimeOf(s.lastDueAt, config.timeZone), config.timeZone) : null,
+        durationMinutes: s.durationMinutes,
+        status: "pending" as const,
+      },
+    ];
+  });
+}

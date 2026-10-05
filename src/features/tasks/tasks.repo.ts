@@ -19,7 +19,7 @@ import {
   type DayRoom,
   type DayTask,
 } from "./capacity";
-import { parseRecurrence, planOccurrences, type SeriesForSpawn } from "./recurrence";
+import { occursOn, parseRecurrence, planOccurrences, projectedOccurrences, type SeriesForSpawn, type SeriesTemplate } from "./recurrence";
 
 /** How far back catch-up looks for ignored needs and recurring templates. */
 const LOOKBACK_DAYS = 14;
@@ -237,6 +237,8 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = D
 // ─── Capacity and time blocks ───────────────────────────────────────────────
 
 const CAPACITY_KEY = "capacity";
+/** How far ahead a new habit is checked for clashes and capacity. */
+const HABIT_CHECK_DAYS = 14;
 
 export async function loadCapacity(db: Db): Promise<CapacitySetting> {
   const { data, error } = await db.from("settings").select("value").eq("key", CAPACITY_KEY).maybeSingle();
@@ -260,8 +262,8 @@ export async function loadDayTasks(db: Db, day: string, config = DEFAULT_CONFIG)
   const { data, error } = await db
     .from("tasks")
     .select("id, title, due_at, duration_minutes, status")
-    .gte("due_at", from)
-    .lt("due_at", to);
+    // Timed tasks on the day, plus "any time" habit rows for it.
+    .or(`and(due_at.gte.${from},due_at.lt.${to}),and(occurs_on.eq.${day},due_at.is.null)`);
   if (error) fail("loading the day", error);
   const tasks: DayTask[] = data.map((t) => ({
     id: t.id,
@@ -271,8 +273,34 @@ export async function loadDayTasks(db: Db, day: string, config = DEFAULT_CONFIG)
     status: t.status,
   }));
   // Timed events take time too: a task can clash with a meeting, and a
-  // three-hour wedding uses three hours of that day's capacity.
-  return [...tasks, ...(await eventBlocksOn(db, day))];
+  // three-hour wedding uses three hours of that day's capacity. Habit days not
+  // created yet (rows are made each morning) are projected, or a future day
+  // full of habits would look empty.
+  const [events, templates] = await Promise.all([eventBlocksOn(db, day), loadSeriesTemplates(db)]);
+  return [...tasks, ...events, ...projectedOccurrences(templates, day, config)];
+}
+
+/** The latest row of every recurring habit — its template for future days. */
+export async function loadSeriesTemplates(db: Db): Promise<SeriesTemplate[]> {
+  const { data, error } = await db
+    .from("tasks")
+    .select("series_id, title, recurrence, occurs_on, due_at, duration_minutes")
+    .not("series_id", "is", null)
+    .order("occurs_on", { ascending: false });
+  if (error) fail("loading habits", error);
+  const latest = new Map<string, SeriesTemplate>();
+  for (const r of data) {
+    if (!r.series_id || !r.recurrence || !r.occurs_on || latest.has(r.series_id)) continue;
+    latest.set(r.series_id, {
+      seriesId: r.series_id,
+      title: r.title,
+      rule: r.recurrence,
+      lastOccursOn: r.occurs_on,
+      lastDueAt: r.due_at ? new Date(r.due_at) : null,
+      durationMinutes: r.duration_minutes,
+    });
+  }
+  return [...latest.values()];
 }
 
 /** Why a task can't go where it was asked to. */
@@ -347,12 +375,25 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = DEFA
   const dueAt = start ?? (task.dueDate ? zonedInstant(day, "23:59", config.timeZone) : null);
 
   if (hasDay) {
-    const refusal = await guardDay(
-      db,
-      { day, start, minutes: task.durationMinutes ?? DEFAULT_DURATION, excludeId: null, forceClash: task.forceClash ?? false, now },
-      config,
-    );
-    if (refusal) return refusal;
+    // A one-off is checked on its day; a habit on each of its next 14 days,
+    // so a daily habit can't quietly overfill next Tuesday.
+    const rule = task.recurrence ? parseRecurrence(task.recurrence) : null;
+    const days = rule ? Array.from({ length: HABIT_CHECK_DAYS }, (_, i) => addDays(day, i)).filter((d) => d === day || occursOn(rule, d)) : [day];
+    for (const d of days) {
+      const refusal = await guardDay(
+        db,
+        {
+          day: d,
+          start: task.dueTime ? zonedInstant(d, task.dueTime, config.timeZone) : null,
+          minutes: task.durationMinutes ?? DEFAULT_DURATION,
+          excludeId: null,
+          forceClash: task.forceClash ?? false,
+          now,
+        },
+        config,
+      );
+      if (refusal) return refusal;
+    }
   }
 
   const { data, error } = await db

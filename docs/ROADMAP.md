@@ -51,12 +51,12 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [ ] **Google Calendar import** via the private iCal URL (read-only, no Google
   OAuth): imported events count for clashes, capacity, reminders and plan_day.
 
+## Done: infrastructure
+- [x] Hosted pgTAP via `bun run db:test:hosted` (always rolled back).
+- [x] Dead push subscriptions pruned by the nudge job.
+- [x] Habits counted on every day they occur (capacity, clashes, planning).
+
 ## Known gaps
 - Voiding income that's already been split into buckets (needs a split undo).
 - One balance for everything; separate accounts (OPay, bank, cash) later.
 - Edit/delete events and meals from the app (chat only for now).
-- Dead push subscriptions aren't pruned yet: `/api/push` reports them as
-  `gone`, but nothing deletes them (the route has no DB access by design).
-  A small cron step reading `net._http_response` can do it.
-- Capacity only counts the first day of a new habit, not every day it recurs.
-- pgTAP doesn't run against the hosted project yet (see DECISIONS.md).

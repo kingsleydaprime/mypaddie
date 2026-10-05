@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { InvalidRecurrenceError, occursOn, parseRecurrence, planOccurrences, type SeriesForSpawn } from "./recurrence";
+import { InvalidRecurrenceError, occursOn, parseRecurrence, planOccurrences, projectedOccurrences, type SeriesForSpawn, type SeriesTemplate } from "./recurrence";
 
 const at = (local: string) => new Date(`${local}+01:00`);
 
@@ -90,5 +90,26 @@ describe("planOccurrences", () => {
     expect(planOccurrences([rhapsody], new Date("2026-10-05T23:30:00Z")).map((p) => p.occursOn)).toEqual([
       "2026-10-06",
     ]);
+  });
+});
+
+describe("projectedOccurrences", () => {
+  const reading: SeriesTemplate = { seriesId: "s1", title: "Reading", rule: "FREQ=DAILY", lastOccursOn: "2026-10-06", lastDueAt: at("2026-10-06T06:30:00"), durationMinutes: 30 };
+  const gym: SeriesTemplate = { seriesId: "s2", title: "Gym", rule: "FREQ=WEEKLY;BYDAY=TU,TH", lastOccursOn: "2026-10-06", lastDueAt: at("2026-10-06T18:00:00"), durationMinutes: 60 };
+  const anytime: SeriesTemplate = { seriesId: "s3", title: "Duolingo", rule: "FREQ=DAILY", lastOccursOn: "2026-10-06", lastDueAt: null, durationMinutes: 15 };
+
+  test("a future day gets every habit that falls on it, at its usual time", () => {
+    const thursday = projectedOccurrences([reading, gym, anytime], "2026-10-08");
+    expect(thursday.map((o) => `${o.title}@${o.dueAt?.toISOString() ?? "any"}:${o.durationMinutes}`)).toEqual([
+      "Reading@2026-10-08T05:30:00.000Z:30",
+      "Gym@2026-10-08T17:00:00.000Z:60",
+      "Duolingo@any:15",
+    ]);
+  });
+  test("weekly habits only on their days", () => {
+    expect(projectedOccurrences([gym], "2026-10-07").length).toBe(0); // Wednesday
+  });
+  test("days already created are real rows, not projected", () => {
+    expect(projectedOccurrences([reading], "2026-10-06")).toEqual([]);
   });
 });

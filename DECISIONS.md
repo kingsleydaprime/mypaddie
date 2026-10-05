@@ -154,7 +154,7 @@ exactly the endpoint Claude connects to.
 Supabase's advisor flagged the `(…_id, user_id)` foreign keys as unindexed:
 the single-column indexes didn't cover the pair. Replaced with composite ones.
 
-### Known gap: pgTAP doesn't run against the hosted project yet
+### ~~Known gap: pgTAP doesn't run against the hosted project yet~~ — resolved below
 `supabase test db --linked` fails with `function plan(integer) does not exist`
 — the CLI's remote runner can't reach the schema pgTAP lives in (probably a
 privilege issue for its login role). The same migrations pass all 38 pgTAP
@@ -412,3 +412,29 @@ yet (unwinding a split is its own problem).
 `interest`: interested / not_interested / bought. Not-interested checks sink
 and grey out but stay visible — the record of what he almost bought is the
 point.
+
+## 2026-10-05 — Infrastructure
+
+### pgTAP on the hosted project, safely
+`supabase test db --linked` can't see pgTAP's functions there, though pgTAP
+works. `scripts/test-db-hosted.ts` (`bun run db:test:hosted`) runs each suite
+through `supabase db query --linked` instead, replacing the ending with a
+statement that *raises an error carrying the counts* (planned / ran /
+failed, from pgTAP's `__tcache__`). An error always aborts the transaction,
+so nothing a test inserts can be committed to the real database — the safe
+failure mode. Proved locally first, including a deliberately failing case.
+Running against real data exposed a test isolation bug: collect_nudges and
+spawn_today see *every* user, so assertions now look only at the test's own
+devices and rows.
+
+### Dead subscriptions are pruned by the nudge job
+/api/push reports 404/410 endpoints as `gone`; pg_net keeps the responses.
+Each run reads the last 30 minutes of responses (skipping non-JSON) and
+deletes those subscriptions. The route itself still has no database access.
+
+### Habits count on every day they happen
+Future habit days don't exist as rows yet (they're created each morning), and
+"any time" habit rows weren't counted at all. Day loading now includes both:
+any-time rows, and projected occurrences from each habit's latest row. So
+capacity, clashes, "how full is Tuesday" and planning ahead all see habits,
+and a new habit is checked against its next 14 days, not just the first.
