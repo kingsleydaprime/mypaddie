@@ -1,4 +1,5 @@
 import { upcoming } from "@/features/events/events";
+import Link from "next/link";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
 import { loadLearning } from "@/features/learning/learning.repo";
 import { loadMode } from "@/features/mode/mode.repo";
@@ -32,7 +33,9 @@ function Row({ item, now, big }: { item: FocusItem; now: Date; big?: boolean }) 
   return (
     <li className={`flex items-center gap-3 rounded-2xl border border-line bg-surface ${big ? "p-4" : "px-4 py-3"}`}>
       <div className="min-w-0 flex-1">
-        <p className={`truncate font-semibold ${big ? "text-lg" : "text-base"}`}>{item.title}</p>
+        <Link href={`/tasks/${item.id}`} className={`block truncate font-semibold ${big ? "text-lg" : "text-base"}`}>
+          {item.title}
+        </Link>
         <p className="mt-0.5 flex items-center gap-2 text-sm text-muted">
           <span className={item.overdue ? "font-medium text-red" : ""}>{item.overdue ? `overdue · ${due(item, now)}` : due(item, now)}</span>
           {item.nonNegotiable && <span className="text-gold">· must</span>}
@@ -62,7 +65,7 @@ export async function TodayScreen({ db }: { db: Db }) {
         <p className="text-sm font-medium text-muted">{date}</p>
         <h1 className="mt-1 text-2xl font-bold leading-tight">{NARRATION[mode.mode]}</h1>
         {(todayEvents.length > 0 || prepare.length > 0) && (
-          <p className="mt-2 text-sm text-muted">
+          <Link href="/events" className="mt-2 block text-sm text-muted">
             {todayEvents.map((e) => (e.allDay ? e.title : `${e.title} ${localTimeOf(e.at, tz)}`)).join(" · ")}
             {todayEvents.length > 0 && prepare.length > 0 && " · "}
             {prepare.map((e) => (
@@ -70,7 +73,7 @@ export async function TodayScreen({ db }: { db: Db }) {
                 {e.title} in {e.daysAway}d{" "}
               </span>
             ))}
-          </p>
+          </Link>
         )}
       </header>
 
@@ -109,6 +112,11 @@ export async function TodayScreen({ db }: { db: Db }) {
       )}
 
       {focus.doneToday > 0 && <p className="text-center text-sm text-muted">{focus.doneToday} done today.</p>}
+
+      <nav className="grid grid-cols-2 gap-3">
+        <Link href="/plan" className="rounded-xl border border-line px-4 py-3 text-center font-medium">Plan my day</Link>
+        <Link href="/events" className="rounded-xl border border-line px-4 py-3 text-center font-medium">Events</Link>
+      </nav>
     </div>
   );
 }

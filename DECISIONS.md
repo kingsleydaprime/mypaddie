@@ -368,3 +368,16 @@ hours is refused with the reason, because it would silently never arrive.
 Malformed stored values fall back to defaults in both TS and SQL, so a bad
 setting can't break the nudge job. "Time left today" and the planner end at
 the start of quiet hours (or at midnight if quiet hours start after it).
+
+### Custom reminder notes
+A task or event can carry `reminder_note` (≤ 200 chars). The notification's
+title still says *when*; the note becomes the body. On escalations the note
+goes under Paddie's firm line rather than replacing it. The SQL change was
+generated from the previous collect_nudges by a script that inserts one
+payload line, so the 150-line function wasn't re-typed by hand.
+
+### App screens call the same repos as the tools
+Task edit, Events and Plan my day reuse updateTask/deleteTask, addEvent and
+proposeDay/acceptDay. addEvent lives in its own file (`add-event.ts`) because
+it needs tasks.repo, and tasks.repo needs events.repo — keeping it out of
+events.repo avoids a circular import.

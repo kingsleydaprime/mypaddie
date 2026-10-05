@@ -28,6 +28,7 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
   last time's numbers; logs, personal bests; Training on Stats.
 - [x] **Pantry and meals.** Stock with units and low levels, shopping list,
   cook_meal uses ingredients up, meal history; Pantry page off Money.
+- [x] Edit tasks from the app (tap a task on Today).
 - [ ] Workout screen in the app (today's exercises, log sets with taps).
 - [ ] Pantry editing in the app (it's chat-only for now).
 - [x] `plan_day` / `accept_day_plan`: fixed blocks, meals, tasks by priority,
@@ -35,7 +36,8 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [x] **Events**: meetings, birthdays, weddings… important × close; yearly
   repeats; reminder ladder; block time for clashes and capacity; prep tasks.
 - [x] **Who I'm becoming**: in every get_today; `update_identity`; on Paddie tab.
-- [ ] Events in the app (list + add), and a "Plan my day" button on Today.
+- [x] Events page (grouped, add, cancel) and "Plan my day" (timeline + accept).
+- [x] Custom reminder notes on tasks and events.
 - [x] Schedule settings: quiet hours, brief, evening/morning reminder times,
   event "close" days, meals — per user, in the nudge job, capacity and planner.
 
@@ -48,9 +50,9 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
   OAuth): imported events count for clashes, capacity, reminders and plan_day.
 
 ## Known gaps
+- Edit/delete events and meals from the app (chat only for now).
 - Dead push subscriptions aren't pruned yet: `/api/push` reports them as
   `gone`, but nothing deletes them (the route has no DB access by design).
   A small cron step reading `net._http_response` can do it.
 - Capacity only counts the first day of a new habit, not every day it recurs.
-- Edit tasks from the app (tool exists; UI doesn't).
 - pgTAP doesn't run against the hosted project yet (see DECISIONS.md).
