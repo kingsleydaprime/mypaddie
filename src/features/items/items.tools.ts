@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
 import { TIERS } from "@/shared/domain";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
+import { addItem, listItems } from "./items.repo";
 
 const naira = z.number().int().nonnegative();
 
@@ -37,20 +38,15 @@ export function registerItemTools(server: McpServer) {
     }, ctx: ToolContext) => {
       try {
         const db = dbFrom(ctx);
-        const { data, error } = await db
-          .from("items")
-          .insert({
-            tier: args.tier,
-            title: args.title,
-            target: args.target ?? null,
-            deadline: args.deadline ?? null,
-            priority: args.priority ?? 100,
-            floor_amount: args.floor_amount ?? null,
-            comfortable_amount: args.comfortable_amount ?? null,
-          })
-          .select("id, tier, title")
-          .single();
-        if (error) return toolError(`add_item failed: ${error.message}`);
+        const data = await addItem(db, {
+          tier: args.tier,
+          title: args.title,
+          target: args.target,
+          deadline: args.deadline,
+          priority: args.priority,
+          floorAmount: args.floor_amount,
+          comfortableAmount: args.comfortable_amount,
+        });
         return ok(await withMode(db, new Date(), { item: data }));
       } catch (error) {
         return toolError(`add_item failed: ${(error as Error).message}`);
@@ -72,15 +68,7 @@ export function registerItemTools(server: McpServer) {
     async (args: { tier?: (typeof TIERS)[number]; status?: "active" | "done" | "paused" | "dropped" }, ctx: ToolContext) => {
       try {
         const db = dbFrom(ctx);
-        let query = db
-          .from("items")
-          .select("id, tier, title, target, deadline, status, priority, floor_amount, comfortable_amount")
-          .eq("status", args.status ?? "active")
-          .order("tier")
-          .order("priority");
-        if (args.tier) query = query.eq("tier", args.tier);
-        const { data, error } = await query;
-        if (error) return toolError(`list_items failed: ${error.message}`);
+        const data = await listItems(db, { tier: args.tier, status: args.status });
         return ok(await withMode(db, new Date(), { items: data }));
       } catch (error) {
         return toolError(`list_items failed: ${(error as Error).message}`);
