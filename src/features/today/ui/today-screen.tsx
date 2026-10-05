@@ -1,3 +1,5 @@
+import { upcoming } from "@/features/events/events";
+import { loadUpcomingEvents } from "@/features/events/events.repo";
 import { loadMode } from "@/features/mode/mode.repo";
 import type { Mode } from "@/shared/domain";
 import { catchUp, loadTasksAroundToday } from "@/features/tasks/tasks.repo";
@@ -42,7 +44,10 @@ function Row({ item, now, big }: { item: FocusItem; now: Date; big?: boolean }) 
 export async function TodayScreen({ db }: { db: Db }) {
   const now = new Date();
   await catchUp(db, now);
-  const [tasks, mode] = await Promise.all([loadTasksAroundToday(db, now), loadMode(db, now)]);
+  const [tasks, mode, events] = await Promise.all([loadTasksAroundToday(db, now), loadMode(db, now), loadUpcomingEvents(db)]);
+  const soon = upcoming(events, now, 7);
+  const todayEvents = soon.filter((e) => e.daysAway === 0);
+  const prepare = soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now");
   const focus = pickFocus(tasks, now);
   const date = new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "long", day: "numeric", month: "long" }).format(now);
 
@@ -51,6 +56,17 @@ export async function TodayScreen({ db }: { db: Db }) {
       <header>
         <p className="text-sm font-medium text-muted">{date}</p>
         <h1 className="mt-1 text-2xl font-bold leading-tight">{NARRATION[mode.mode]}</h1>
+        {(todayEvents.length > 0 || prepare.length > 0) && (
+          <p className="mt-2 text-sm text-muted">
+            {todayEvents.map((e) => (e.allDay ? e.title : `${e.title} ${localTimeOf(e.at, tz)}`)).join(" · ")}
+            {todayEvents.length > 0 && prepare.length > 0 && " · "}
+            {prepare.map((e) => (
+              <span key={e.id} className="text-gold">
+                {e.title} in {e.daysAway}d{" "}
+              </span>
+            ))}
+          </p>
+        )}
       </header>
 
       {focus.top.length === 0 ? (

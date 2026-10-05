@@ -3,6 +3,7 @@ import { completionXp, ignoredNeedDeduction, isLate, lateAfter, type SlipForXp, 
 import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
 import type { Tier } from "@/shared/domain";
 import type { Database, Json } from "@/shared/supabase/database.types";
+import { eventBlocksOn } from "@/features/events/events.repo";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, localTimeOf, zonedInstant } from "@/shared/time";
 import {
@@ -230,7 +231,7 @@ export async function saveCapacity(db: Db, setting: CapacitySetting) {
   if (error) fail("saving capacity", error);
 }
 
-/** Tasks on one local day (by due time), for capacity and clash checks. */
+/** Tasks and timed events on one local day, for capacity and clash checks. */
 export async function loadDayTasks(db: Db, day: string, config = DEFAULT_CONFIG): Promise<DayTask[]> {
   const from = zonedInstant(day, "00:00", config.timeZone).toISOString();
   const to = zonedInstant(addDays(day, 1), "00:00", config.timeZone).toISOString();
@@ -240,13 +241,16 @@ export async function loadDayTasks(db: Db, day: string, config = DEFAULT_CONFIG)
     .gte("due_at", from)
     .lt("due_at", to);
   if (error) fail("loading the day", error);
-  return data.map((t) => ({
+  const tasks: DayTask[] = data.map((t) => ({
     id: t.id,
     title: t.title,
     dueAt: t.due_at ? new Date(t.due_at) : null,
     durationMinutes: t.duration_minutes,
     status: t.status,
   }));
+  // Timed events take time too: a task can clash with a meeting, and a
+  // three-hour wedding uses three hours of that day's capacity.
+  return [...tasks, ...(await eventBlocksOn(db, day))];
 }
 
 /** Why a task can't go where it was asked to. */

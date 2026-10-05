@@ -1,11 +1,16 @@
 /** One nudge as decided by the database (private.collect_nudges). */
 export interface Nudge {
-  kind: "nudge" | "checkin" | "brief" | "headsup" | "reminder";
+  kind: "nudge" | "checkin" | "brief" | "headsup" | "reminder" | "event";
   level: number;
   title: string | null;
   items: string[] | null;
   /** Local "HH:MM" the task is due, when it has a time. */
   due?: string | null;
+  /** Events only. */
+  eventKind?: string | null;
+  person?: string | null;
+  /** Days until the event (for the week heads-up). */
+  days?: number | null;
 }
 
 export interface NotificationCopy {
@@ -34,6 +39,24 @@ export function copyFor(n: Nudge): NotificationCopy {
   }
 
   const task = n.title ?? "That task";
+  if (n.kind === "event") {
+    const celebrates = n.eventKind === "birthday" || n.eventKind === "anniversary";
+    const who = n.person ?? task;
+    const at = n.due ? ` at ${n.due}` : "";
+    const tag = `event-${task}`;
+    switch (n.level) {
+      case 1:
+        return { title: `In ${n.days ?? "a few"} days`, body: celebrates ? `${task}. Sort a gift or a plan now, not the night before.` : `${task}${at}. Anything to prepare?`, url: "/", tag };
+      case 2:
+        return { title: `Tomorrow${at}`, body: celebrates ? `${task} is tomorrow.` : `${task}. Get what you need ready tonight.`, url: "/", tag };
+      case 3:
+        return celebrates
+          ? { title: n.eventKind === "birthday" ? `It's ${who}'s birthday` : `${task} today`, body: "Call or text. A voice note counts.", url: "/", tag }
+          : { title: `Today${at}`, body: `${task}. Plan the day around it.`, url: "/", tag };
+      default:
+        return { title: "In 30 minutes", body: `${task}${at}. Time to move.`, url: "/", tag };
+    }
+  }
   if (n.kind === "reminder") {
     // Level = which rung of the ladder: 1 evening before, 2 morning of, 3 in 30 min, 4 in 10 min.
     const at = n.due ? ` at ${n.due}` : "";

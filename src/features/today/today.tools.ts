@@ -1,5 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import { upcoming } from "@/features/events/events";
+import { loadUpcomingEvents } from "@/features/events/events.repo";
+import { loadActiveIdentity } from "@/features/identity/identity.repo";
 import { loadMode } from "@/features/mode/mode.repo";
 import { loadMoneyStage } from "@/features/money/money.repo";
 import type { MoneyStage } from "@/features/money/stage";
@@ -40,8 +43,8 @@ export function registerTodayTools(server: McpServer) {
       title: "Get today",
       description:
         "Call at the start of every chat. Returns the 3 things that matter right now (lead with these and ask Kingsley " +
-        "to do one), the rest of today's open tasks, money status, and the current coaching mode with the facts " +
-        "behind it. Follow the returned mode. Don't recite stats unless asked.",
+        "to do one), the rest of today's open tasks, money status, the current coaching mode with the facts " +
+        "behind it, and his 'Who I'm becoming' profile (`becoming`) — measure choices against it all chat. Follow the returned mode. Don't recite stats unless asked.",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: false, idempotentHint: true },
     },
@@ -50,13 +53,16 @@ export function registerTodayTools(server: McpServer) {
         const db = dbFrom(ctx);
         const now = new Date();
         const caughtUp = await catchUp(db, now);
-        const [tasks, mode, money, capacity, dayTasks] = await Promise.all([
+        const [tasks, mode, money, capacity, dayTasks, identity, events] = await Promise.all([
           loadTasksAroundToday(db, now),
           loadMode(db, now),
           loadMoneyStage(db, now),
           loadCapacity(db),
           loadDayTasks(db, dayKey(now, tz)),
+          loadActiveIdentity(db),
+          loadUpcomingEvents(db),
         ]);
+        const soon = upcoming(events, now, 7);
         const room = roomOn(dayKey(now, tz), dayTasks, capacity, now);
         const focus = pickFocus(tasks, now);
         return ok({
@@ -69,6 +75,13 @@ export function registerTodayTools(server: McpServer) {
           // How full today is, in minutes. Mention only if he's near or over, or asks.
           plate: { capacity: room.capacity, committed: room.committed, available: room.available, label: room.label },
           caughtUp,
+          // Today's events, and important ones within the week (prepare for those).
+          events: {
+            today: soon.filter((e) => e.daysAway === 0).map((e) => ({ title: e.title, kind: e.kind, at: e.allDay ? "all day" : formatLocal(e.at, tz) })),
+            prepareNow: soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now").map((e) => ({ title: e.title, daysAway: e.daysAway })),
+          },
+          // Who he's becoming — coach toward it all chat. Null: offer to help him write one.
+          becoming: identity ? { name: identity.name, text: identity.text } : null,
         });
       } catch (error) {
         return toolError(`get_today failed: ${(error as Error).message}`);
