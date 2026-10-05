@@ -1,1 +1,55 @@
 @import "tailwindcss";
+
+/* Design tokens. Dark is the default look; light follows the system setting.
+   Gold is XP / progress, green is done, red is overdue — used sparingly. */
+:root {
+  --bg: #0e0f13;
+  --surface: #17191f;
+  --surface-2: #20232b;
+  --border: #2a2e38;
+  --text: #f2f3f5;
+  --muted: #9aa0ac;
+  --gold: #f5b83d;
+  --green: #3ecf8e;
+  --red: #ff6b5e;
+  --on-gold: #1a1203;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f6f3;
+    --surface: #ffffff;
+    --surface-2: #efefea;
+    --border: #e1e1da;
+    --text: #15171c;
+    --muted: #5e6470;
+    --gold: #c98a06;
+    --green: #128a5a;
+    --red: #d63c2f;
+    --on-gold: #ffffff;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-gold: var(--gold);
+  --color-green: var(--green);
+  --color-red: var(--red);
+  --color-on-gold: var(--on-gold);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+}

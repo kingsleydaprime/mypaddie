@@ -6,7 +6,6 @@ import { supabasePublishableKey, supabaseUrl } from "@/shared/supabase/env";
  * Keeps the login session fresh on the pages that use it. Server components
  * can't write cookies, so an expired access token is refreshed here, before
  * the page renders. (Next 16 renamed middleware.ts to proxy.ts.)
- * The MCP endpoint isn't matched: it uses Bearer tokens, not cookies.
  */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -24,4 +23,8 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-export const config = { matcher: ["/login", "/oauth/:path*"] };
+// Every page except the MCP endpoint and its metadata (Bearer tokens, not
+// cookies), Next's static files, icons and the manifest.
+export const config = {
+  matcher: ["/((?!api/mcp|\\.well-known|_next/static|_next/image|icons|icon|manifest\\.webmanifest|sw\\.js).*)"],
+};

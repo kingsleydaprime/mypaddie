@@ -31,12 +31,12 @@ export default async function ConsentPage({ searchParams }: PageProps<"/oauth/co
         <strong>{data.client.name}</strong> wants to read and update your MyPaddie data — tasks, XP, money and
         notes — as <strong>{data.user.email}</strong>.
       </p>
-      <p className="text-sm opacity-70">It will be sent back to {data.redirect_uri}</p>
+      <p className="text-sm text-muted">It will be sent back to {data.redirect_uri}</p>
       <form action={decide} className="flex gap-3">
         <input type="hidden" name="authorization_id" value={data.authorization_id} />
-        <button name="decision" value="deny" className="flex-1 rounded-lg border px-3 py-3">Deny</button>
+        <button name="decision" value="deny" className="flex-1 rounded-xl border border-line px-4 py-3.5 font-medium">Deny</button>
         <button name="decision" value="approve"
-          className="flex-1 rounded-lg bg-black px-3 py-3 font-medium text-white dark:bg-white dark:text-black">
+          className="flex-1 rounded-xl bg-gold px-4 py-3.5 text-base font-semibold text-on-gold">
           Allow
         </button>
       </form>

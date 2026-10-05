@@ -10,11 +10,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <form action={signIn} className="flex flex-col gap-3">
         <input type="hidden" name="next" value={next} />
         <input name="email" type="email" required autoComplete="email" placeholder="Email"
-          className="rounded-lg border px-3 py-3" />
+          className="rounded-xl border border-line bg-surface px-4 py-3.5 text-base placeholder:text-muted" />
         <input name="password" type="password" required autoComplete="current-password" placeholder="Password"
-          className="rounded-lg border px-3 py-3" />
-        {params.error && <p className="text-sm text-red-600">Wrong email or password.</p>}
-        <button className="rounded-lg bg-black px-3 py-3 font-medium text-white dark:bg-white dark:text-black">
+          className="rounded-xl border border-line bg-surface px-4 py-3.5 text-base placeholder:text-muted" />
+        {params.error && <p className="text-sm text-red">Wrong email or password.</p>}
+        <button className="rounded-xl bg-gold px-4 py-3.5 text-base font-semibold text-on-gold">
           Sign in
         </button>
       </form>
