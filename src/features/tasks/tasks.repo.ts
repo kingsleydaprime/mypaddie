@@ -1,5 +1,5 @@
 import { validateWeights, type PillarWeight } from "@/features/xp/split";
-import { completionXp, ignoredNeedDeduction, isLate, type SlipForXp, type TaskForXp } from "@/features/xp/xp";
+import { completionXp, ignoredNeedDeduction, isLate, lateAfter, type SlipForXp, type TaskForXp } from "@/features/xp/xp";
 import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
 import type { Tier } from "@/shared/domain";
 import type { Database, Json } from "@/shared/supabase/database.types";
@@ -23,7 +23,7 @@ const LOOKBACK_DAYS = 14;
 const SERIES_LOOKBACK_DAYS = 60;
 
 const TASK_COLUMNS =
-  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, item_id, items(tier), task_pillars(pillar, weight)";
+  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, item_id, items(tier), task_pillars(pillar, weight)";
 
 type TaskRow = {
   id: string;
@@ -34,6 +34,7 @@ type TaskRow = {
   done_at: string | null;
   is_non_negotiable: boolean;
   must_from: string | null;
+  duration_minutes: number | null;
   item_id: string | null;
   items: { tier: Tier } | null;
   task_pillars: PillarWeight[];
@@ -190,7 +191,9 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = D
   if (task.status === "done") return { result: "already_done", title: task.title };
   if (task.status === "cancelled") return { result: "cancelled", title: task.title };
 
-  const entries = completionXp(task, now, config);
+  // A time block (workout, meeting) is on time all day; a deadline isn't.
+  const timed = { ...task, dueAt: lateAfter(task.dueAt, data.duration_minutes, config) };
+  const entries = completionXp(timed, now, config);
   const { data: outcome, error: rpcError } = await db.rpc("complete_task", {
     p_task_id: taskId,
     p_done_at: now.toISOString(),
@@ -203,7 +206,7 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = D
   return {
     result: "completed",
     xp: entries.reduce((sum, e) => sum + e.amount, 0),
-    late: isLate(task, now),
+    late: isLate(timed, now),
     title: task.title,
   };
 }

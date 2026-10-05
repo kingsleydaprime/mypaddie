@@ -1,6 +1,6 @@
 import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
 import type { Pillar, Tier } from "@/shared/domain";
-import { dayKey } from "@/shared/time";
+import { dayKey, startOfNextDay } from "@/shared/time";
 import { splitXp, type PillarWeight } from "./split";
 
 /** Mirrors the `xp_reason` enum in Postgres. */
@@ -55,6 +55,18 @@ function entries(amount: number, weights: readonly PillarWeight[], reason: XpRea
 
 export function isLate(task: Pick<TaskForXp, "dueAt">, doneAt: Date): boolean {
   return task.dueAt !== null && doneAt.getTime() > task.dueAt.getTime();
+}
+
+/**
+ * When a task starts counting as late. For a deadline ("submit by 14:00") it's
+ * the due time. For a time block — a task with a duration, like a workout or a
+ * meeting — the due time is when it *starts*, so finishing it any time that
+ * day is on time; it's only late once its day is over.
+ */
+export function lateAfter(dueAt: Date | null, durationMinutes: number | null, config: EngineConfig = DEFAULT_CONFIG): Date | null {
+  if (dueAt === null) return null;
+  if (durationMinutes === null) return dueAt;
+  return new Date(startOfNextDay(dueAt, config.timeZone).getTime() - 1);
 }
 
 /**

@@ -1,12 +1,13 @@
 import type { Db } from "@/shared/supabase/token-client";
 import { loadLearning } from "@/features/learning/learning.repo";
+import { loadTraining } from "@/features/workouts/workouts.repo";
 import { loadStats } from "../stats.repo";
 
 const label = (name: string) => name[0]!.toUpperCase() + name.slice(1);
 
 export async function StatsScreen({ db }: { db: Db }) {
   const now = new Date();
-  const [stats, learning] = await Promise.all([loadStats(db, now), loadLearning(db, now)]);
+  const [stats, learning, training] = await Promise.all([loadStats(db, now), loadLearning(db, now), loadTraining(db, now)]);
   const activeSkills = learning.filter((l) => l.skill.status === "active");
   const ranked = [...stats.pillars].sort((a, b) => b.xp - a.xp);
   const totalXp = stats.pillars.reduce((s, p) => s + Math.max(0, p.xp), 0);
@@ -52,6 +53,31 @@ export async function StatsScreen({ db }: { db: Db }) {
           </li>
         ))}
       </ul>
+
+      <section className="rounded-2xl border border-line bg-surface p-4">
+        <h2 className="font-bold">Training</h2>
+        {training.lastWorkout === null ? (
+          <p className="mt-1 text-sm text-muted">No workouts logged yet. Tell Paddie your plan, then log what you did.</p>
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-muted">
+              {training.last7} this week · {training.last30} in the last 30 days
+            </p>
+            {training.bests.length > 0 && (
+              <ul className="mt-2 flex flex-col gap-1 text-sm">
+                {training.bests.slice(0, 5).map((b) => (
+                  <li key={b.exercise} className="flex justify-between">
+                    <span>{b.exercise}</span>
+                    <span className="text-muted">
+                      {b.best.weightKg ? `${b.best.weightKg}kg × ${b.best.reps ?? "?"}` : b.best.seconds ? `${b.best.seconds}s` : `${b.best.reps ?? "?"} reps`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </section>
 
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-bold">Learning</h2>

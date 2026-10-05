@@ -7,6 +7,7 @@ import {
   goalCompletionBonus,
   ignoredNeedDeduction,
   isIgnoredNeed,
+  lateAfter,
   transactionLoggedXp,
   wishFulfilledBonus,
   type TaskForXp,
@@ -180,5 +181,25 @@ describe("transactionLoggedXp", () => {
     expect(transactionLoggedXp()).toEqual([
       { pillar: "financial", amount: 2, reason: "transaction_logged" },
     ]);
+  });
+});
+
+describe("lateAfter", () => {
+  test("a deadline is late right after its due time", () => {
+    expect(lateAfter(at("2026-10-05T14:00:00"), null)).toEqual(at("2026-10-05T14:00:00"));
+  });
+  test("a time block (has a duration) is on time until its day ends", () => {
+    expect(lateAfter(at("2026-10-05T18:00:00"), 60)!.toISOString()).toBe("2026-10-05T22:59:59.999Z"); // 23:59:59.999 Lagos
+  });
+  test("so a workout due 18:00, logged 19:05, pays full XP", () => {
+    const workout = task({ tier: null, dueAt: lateAfter(at("2026-10-05T18:00:00"), 60) });
+    expect(total(completionXp(workout, at("2026-10-05T19:05:00")))).toBe(10);
+  });
+  test("…but logged the next morning, it's late", () => {
+    const workout = task({ tier: null, dueAt: lateAfter(at("2026-10-05T18:00:00"), 60) });
+    expect(total(completionXp(workout, at("2026-10-06T08:00:00")))).toBe(5);
+  });
+  test("no due time, never late", () => {
+    expect(lateAfter(null, 60)).toBeNull();
   });
 });
