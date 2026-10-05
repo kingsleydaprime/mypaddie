@@ -2,9 +2,9 @@ import { validateWeights, type PillarWeight } from "@/features/xp/split";
 import { completionXp, ignoredNeedDeduction, isLate, type SlipForXp, type TaskForXp } from "@/features/xp/xp";
 import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
 import type { Tier } from "@/shared/domain";
-import type { Json } from "@/shared/supabase/database.types";
+import type { Database, Json } from "@/shared/supabase/database.types";
 import type { Db } from "@/shared/supabase/token-client";
-import { addDays, dayKey, zonedInstant } from "@/shared/time";
+import { addDays, dayKey, localTimeOf, zonedInstant } from "@/shared/time";
 import { parseRecurrence, planOccurrences, type SeriesForSpawn } from "./recurrence";
 
 /** How far back catch-up looks for ignored needs and recurring templates. */
@@ -244,4 +244,104 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = DEFA
     fail("saving pillar weights", weightError);
   }
   return data;
+}
+
+export interface TaskChanges {
+  title?: string;
+  baseXp?: number;
+  /** Local "YYYY-MM-DD"; only for one-off tasks (a habit's days come from its rule). */
+  dueDate?: string;
+  /** Local "HH:MM", or null to make it "any time". */
+  dueTime?: string | null;
+  nonNegotiable?: boolean;
+  recurrence?: string;
+  weights?: PillarWeight[];
+}
+
+export type UpdateResult =
+  | { result: "updated"; rows: number }
+  | { result: "cancelled" | "stopped"; rows: number }
+  | { result: "not_found" | "already_done" };
+
+/**
+ * Edits a task. For a recurring habit the change applies to this day and every
+ * later pending day — new days copy the latest row, so this also changes the
+ * habit going forward. Done tasks can't be edited: their XP is in the ledger.
+ */
+export async function updateTask(
+  db: Db,
+  taskId: string,
+  changes: TaskChanges,
+  action: "edit" | "cancel" | "stop",
+  config = DEFAULT_CONFIG,
+): Promise<UpdateResult> {
+  const { data: task, error } = await db
+    .from("tasks")
+    .select("id, status, series_id, occurs_on, due_at, recurrence")
+    .eq("id", taskId)
+    .maybeSingle();
+  if (error) fail("loading the task", error);
+  if (!task) return { result: "not_found" };
+  if (task.status === "done") return { result: "already_done" };
+
+  if (action === "cancel") {
+    const { error: e } = await db.from("tasks").update({ status: "cancelled" }).eq("id", task.id).neq("status", "done");
+    if (e) fail("cancelling the task", e);
+    return { result: "cancelled", rows: 1 };
+  }
+
+  if (action === "stop") {
+    if (!task.series_id) return updateTask(db, taskId, changes, "cancel", config);
+    // Cancel what's still open, then dissolve the series so nothing new spawns.
+    // Past rows stay as history (as one-offs).
+    const { data: open, error: e1 } = await db
+      .from("tasks").update({ status: "cancelled" }).eq("series_id", task.series_id).eq("status", "pending").select("id");
+    if (e1) fail("stopping the habit", e1);
+    const { error: e2 } = await db
+      .from("tasks").update({ recurrence: null, series_id: null, occurs_on: null }).eq("series_id", task.series_id);
+    if (e2) fail("stopping the habit", e2);
+    return { result: "stopped", rows: open.length };
+  }
+
+  if (changes.weights) validateWeights(changes.weights);
+  if (changes.recurrence) {
+    parseRecurrence(changes.recurrence);
+    if (!task.series_id) throw new Error("this is a one-off task; add a new recurring task instead");
+  }
+  if (changes.dueDate && task.series_id) throw new Error("a habit's days come from its recurrence; change that instead");
+
+  // This row, plus later pending rows of the same habit.
+  let targets: { id: string; occurs_on: string | null; due_at: string | null }[] = [task];
+  if (task.series_id && task.occurs_on) {
+    const { data: later, error: e } = await db
+      .from("tasks")
+      .select("id, occurs_on, due_at")
+      .eq("series_id", task.series_id)
+      .eq("status", "pending")
+      .gt("occurs_on", task.occurs_on);
+    if (e) fail("loading the habit", e);
+    targets = [task, ...later];
+  }
+
+  for (const row of targets) {
+    const patch: Database["public"]["Tables"]["tasks"]["Update"] = {};
+    if (changes.title !== undefined) patch.title = changes.title;
+    if (changes.baseXp !== undefined) patch.base_xp = changes.baseXp;
+    if (changes.nonNegotiable !== undefined) patch.is_non_negotiable = changes.nonNegotiable;
+    if (changes.recurrence !== undefined) patch.recurrence = changes.recurrence;
+    if (changes.dueDate !== undefined || changes.dueTime !== undefined) {
+      const day = changes.dueDate ?? row.occurs_on ?? (row.due_at ? dayKey(new Date(row.due_at), config.timeZone) : dayKey(new Date(), config.timeZone));
+      const time = changes.dueTime === undefined ? (row.due_at ? localTimeOf(new Date(row.due_at), config.timeZone) : null) : changes.dueTime;
+      patch.due_at = time ? zonedInstant(day, time, config.timeZone).toISOString() : row.occurs_on ? null : zonedInstant(day, "23:59", config.timeZone).toISOString();
+    }
+    if (Object.keys(patch).length > 0) {
+      const { error: e } = await db.from("tasks").update(patch).eq("id", row.id);
+      if (e) fail("updating the task", e);
+    }
+    if (changes.weights) {
+      const { error: e } = await db.rpc("set_task_weights", { p_task_id: row.id, p_weights: changes.weights as unknown as Json });
+      if (e) fail("updating pillar weights", e);
+    }
+  }
+  return { result: "updated", rows: targets.length };
 }

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
 import { PILLARS } from "@/shared/domain";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
-import { completeTask, createTask } from "./tasks.repo";
+import { completeTask, createTask, updateTask } from "./tasks.repo";
 
 const weightsSchema = z
   .array(z.object({ pillar: z.enum(PILLARS), weight: z.number().int().min(1).max(100) }))
@@ -64,6 +64,64 @@ export function registerTaskTools(server: McpServer) {
         return ok(await withMode(db, now, { task }));
       } catch (error) {
         return toolError(`add_task failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "update_task",
+    {
+      title: "Update task",
+      description:
+        "Edit, cancel, or stop a task. action='edit' changes only the fields you pass; for a recurring habit it " +
+        "applies to that day and every later day. action='cancel' skips just this one (no XP penalty — a " +
+        "deliberate decision isn't ignoring it). action='stop' ends a recurring habit entirely. Done tasks can't " +
+        "be changed. Pass due_time=null to make it 'any time'.",
+      inputSchema: z.object({
+        task_id: z.uuid(),
+        action: z.enum(["edit", "cancel", "stop"]).default("edit"),
+        title: z.string().trim().min(1).optional(),
+        base_xp: z.number().int().min(1).max(500).optional(),
+        due_date: z.iso.date().optional().describe("One-off tasks only. YYYY-MM-DD, Lagos time"),
+        due_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().optional().describe("HH:MM Lagos, or null"),
+        non_negotiable: z.boolean().optional(),
+        recurrence: z.string().optional().describe("Recurring habits only, e.g. FREQ=WEEKLY;BYDAY=MO,TH"),
+        weights: weightsSchema.optional(),
+      }),
+    },
+    async (
+      args: {
+        task_id: string;
+        action: "edit" | "cancel" | "stop";
+        title?: string;
+        base_xp?: number;
+        due_date?: string;
+        due_time?: string | null;
+        non_negotiable?: boolean;
+        recurrence?: string;
+        weights?: { pillar: (typeof PILLARS)[number]; weight: number }[];
+      },
+      ctx: ToolContext,
+    ) => {
+      try {
+        const db = dbFrom(ctx);
+        const outcome = await updateTask(
+          db,
+          args.task_id,
+          {
+            title: args.title,
+            baseXp: args.base_xp,
+            dueDate: args.due_date,
+            dueTime: args.due_time,
+            nonNegotiable: args.non_negotiable,
+            recurrence: args.recurrence,
+            weights: args.weights,
+          },
+          args.action,
+        );
+        return ok(await withMode(db, new Date(), { ...outcome }));
+      } catch (error) {
+        return toolError(`update_task failed: ${(error as Error).message}`);
       }
     },
   );

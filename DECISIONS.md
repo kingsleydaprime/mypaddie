@@ -197,3 +197,17 @@ to one month of needs.
 ### `plan_day` deferred
 Meals, chore batching and fun blocks need real data to design well (Day 4).
 `get_today`'s top three covers "what next" until then.
+
+### An 11th pillar: academic
+Coursework and studying for school, separate from `skills` (DSA, LeetCode,
+craft). Appended last in both the Postgres enum and `PILLARS`, because pillar
+order breaks ties when splitting XP — inserting it mid-list would silently
+change existing splits. A test now fails if the TypeScript lists and the
+database enums ever drift apart.
+
+### Editing tasks
+`update_task`: edits apply to the given day and every later pending day of a
+habit (new days copy the latest row, so that's also "from now on"). `cancel`
+skips one occurrence without penalty — a decision isn't ignoring it. `stop`
+cancels what's open and dissolves the series, keeping past rows as history.
+Done tasks are frozen: their XP is in the append-only ledger.
