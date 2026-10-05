@@ -28,10 +28,10 @@ export async function logTransactionAction(_prev: LogState, formData: FormData):
   const v = parsed.data;
   if (v.direction === "out" && !v.tag) return { error: "Need, want, or not sure?" };
 
-  const db = await requireDb("/money");
+  const db = await requireDb("/app/money");
   try {
     const logged = await logTransaction(db, { amount: v.amount, direction: v.direction, category: v.category, tag: v.tag ?? null }, new Date());
-    revalidatePath("/money");
+    revalidatePath("/app/money");
     return { ok: true, direction: v.direction, amount: v.amount, ...logged };
   } catch (error) {
     return { error: (error as Error).message };
@@ -39,8 +39,8 @@ export async function logTransactionAction(_prev: LogState, formData: FormData):
 }
 
 export async function acceptSplitAction(transactionId: string) {
-  const db = await requireDb("/money");
+  const db = await requireDb("/app/money");
   const outcome = await acceptSplit(db, transactionId, new Date());
-  revalidatePath("/money");
+  revalidatePath("/app/money");
   return outcome.result;
 }

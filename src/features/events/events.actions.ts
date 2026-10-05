@@ -23,16 +23,16 @@ export type EventFormState = null | { error: string } | { ok: string };
 export async function addEventAction(_prev: EventFormState, form: FormData): Promise<EventFormState> {
   const parsed = schema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form" };
-  const db = await requireDb("/events");
+  const db = await requireDb("/app/events");
   const result = await addEvent(db, { ...parsed.data, important: form.get("important") === "on" }, new Date());
   if ("error" in result) return { error: result.error };
-  revalidatePath("/events");
+  revalidatePath("/app/events");
   const clash = result.clashes[0];
   return { ok: clash ? `Added. Heads up: it overlaps ${clash.title} (${clash.at.slice(11)}).` : "Added." };
 }
 
 export async function cancelEventAction(id: string) {
-  const db = await requireDb("/events");
+  const db = await requireDb("/app/events");
   await changeEvent(db, id, "cancel");
-  revalidatePath("/events");
+  revalidatePath("/app/events");
 }

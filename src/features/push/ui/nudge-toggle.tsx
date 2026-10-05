@@ -63,7 +63,7 @@ export function NudgeToggle() {
     unsupported: "This browser can't receive nudges. On Android, install the app from Chrome first.",
     blocked: "Notifications are blocked for this site. Allow them in your browser settings, then come back.",
     off: "Nudges are off. Non-negotiables get escalating reminders until done; everything else, one check-in. Nothing during your quiet hours.",
-    on: "Nudges are on for this device. Quiet hours and the brief time are in Settings below.",
+    on: "Nudges are on for this device. Quiet hours and the brief time are under Schedule below.",
   };
 
   return (

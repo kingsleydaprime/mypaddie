@@ -20,7 +20,7 @@ describe("planNotifications", () => {
     expect(out[0]!.copy).toEqual({
       title: "4 things need you",
       body: "Reading, Duolingo, Email +1. Pick one.",
-      url: "/",
+      url: "/app",
       tag: "bundle-overdue",
     });
   });

@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "MyPaddie",
     short_name: "Paddie",
     description: "Here are the 3 things that matter right now. Do one.",
-    start_url: "/",
+    start_url: "/app",
     display: "standalone",
     orientation: "portrait",
     background_color: "#0e0f13",

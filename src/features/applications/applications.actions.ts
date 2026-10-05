@@ -19,7 +19,7 @@ export async function addApplicationAction(_prev: AppFormState, form: FormData):
   if (date && !isValidTimeZone(tz)) return { error: `"${tz}" isn't a time zone name — try America/New_York or Europe/London` };
   const requirements = get("requirements").split(/\n|,/).map((r) => r.trim()).filter(Boolean).map((title) => ({ title }));
 
-  const db = await requireDb("/applications");
+  const db = await requireDb("/app/applications");
   const { id } = await addApplication(
     db,
     {
@@ -32,28 +32,28 @@ export async function addApplicationAction(_prev: AppFormState, form: FormData):
     },
     new Date(),
   );
-  revalidatePath("/applications");
-  redirect(`/applications/${id}`);
+  revalidatePath("/app/applications");
+  redirect(`/app/applications/${id}`);
 }
 
 export async function setStatusAction(id: string, status: ApplicationStatus) {
-  const db = await requireDb(`/applications/${id}`);
+  const db = await requireDb(`/app/applications/${id}`);
   await updateApplication(db, id, { status }, new Date());
-  revalidatePath(`/applications/${id}`);
-  revalidatePath("/applications");
+  revalidatePath(`/app/applications/${id}`);
+  revalidatePath("/app/applications");
 }
 
 export async function toggleRequirementAction(id: string, title: string, done: boolean) {
-  const db = await requireDb(`/applications/${id}`);
+  const db = await requireDb(`/app/applications/${id}`);
   await changeRequirement(db, id, done ? { done: title } : { undone: title }, new Date());
-  revalidatePath(`/applications/${id}`);
-  revalidatePath("/");
+  revalidatePath(`/app/applications/${id}`);
+  revalidatePath("/app");
 }
 
 export async function addRequirementAction(id: string, form: FormData) {
   const title = String(form.get("title") ?? "").trim();
   if (!title) return;
-  const db = await requireDb(`/applications/${id}`);
+  const db = await requireDb(`/app/applications/${id}`);
   await changeRequirement(db, id, { add: [{ title }] }, new Date());
-  revalidatePath(`/applications/${id}`);
+  revalidatePath(`/app/applications/${id}`);
 }

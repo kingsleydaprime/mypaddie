@@ -19,7 +19,7 @@ export function SettingsForm({ schedule }: { schedule: Schedule }) {
   const [state, action, pending] = useActionState<SettingsState, FormData>(saveSettingsAction, null);
   return (
     <details className="rounded-2xl border border-line bg-surface p-4">
-      <summary className="cursor-pointer font-bold">Settings</summary>
+      <summary className="cursor-pointer font-bold">Schedule</summary>
       <form action={action} className="mt-3 flex flex-col gap-3">
         <Time name="quietStart" label="Quiet from" value={schedule.quietStart} />
         <Time name="quietEnd" label="Quiet until" value={schedule.quietEnd} />

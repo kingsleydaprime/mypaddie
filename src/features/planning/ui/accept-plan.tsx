@@ -11,7 +11,7 @@ export function AcceptPlan({ day, assignments }: { day: string; assignments: { t
     return (
       <div className="flex flex-col gap-2 text-center" role="status">
         <p className="font-semibold text-green">Plan set{done.failed ? ` (${done.failed} couldn't be placed — open them to see why)` : ""}.</p>
-        <Link href="/" className="text-muted">Back to Today</Link>
+        <Link href="/app" className="text-muted">Back to Today</Link>
       </div>
     );
   }

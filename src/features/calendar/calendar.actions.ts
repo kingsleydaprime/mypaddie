@@ -21,25 +21,25 @@ function said(r: Awaited<ReturnType<typeof syncCalendar>> | { result: "rejected"
 }
 
 export async function connectCalendarAction(_prev: CalendarState, form: FormData): Promise<CalendarState> {
-  const db = await requireDb("/paddie");
+  const db = await requireDb("/app/settings");
   const r = await connectCalendar(db, String(form.get("url") ?? ""), new Date());
-  revalidatePath("/paddie");
-  revalidatePath("/");
+  revalidatePath("/app/settings");
+  revalidatePath("/app");
   return said(r);
 }
 
 export async function syncCalendarAction(): Promise<CalendarState> {
-  const db = await requireDb("/paddie");
+  const db = await requireDb("/app/settings");
   const r = await syncCalendar(db, new Date(), { force: true });
-  revalidatePath("/paddie");
-  revalidatePath("/");
+  revalidatePath("/app/settings");
+  revalidatePath("/app");
   return said(r);
 }
 
 export async function disconnectCalendarAction(): Promise<CalendarState> {
-  const db = await requireDb("/paddie");
+  const db = await requireDb("/app/settings");
   const r = await disconnectCalendar(db);
-  revalidatePath("/paddie");
-  revalidatePath("/");
+  revalidatePath("/app/settings");
+  revalidatePath("/app");
   return { ok: `Disconnected. Removed ${r.removedEvents} imported events.` };
 }

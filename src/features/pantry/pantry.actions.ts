@@ -7,13 +7,13 @@ import { adjustPantry, removePantryItem } from "./pantry.repo";
 export type PantryFormState = null | { error: string } | { ok: string };
 
 export async function stepItemAction(name: string, delta: number): Promise<PantryFormState> {
-  const db = await requireDb("/pantry");
+  const db = await requireDb("/app/pantry");
   try {
     await adjustPantry(db, [{ name, delta }]);
   } catch (e) {
     return { error: (e as Error).message };
   }
-  revalidatePath("/pantry");
+  revalidatePath("/app/pantry");
   return null;
 }
 
@@ -33,7 +33,7 @@ export async function saveItemAction(_prev: PantryFormState, form: FormData): Pr
   if (quantity !== undefined && (!Number.isFinite(quantity) || quantity < 0)) return { error: "Amount must be 0 or more" };
   if (lowAt !== undefined && (!Number.isFinite(lowAt) || lowAt < 0)) return { error: "'Low at' must be 0 or more" };
 
-  const db = await requireDb("/pantry");
+  const db = await requireDb("/app/pantry");
   try {
     await adjustPantry(db, [
       {
@@ -47,12 +47,12 @@ export async function saveItemAction(_prev: PantryFormState, form: FormData): Pr
   } catch (e) {
     return { error: (e as Error).message };
   }
-  revalidatePath("/pantry");
+  revalidatePath("/app/pantry");
   return { ok: "Saved." };
 }
 
 export async function removeItemAction(name: string) {
-  const db = await requireDb("/pantry");
+  const db = await requireDb("/app/pantry");
   await removePantryItem(db, name);
-  revalidatePath("/pantry");
+  revalidatePath("/app/pantry");
 }

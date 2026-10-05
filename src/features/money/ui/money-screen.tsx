@@ -33,7 +33,7 @@ export async function MoneyScreen({ db, addMoney = false }: { db: Db; addMoney?:
     <div className="flex flex-col gap-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Money</h1>
-        <Link href="/pantry" className="rounded-xl border border-line px-4 py-2 text-sm font-medium">Pantry ›</Link>
+        <Link href="/app/pantry" className="rounded-xl border border-line px-4 py-2 text-sm font-medium">Pantry ›</Link>
       </header>
 
       <BalanceCard balance={balance} />
@@ -96,12 +96,12 @@ export async function MoneyScreen({ db, addMoney = false }: { db: Db; addMoney?:
       {(recent.data?.length ?? 0) > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="flex items-baseline justify-between text-lg font-bold">
-            Recent <Link href="/money/history" className="text-sm font-medium text-muted">See all ›</Link>
+            Recent <Link href="/app/money/history" className="text-sm font-medium text-muted">See all ›</Link>
           </h2>
           <ul className="flex flex-col divide-y divide-line rounded-2xl border border-line bg-surface">
             {recent.data!.map((t) => (
               <li key={t.id}>
-                <Link href={`/money/tx/${t.id}`} className="flex items-center justify-between px-4 py-3">
+                <Link href={`/app/money/tx/${t.id}`} className="flex items-center justify-between px-4 py-3">
                   <span className="min-w-0 truncate">
                     {t.note || t.category}
                     {t.tag && <span className="ml-2 text-xs text-muted">{t.tag}</span>}

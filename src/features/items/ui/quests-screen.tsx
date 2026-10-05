@@ -66,18 +66,18 @@ export async function QuestsScreen({ db, tier }: { db: Db; tier: Tier | null }) 
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Quests</h1>
         <div className="flex gap-2">
-          <Link href="/applications" className="rounded-xl border border-line px-3 py-2.5 text-sm font-medium">Applications</Link>
-          <Link href="/updates" className="rounded-xl border border-line px-3 py-2.5 text-sm font-medium">Updates</Link>
-          <Link href={`/quests/new${tier ? `?tier=${tier}` : ""}`} className="rounded-xl bg-gold px-4 py-2.5 font-semibold text-on-gold">
+          <Link href="/app/applications" className="rounded-xl border border-line px-3 py-2.5 text-sm font-medium">Applications</Link>
+          <Link href="/app/updates" className="rounded-xl border border-line px-3 py-2.5 text-sm font-medium">Updates</Link>
+          <Link href={`/app/quests/new${tier ? `?tier=${tier}` : ""}`} className="rounded-xl bg-gold px-4 py-2.5 font-semibold text-on-gold">
             + Add
           </Link>
         </div>
       </header>
 
       <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="Filter by tier">
-        <Chip href="/quests" active={tier === null}>All</Chip>
+        <Chip href="/app/quests" active={tier === null}>All</Chip>
         {TIERS.map((t) => (
-          <Chip key={t} href={`/quests?tier=${t}`} active={tier === t}>
+          <Chip key={t} href={`/app/quests?tier=${t}`} active={tier === t}>
             {TIER_INFO[t].plural}
           </Chip>
         ))}

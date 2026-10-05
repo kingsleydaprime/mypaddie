@@ -24,7 +24,7 @@ export async function EventsScreen({ db }: { db: Db }) {
   return (
     <div className="flex flex-col gap-5">
       <header className="flex items-center gap-3">
-        <Link href="/" className="text-muted" aria-label="Back to today">‹ Today</Link>
+        <Link href="/app" className="text-muted" aria-label="Back to today">‹ Today</Link>
         <h1 className="text-2xl font-bold">Events</h1>
       </header>
       <AddEventForm />

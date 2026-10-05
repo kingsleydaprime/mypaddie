@@ -16,7 +16,7 @@ export async function addUpdateAction(_prev: UpdateFormState, form: FormData): P
   const weekday = get("weekday");
   if (!recipient || !about) return { error: "Who is it for, and what's it about?" };
   if (!CHANNELS.includes(channel)) return { error: "Pick a channel" };
-  const db = await requireDb("/updates");
+  const db = await requireDb("/app/updates");
   const result = await addUpdate(
     db,
     {
@@ -31,13 +31,13 @@ export async function addUpdateAction(_prev: UpdateFormState, form: FormData): P
     new Date(),
   );
   if (result.result === "clash" || result.result === "over_capacity") return { error: refusalMessage(result) };
-  revalidatePath("/updates");
+  revalidatePath("/app/updates");
   return { ok: "Added — it's on your days now." };
 }
 
 export async function markSentAction(id: string) {
-  const db = await requireDb("/updates");
+  const db = await requireDb("/app/updates");
   await markUpdateSent(db, id, null, new Date());
-  revalidatePath("/updates");
-  revalidatePath("/");
+  revalidatePath("/app/updates");
+  revalidatePath("/app");
 }

@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 /* Design tokens. Dark is the default look; light follows the system setting.
-   Gold is XP / progress, green is done, red is overdue — used sparingly. */
+   Gold is the one accent: brand, actions, progress. Green and red only carry
+   meaning — money in / done, money out / overdue — never decoration. */
 :root {
   --bg: #0e0f13;
   --surface: #17191f;
@@ -23,7 +24,8 @@
     --border: #e1e1da;
     --text: #15171c;
     --muted: #5e6470;
-    --gold: #c98a06;
+    /* Deeper in light mode for contrast: 5.5:1 under white text, 5:1 as text (WCAG AA). */
+    --gold: #8f6000;
     --green: #128a5a;
     --red: #d63c2f;
     --on-gold: #ffffff;

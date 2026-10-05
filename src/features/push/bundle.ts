@@ -43,7 +43,7 @@ export function planNotifications(nudges: readonly OutgoingNudge[], threshold = 
       push({
         title: `${firm ? "Paddie, again: " : ""}${overdue.length} things need you`,
         body: `${list(overdue.map((n) => n.title ?? "a task"))}. Pick one.`,
-        url: "/",
+        url: "/app",
         tag: "bundle-overdue",
       });
     } else {
@@ -59,7 +59,7 @@ export function planNotifications(nudges: readonly OutgoingNudge[], threshold = 
       push({
         title: allTomorrow ? "Tomorrow" : "Coming up",
         body: upcoming.map((n) => (n.due ? `${n.title} ${n.due}` : n.title)).join(" · "),
-        url: "/",
+        url: "/app",
         tag: "bundle-upcoming",
       });
     } else {

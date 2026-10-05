@@ -17,7 +17,7 @@ export async function PantryScreen({ db }: { db: Db }) {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex items-center gap-3">
-        <Link href="/money" className="text-muted" aria-label="Back to money">‹ Money</Link>
+        <Link href="/app/money" className="text-muted" aria-label="Back to money">‹ Money</Link>
         <h1 className="text-2xl font-bold">Pantry</h1>
       </header>
 

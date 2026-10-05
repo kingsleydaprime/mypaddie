@@ -25,3 +25,21 @@ export async function updateIdentity(db: Db, changes: { id?: string; name?: stri
   if (error) throw new Error(`updating identity: ${error.message}`);
   return data ? { result: "updated" as const, ...data } : { result: "not_found" as const };
 }
+
+export async function listIdentities(db: Db) {
+  const { data, error } = await db.from("identity_profiles").select("id, name, text, is_active, created_at").order("created_at", { ascending: false });
+  if (error) throw new Error(`loading identity versions: ${error.message}`);
+  return data;
+}
+
+/** A separate version, kept alongside the others; optionally made the active one. */
+export async function saveIdentityVersion(db: Db, name: string, text: string, activate: boolean) {
+  const { data, error } = await db.rpc("save_identity", { p_name: name, p_text: text, p_activate: activate });
+  if (error) throw new Error(`saving identity: ${error.message}`);
+  return data;
+}
+
+export async function activateIdentity(db: Db, id: string) {
+  const { error } = await db.rpc("activate_identity", { p_id: id });
+  if (error) throw new Error(`switching identity: ${error.message}`);
+}

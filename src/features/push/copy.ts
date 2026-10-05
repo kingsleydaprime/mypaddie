@@ -43,7 +43,7 @@ function defaultCopy(n: Nudge): NotificationCopy {
     return {
       title: "Today's three",
       body: items.length > 0 ? `${items.join(" · ")}. Pick one.` : "Nothing scheduled. Suspicious, but fine. Go live.",
-      url: "/",
+      url: "/app",
       tag: "brief",
     };
   }
@@ -54,10 +54,10 @@ function defaultCopy(n: Nudge): NotificationCopy {
     const still = missing.length ? `Still missing: ${missing.join(", ")}.` : "Everything's ready — submit early.";
     const closes = n.due ? ` Closes ${n.due} your time.` : "";
     const tag = `application-${task}`;
-    if (n.level === 6) return { title: task, body: "Rolling deadline — places go to early applicants. Apply soon.", url: "/applications", tag };
-    if (n.level === 7) return { title: task, body: "Results are due around now. Check your email and the portal.", url: "/applications", tag };
+    if (n.level === 6) return { title: task, body: "Rolling deadline — places go to early applicants. Apply soon.", url: "/app/applications", tag };
+    if (n.level === 7) return { title: task, body: "Results are due around now. Check your email and the portal.", url: "/app/applications", tag };
     const when = n.level === 5 ? "Your target is today" : `${n.days ?? "A few"} days to your target`;
-    return { title: `${task}: ${when}`, body: `${still}${closes}`, url: "/applications", tag };
+    return { title: `${task}: ${when}`, body: `${still}${closes}`, url: "/app/applications", tag };
   }
   if (n.kind === "event") {
     const celebrates = n.eventKind === "birthday" || n.eventKind === "anniversary";
@@ -66,15 +66,15 @@ function defaultCopy(n: Nudge): NotificationCopy {
     const tag = `event-${task}`;
     switch (n.level) {
       case 1:
-        return { title: `In ${n.days ?? "a few"} days`, body: celebrates ? `${task}. Sort a gift or a plan now, not the night before.` : `${task}${at}. Anything to prepare?`, url: "/", tag };
+        return { title: `In ${n.days ?? "a few"} days`, body: celebrates ? `${task}. Sort a gift or a plan now, not the night before.` : `${task}${at}. Anything to prepare?`, url: "/app", tag };
       case 2:
-        return { title: `Tomorrow${at}`, body: celebrates ? `${task} is tomorrow.` : `${task}. Get what you need ready tonight.`, url: "/", tag };
+        return { title: `Tomorrow${at}`, body: celebrates ? `${task} is tomorrow.` : `${task}. Get what you need ready tonight.`, url: "/app", tag };
       case 3:
         return celebrates
-          ? { title: n.eventKind === "birthday" ? `It's ${who}'s birthday` : `${task} today`, body: "Call or text. A voice note counts.", url: "/", tag }
-          : { title: `Today${at}`, body: `${task}. Plan the day around it.`, url: "/", tag };
+          ? { title: n.eventKind === "birthday" ? `It's ${who}'s birthday` : `${task} today`, body: "Call or text. A voice note counts.", url: "/app", tag }
+          : { title: `Today${at}`, body: `${task}. Plan the day around it.`, url: "/app", tag };
       default:
-        return { title: "In 30 minutes", body: `${task}${at}. Time to move.`, url: "/", tag };
+        return { title: "In 30 minutes", body: `${task}${at}. Time to move.`, url: "/app", tag };
     }
   }
   if (n.kind === "reminder") {
@@ -87,13 +87,13 @@ function defaultCopy(n: Nudge): NotificationCopy {
       ["In 10 minutes", `${task}. Go.`],
     ];
     const [title, body] = ladder[Math.min(Math.max(n.level, 1), 4) - 1]!;
-    return { title, body, url: "/", tag: `task-${task}` };
+    return { title, body, url: "/app", tag: `task-${task}` };
   }
   if (n.kind === "headsup") {
-    return { title: n.due ? `Coming up at ${n.due}` : "Coming up", body: `${task}. Get ready.`, url: "/", tag: `task-${task}` };
+    return { title: n.due ? `Coming up at ${n.due}` : "Coming up", body: `${task}. Get ready.`, url: "/app", tag: `task-${task}` };
   }
   if (n.kind === "checkin") {
-    return { title: task, body: "Time's passed. Did you do it?", url: "/", tag: `task-${task}` };
+    return { title: task, body: "Time's passed. Did you do it?", url: "/app", tag: `task-${task}` };
   }
 
   const escalation = [
@@ -103,5 +103,5 @@ function defaultCopy(n: Nudge): NotificationCopy {
     `Last nudge for ${task} today. Late still earns XP. Go.`,
   ];
   const level = Math.min(Math.max(n.level, 1), escalation.length);
-  return { title: level >= 3 ? "Paddie, again" : "Paddie", body: escalation[level - 1]!, url: "/", tag: `task-${task}` };
+  return { title: level >= 3 ? "Paddie, again" : "Paddie", body: escalation[level - 1]!, url: "/app", tag: `task-${task}` };
 }

@@ -34,15 +34,15 @@ export async function logWorkoutAction(input: unknown): Promise<LogWorkoutResult
   const parsed = payload.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the numbers" };
   const v = parsed.data;
-  const db = await requireDb("/workout");
+  const db = await requireDb("/app/workout");
   try {
     const logged = await logWorkout(
       db,
       { day: v.day ?? undefined, durationMinutes: v.durationMinutes, feel: v.feel ?? undefined, notes: v.notes || undefined, entries: v.entries },
       new Date(),
     );
-    revalidatePath("/");
-    revalidatePath("/workout");
+    revalidatePath("/app");
+    revalidatePath("/app/workout");
     return {
       ok: true,
       xp: logged.completed.result === "completed" ? logged.completed.xp : null,

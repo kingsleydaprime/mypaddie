@@ -32,7 +32,7 @@ export async function addItemAction(_prev: AddItemState, formData: FormData): Pr
     return { error: "The cheapest version can't cost more than what you spend now" };
   }
 
-  const db = await requireDb("/quests/new");
+  const db = await requireDb("/app/quests/new");
   await addItem(db, {
     tier: v.tier,
     title: v.title,
@@ -41,5 +41,5 @@ export async function addItemAction(_prev: AddItemState, formData: FormData): Pr
     floorAmount: v.floor_amount,
     comfortableAmount: v.comfortable_amount,
   });
-  redirect(`/quests?tier=${v.tier}`);
+  redirect(`/app/quests?tier=${v.tier}`);
 }

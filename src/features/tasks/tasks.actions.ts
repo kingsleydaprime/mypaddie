@@ -11,7 +11,7 @@ const time = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export async function saveTaskAction(_prev: TaskFormState, form: FormData): Promise<TaskFormState> {
   const id = String(form.get("id"));
-  const db = await requireDb(`/tasks/${id}`);
+  const db = await requireDb(`/app/tasks/${id}`);
   const title = String(form.get("title") ?? "").trim();
   const date = String(form.get("date") ?? "");
   const t = String(form.get("time") ?? "");
@@ -43,13 +43,13 @@ export async function saveTaskAction(_prev: TaskFormState, form: FormData): Prom
 }
 
 export async function taskAction(id: string, action: "cancel" | "stop" | "delete"): Promise<TaskFormState> {
-  const db = await requireDb(`/tasks/${id}`);
+  const db = await requireDb(`/app/tasks/${id}`);
   if (action === "delete") {
     const r = await deleteTask(db, id);
     if (r.result === "has_history") return { error: "It has history (XP or slips), so it stays on the record. Cancel it instead." };
-    redirect("/");
+    redirect("/app");
   }
   const r = await updateTask(db, id, {}, action);
   if (r.result === "already_done") return { error: "It's already done." };
-  redirect("/");
+  redirect("/app");
 }

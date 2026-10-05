@@ -74,7 +74,7 @@ describe("copyFor", () => {
     expect(copyFor({ kind: "application", level: 3, title: "Scholarship X", items: ["Essay", "2nd reference"], days: 3, due: "Mon 16 Nov 05:59" })).toMatchObject({
       title: "Scholarship X: 3 days to your target",
       body: "Still missing: Essay, 2nd reference. Closes Mon 16 Nov 05:59 your time.",
-      url: "/applications",
+      url: "/app/applications",
     });
     expect(copyFor({ kind: "application", level: 5, title: "Job Y", items: [], due: null }).body).toBe("Everything's ready — submit early.");
   });
