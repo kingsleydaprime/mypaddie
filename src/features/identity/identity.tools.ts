@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
+import { updateIdentity } from "./identity.repo";
 
 export function registerIdentityTools(server: McpServer) {
   server.registerTool(
@@ -50,6 +51,31 @@ export function registerIdentityTools(server: McpServer) {
         return ok(await withMode(db, new Date(), { id, name: args.name, active: args.activate }));
       } catch (error) {
         return toolError(`save_identity failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "update_identity",
+    {
+      title: "Update identity",
+      description:
+        "Edit a 'Who I'm becoming' profile in place (default: the active one) — refine wording, add a trait, " +
+        "remove something he's outgrown. Write it in his words, first person. Use save_identity instead when he " +
+        "wants a separate version to switch between (e.g. 'this month I'm working on…').",
+      inputSchema: z.object({
+        id: z.uuid().optional(),
+        name: z.string().trim().min(1).optional(),
+        text: z.string().trim().min(1).optional(),
+      }),
+    },
+    async (args: { id?: string; name?: string; text?: string }, ctx: ToolContext) => {
+      try {
+        if (!args.name && !args.text) return toolError("update_identity: give a new name and/or text");
+        const db = dbFrom(ctx);
+        return ok(await withMode(db, new Date(), { ...(await updateIdentity(db, args)) }));
+      } catch (error) {
+        return toolError(`update_identity failed: ${(error as Error).message}`);
       }
     },
   );
