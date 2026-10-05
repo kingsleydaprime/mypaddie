@@ -1,11 +1,11 @@
-import type { PillarWeight } from "@/features/xp/split";
+import { validateWeights, type PillarWeight } from "@/features/xp/split";
 import { completionXp, ignoredNeedDeduction, isLate, type SlipForXp, type TaskForXp } from "@/features/xp/xp";
 import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
 import type { Tier } from "@/shared/domain";
 import type { Json } from "@/shared/supabase/database.types";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, zonedInstant } from "@/shared/time";
-import { planOccurrences, type SeriesForSpawn } from "./recurrence";
+import { parseRecurrence, planOccurrences, type SeriesForSpawn } from "./recurrence";
 
 /** How far back catch-up looks for ignored needs and recurring templates. */
 const LOOKBACK_DAYS = 14;
@@ -192,4 +192,56 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = D
     late: isLate(task, now),
     title: task.title,
   };
+}
+
+export interface NewTask {
+  title: string;
+  itemId: string | null;
+  baseXp: number;
+  /** Local date "YYYY-MM-DD"; defaults to today. */
+  dueDate: string | null;
+  /** Local time "HH:MM"; null = any time that day. */
+  dueTime: string | null;
+  /** RRULE subset; null = one-off. */
+  recurrence: string | null;
+  nonNegotiable: boolean;
+  weights: PillarWeight[];
+}
+
+/**
+ * Creates a task and its pillar weights. Weights and recurrence are validated
+ * before anything is written; if the weights insert still fails, the task row
+ * is removed again so there's never a task that can't pay XP.
+ */
+export async function createTask(db: Db, task: NewTask, now: Date, config = DEFAULT_CONFIG) {
+  validateWeights(task.weights);
+  if (task.recurrence) parseRecurrence(task.recurrence);
+
+  const day = task.dueDate ?? dayKey(now, config.timeZone);
+  const dueAt = task.dueTime ? zonedInstant(day, task.dueTime, config.timeZone) : task.dueDate ? zonedInstant(day, "23:59", config.timeZone) : null;
+
+  const { data, error } = await db
+    .from("tasks")
+    .insert({
+      title: task.title,
+      item_id: task.itemId,
+      base_xp: task.baseXp,
+      due_at: dueAt?.toISOString() ?? null,
+      recurrence: task.recurrence,
+      is_non_negotiable: task.nonNegotiable,
+      series_id: task.recurrence ? crypto.randomUUID() : null,
+      occurs_on: task.recurrence ? day : null,
+    })
+    .select("id, title, due_at, recurrence")
+    .single();
+  if (error) fail("creating the task", error);
+
+  const { error: weightError } = await db
+    .from("task_pillars")
+    .insert(task.weights.map((w) => ({ task_id: data.id, pillar: w.pillar, weight: w.weight })));
+  if (weightError) {
+    await db.from("tasks").delete().eq("id", data.id);
+    fail("saving pillar weights", weightError);
+  }
+  return data;
 }

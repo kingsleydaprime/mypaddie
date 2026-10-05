@@ -51,3 +51,8 @@ export async function loadMode(db: Db, now: Date, config = DEFAULT_CONFIG): Prom
     config,
   );
 }
+
+/** Every tool reply carries the current mode, so the AI always knows how firm to be. */
+export async function withMode<T extends Record<string, unknown>>(db: Db, now: Date, data: T) {
+  return { ...data, mode: await loadMode(db, now) };
+}
