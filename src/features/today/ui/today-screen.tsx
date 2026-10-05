@@ -1,5 +1,6 @@
 import { upcoming } from "@/features/events/events";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
+import { loadLearning } from "@/features/learning/learning.repo";
 import { loadMode } from "@/features/mode/mode.repo";
 import type { Mode } from "@/shared/domain";
 import { catchUp, loadTasksAroundToday } from "@/features/tasks/tasks.repo";
@@ -44,7 +45,10 @@ function Row({ item, now, big }: { item: FocusItem; now: Date; big?: boolean }) 
 export async function TodayScreen({ db }: { db: Db }) {
   const now = new Date();
   await catchUp(db, now);
-  const [tasks, mode, events] = await Promise.all([loadTasksAroundToday(db, now), loadMode(db, now), loadUpcomingEvents(db)]);
+  const [tasks, mode, events, learning] = await Promise.all([loadTasksAroundToday(db, now), loadMode(db, now), loadUpcomingEvents(db), loadLearning(db, now)]);
+  const review = learning
+    .filter((l) => l.skill.status === "active")
+    .flatMap((l) => l.summary.reviewDue.map((t) => `${t.topic} (${l.skill.name})`));
   const soon = upcoming(events, now, 7);
   const todayEvents = soon.filter((e) => e.daysAway === 0);
   const prepare = soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now");
@@ -93,6 +97,14 @@ export async function TodayScreen({ db }: { db: Db }) {
             ))}
           </ul>
         </details>
+      )}
+
+      {review.length > 0 && (
+        <p className="text-sm text-muted">
+          <span className="font-medium text-gold">Worth a quick review: </span>
+          {review.slice(0, 2).join(", ")}
+          {review.length > 2 && ` +${review.length - 2}`}
+        </p>
       )}
 
       {focus.doneToday > 0 && <p className="text-center text-sm text-muted">{focus.doneToday} done today.</p>}

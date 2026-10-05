@@ -24,7 +24,7 @@ const LOOKBACK_DAYS = 14;
 const SERIES_LOOKBACK_DAYS = 60;
 
 const TASK_COLUMNS =
-  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, item_id, items(tier), task_pillars(pillar, weight)";
+  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, item_id, items(tier), task_pillars(pillar, weight)";
 
 type TaskRow = {
   id: string;
@@ -36,6 +36,7 @@ type TaskRow = {
   is_non_negotiable: boolean;
   must_from: string | null;
   duration_minutes: number | null;
+  skill_id: string | null;
   item_id: string | null;
   items: { tier: Tier } | null;
   task_pillars: PillarWeight[];
@@ -179,7 +180,7 @@ export async function catchUp(db: Db, now: Date, config = DEFAULT_CONFIG): Promi
 }
 
 export type CompleteResult =
-  | { result: "completed"; xp: number; late: boolean; title: string }
+  | { result: "completed"; xp: number; late: boolean; title: string; practiceLogged?: { minutes: number } }
   | { result: "already_done" | "cancelled" | "not_found"; title: string | null };
 
 /** Marks a task done and pays its weighted XP, atomically and at most once. */
@@ -204,7 +205,26 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = D
 
   const result = (outcome as { result: string }).result;
   if (result !== "completed") return { result: result as "already_done", title: task.title };
+
+  // Practice for a skill: record the time. No XP here — the task just paid it.
+  let practiceLogged: { minutes: number } | undefined;
+  if (data.skill_id) {
+    const minutes = data.duration_minutes ?? DEFAULT_DURATION;
+    const { error: practiceError } = await db.rpc("record_learning", {
+      p_skill_id: data.skill_id,
+      p_topic: null as unknown as string,
+      p_minutes: minutes,
+      p_count: null as unknown as number,
+      p_unit: null as unknown as string,
+      p_confidence: null as unknown as number,
+      p_notes: `From task: ${task.title}`,
+      p_at: now.toISOString(),
+      p_xp: [] as unknown as Json,
+    });
+    if (!practiceError) practiceLogged = { minutes };
+  }
   return {
+    ...(practiceLogged ? { practiceLogged } : {}),
     result: "completed",
     xp: entries.reduce((sum, e) => sum + e.amount, 0),
     late: isLate(timed, now),
@@ -298,6 +318,8 @@ export interface NewTask {
   mustFrom?: Date | null;
   /** Book it even if it overlaps something (never bypasses capacity). */
   forceClash?: boolean;
+  /** Completing it logs practice time for this skill. */
+  skillId?: string | null;
 }
 
 export type Reminder = "eve" | "morning" | "30" | "10";
@@ -342,6 +364,7 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = DEFA
       duration_minutes: task.durationMinutes ?? null,
       reminders: task.reminders ?? null,
       must_from: task.mustFrom?.toISOString() ?? null,
+      skill_id: task.skillId ?? null,
     })
     .select("id, title, due_at, recurrence")
     .single();
@@ -373,6 +396,7 @@ export interface TaskChanges {
   reminders?: Reminder[] | null;
   mustFrom?: Date | null;
   forceClash?: boolean;
+  skillId?: string | null;
 }
 
 export type UpdateResult =
@@ -482,6 +506,7 @@ export async function updateTask(
     if (changes.durationMinutes !== undefined) patch.duration_minutes = changes.durationMinutes;
     if (changes.reminders !== undefined) patch.reminders = changes.reminders;
     if (changes.mustFrom !== undefined) patch.must_from = changes.mustFrom?.toISOString() ?? null;
+    if (changes.skillId !== undefined) patch.skill_id = changes.skillId;
     if (moves) patch.due_at = newDueAt(row);
     if (Object.keys(patch).length > 0) {
       const { error: e } = await db.from("tasks").update(patch).eq("id", row.id);

@@ -22,8 +22,8 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [x] **Learning log.** Skills, sessions (topic, minutes, count, confidence),
   1 XP / 5 min to the skill's pillar, streaks, spaced-repetition review by
   confidence; Learning section on Stats.
-- [ ] Link a task to a skill so completing "LeetCode 1h" logs the session too.
-- [ ] Review topics surface in the morning brief / get_today.
+- [x] Link a task to a skill so completing "LeetCode 1h" logs the session too.
+- [x] Review topics surface in get_today and on Today (not in the push brief: that's built in SQL).
 - [x] **Workout plans.** Training days become weekly tasks; today's workout with
   last time's numbers; logs, personal bests; Training on Stats.
 - [x] **Pantry and meals.** Stock with units and low levels, shopping list,
@@ -37,6 +37,14 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [x] **Who I'm becoming**: in every get_today; `update_identity`; on Paddie tab.
 - [ ] Events in the app (list + add), and a "Plan my day" button on Today.
 - [ ] "Close" (7 days) and meal times as settings.
+
+## Later (ideas, 2026-10-05)
+- [ ] **Applications** (jobs, scholarships…): link, org, deadline, requirements
+  checklist → tasks, pipeline status, deadline reminders.
+- [ ] **Updates** (to a manager, a person, a spreadsheet): recipient + channel +
+  cadence on top of tasks; `draft_update` from what was done since the last one.
+- [ ] **Google Calendar import** via the private iCal URL (read-only, no Google
+  OAuth): imported events count for clashes, capacity, reminders and plan_day.
 
 ## Known gaps
 - Dead push subscriptions aren't pruned yet: `/api/push` reports them as

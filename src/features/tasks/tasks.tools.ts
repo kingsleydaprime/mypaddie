@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
 import { PILLARS } from "@/shared/domain";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
+import { findOrCreateSkill } from "@/features/learning/learning.repo";
 import { completeTask, createTask, deleteTask, updateTask } from "./tasks.repo";
 
 const weightsSchema = z
@@ -46,6 +47,7 @@ export function registerTaskTools(server: McpServer) {
         reminders: reminders.optional(),
         becomes_must_do_at: z.iso.datetime({ offset: true }).optional().describe("When it turns non-negotiable, e.g. 2026-10-15T09:00:00+01:00"),
         force_clash: z.boolean().default(false).describe("Only after he confirms a double-booking"),
+        skill: z.string().trim().min(1).optional().describe("Completing it logs practice time for this skill (e.g. 'LeetCode 1h' → DSA)"),
       }),
     },
     async (
@@ -62,12 +64,14 @@ export function registerTaskTools(server: McpServer) {
         reminders?: ("eve" | "morning" | "30" | "10")[];
         becomes_must_do_at?: string;
         force_clash: boolean;
+        skill?: string;
       },
       ctx: ToolContext,
     ) => {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
+        const skillId = args.skill ? (await findOrCreateSkill(db, args.skill)).skill.id : null;
         const outcome = await createTask(
           db,
           {
@@ -83,6 +87,7 @@ export function registerTaskTools(server: McpServer) {
             reminders: args.reminders ?? null,
             mustFrom: args.becomes_must_do_at ? new Date(args.becomes_must_do_at) : null,
             forceClash: args.force_clash,
+            skillId,
           },
           now,
         );
@@ -117,6 +122,7 @@ export function registerTaskTools(server: McpServer) {
         reminders: reminders.nullable().optional().describe("null = back to the default ladder"),
         becomes_must_do_at: z.iso.datetime({ offset: true }).nullable().optional(),
         force_clash: z.boolean().default(false),
+        skill: z.string().trim().min(1).nullable().optional().describe("null = unlink"),
       }),
     },
     async (
@@ -134,11 +140,13 @@ export function registerTaskTools(server: McpServer) {
         reminders?: ("eve" | "morning" | "30" | "10")[] | null;
         becomes_must_do_at?: string | null;
         force_clash: boolean;
+        skill?: string | null;
       },
       ctx: ToolContext,
     ) => {
       try {
         const db = dbFrom(ctx);
+        const skillId = args.skill === undefined ? undefined : args.skill === null ? null : (await findOrCreateSkill(db, args.skill)).skill.id;
         const outcome = await updateTask(
           db,
           args.task_id,
@@ -154,6 +162,7 @@ export function registerTaskTools(server: McpServer) {
             reminders: args.reminders,
             mustFrom: args.becomes_must_do_at === undefined ? undefined : args.becomes_must_do_at ? new Date(args.becomes_must_do_at) : null,
             forceClash: args.force_clash,
+            skillId,
           },
           args.action,
         );

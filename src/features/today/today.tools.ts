@@ -3,6 +3,7 @@ import { z } from "zod";
 import { upcoming } from "@/features/events/events";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
 import { loadActiveIdentity } from "@/features/identity/identity.repo";
+import { loadLearning } from "@/features/learning/learning.repo";
 import { loadMode } from "@/features/mode/mode.repo";
 import { loadMoneyStage } from "@/features/money/money.repo";
 import type { MoneyStage } from "@/features/money/stage";
@@ -53,7 +54,7 @@ export function registerTodayTools(server: McpServer) {
         const db = dbFrom(ctx);
         const now = new Date();
         const caughtUp = await catchUp(db, now);
-        const [tasks, mode, money, capacity, dayTasks, identity, events] = await Promise.all([
+        const [tasks, mode, money, capacity, dayTasks, identity, events, learning] = await Promise.all([
           loadTasksAroundToday(db, now),
           loadMode(db, now),
           loadMoneyStage(db, now),
@@ -61,6 +62,7 @@ export function registerTodayTools(server: McpServer) {
           loadDayTasks(db, dayKey(now, tz)),
           loadActiveIdentity(db),
           loadUpcomingEvents(db),
+          loadLearning(db, now),
         ]);
         const soon = upcoming(events, now, 7);
         const room = roomOn(dayKey(now, tz), dayTasks, capacity, now);
@@ -75,6 +77,11 @@ export function registerTodayTools(server: McpServer) {
           // How full today is, in minutes. Mention only if he's near or over, or asks.
           plate: { capacity: room.capacity, committed: room.committed, available: room.available, label: room.label },
           caughtUp,
+          // Topics due for review (spaced repetition). Offer one as a short practice, don't list them all.
+          reviewDue: learning
+            .filter((l) => l.skill.status === "active")
+            .flatMap((l) => l.summary.reviewDue.map((t) => ({ skill: l.skill.name, topic: t.topic, confidence: t.confidence })))
+            .slice(0, 5),
           // Today's events, and important ones within the week (prepare for those).
           events: {
             today: soon.filter((e) => e.daysAway === 0).map((e) => ({ title: e.title, kind: e.kind, at: e.allDay ? "all day" : formatLocal(e.at, tz) })),

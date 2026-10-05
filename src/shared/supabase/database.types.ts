@@ -239,13 +239,13 @@ isOneToOne: false
                   ]
                 },"tasks": {
                   Row: {
-                    "base_xp": number,"created_at": string,"done_at": string | null,"due_at": string | null,"duration_minutes": number | null,"id": string,"is_non_negotiable": boolean,"item_id": string | null,"must_from": string | null,"occurs_on": string | null,"recurrence": string | null,"reminders": (string)[] | null,"series_id": string | null,"status": Database["public"]['Enums']["task_status"],"title": string,"user_id": string
+                    "base_xp": number,"created_at": string,"done_at": string | null,"due_at": string | null,"duration_minutes": number | null,"id": string,"is_non_negotiable": boolean,"item_id": string | null,"must_from": string | null,"occurs_on": string | null,"recurrence": string | null,"reminders": (string)[] | null,"series_id": string | null,"skill_id": string | null,"status": Database["public"]['Enums']["task_status"],"title": string,"user_id": string
                   }
                   Insert: {
-                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title": string,"user_id"?: string
+                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title": string,"user_id"?: string
                   }
                   Update: {
-                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"user_id"?: string
+                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -253,6 +253,12 @@ isOneToOne: false
       columns: ["item_id","user_id"]
 isOneToOne: false
       referencedRelation: "items"
+      referencedColumns: ["id","user_id"]
+    },{
+      foreignKeyName: "tasks_skill_id_user_id_fkey"
+      columns: ["skill_id","user_id"]
+isOneToOne: false
+      referencedRelation: "skills"
       referencedColumns: ["id","user_id"]
     }
                   ]

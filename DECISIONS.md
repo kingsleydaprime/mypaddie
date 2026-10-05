@@ -350,3 +350,11 @@ while capacity allows. Accepting writes times through `updateTask` (clash and
 capacity re-checked). A recurring habit's time is *not* written: each new
 day copies the latest row, so planning one day would silently re-time the
 habit forever.
+
+### Practice tasks log time, not extra XP
+A task can be linked to a skill (`tasks.skill_id`). Completing it records a
+learning session for its duration (30 min if unknown) — so hours and streaks
+count — but with no XP: the task already paid it, and paying twice would make
+linked tasks worth double. Topics due for review appear in get_today and as one
+quiet line on Today; the push brief stays task-only because it's assembled in
+SQL and the review schedule lives in TypeScript.
