@@ -162,13 +162,13 @@ isOneToOne: false
                   ]
                 },"tasks": {
                   Row: {
-                    "base_xp": number,"created_at": string,"done_at": string | null,"due_at": string | null,"id": string,"is_non_negotiable": boolean,"item_id": string | null,"occurs_on": string | null,"recurrence": string | null,"series_id": string | null,"status": Database["public"]['Enums']["task_status"],"title": string,"user_id": string
+                    "base_xp": number,"created_at": string,"done_at": string | null,"due_at": string | null,"duration_minutes": number | null,"id": string,"is_non_negotiable": boolean,"item_id": string | null,"must_from": string | null,"occurs_on": string | null,"recurrence": string | null,"reminders": (string)[] | null,"series_id": string | null,"status": Database["public"]['Enums']["task_status"],"title": string,"user_id": string
                   }
                   Insert: {
-                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"series_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title": string,"user_id"?: string
+                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title": string,"user_id"?: string
                   }
                   Update: {
-                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"series_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"user_id"?: string
+                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
