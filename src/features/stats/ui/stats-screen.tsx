@@ -1,10 +1,13 @@
 import type { Db } from "@/shared/supabase/token-client";
+import { loadLearning } from "@/features/learning/learning.repo";
 import { loadStats } from "../stats.repo";
 
 const label = (name: string) => name[0]!.toUpperCase() + name.slice(1);
 
 export async function StatsScreen({ db }: { db: Db }) {
-  const stats = await loadStats(db, new Date());
+  const now = new Date();
+  const [stats, learning] = await Promise.all([loadStats(db, now), loadLearning(db, now)]);
+  const activeSkills = learning.filter((l) => l.skill.status === "active");
   const ranked = [...stats.pillars].sort((a, b) => b.xp - a.xp);
   const totalXp = stats.pillars.reduce((s, p) => s + Math.max(0, p.xp), 0);
   const weekXp = stats.pillars.reduce((s, p) => s + p.lastWeek, 0);
@@ -49,6 +52,38 @@ export async function StatsScreen({ db }: { db: Db }) {
           </li>
         ))}
       </ul>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-bold">Learning</h2>
+        {activeSkills.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-line px-4 py-3 text-sm text-muted">
+            Nothing logged yet. Tell Paddie &ldquo;did 45 min of DSA, sliding window&rdquo;.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {activeSkills.map(({ skill, summary }) => (
+              <li key={skill.id} className="rounded-2xl border border-line bg-surface px-4 py-3">
+                <div className="flex items-baseline justify-between">
+                  <span className="font-semibold">{skill.name}</span>
+                  <span className="text-xs text-muted">{label(skill.pillar)}</span>
+                </div>
+                <p className="mt-1 text-sm text-muted">
+                  {(summary.last30Minutes / 60).toFixed(1)}h last 30 days
+                  {summary.streakDays > 0 && <span className="text-gold"> · {summary.streakDays}-day streak</span>}
+                  {Object.entries(summary.counts).map(([unit, n]) => ` · ${n} ${unit}`).join("")}
+                </p>
+                {summary.reviewDue.length > 0 && (
+                  <p className="mt-1 text-sm">
+                    <span className="font-medium text-gold">Review: </span>
+                    {summary.reviewDue.slice(0, 4).map((t) => t.topic).join(", ")}
+                    {summary.reviewDue.length > 4 && ` +${summary.reviewDue.length - 4}`}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="rounded-2xl border border-line bg-surface p-4">
         <h2 className="font-bold">Slips, last 14 days</h2>

@@ -19,8 +19,11 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [x] **Reminder ladder**: evening before, 09:00 on the day, 30 and 10 minutes before.
 - [x] **Becomes a must-do later** (`must_from`).
 - [x] **delete_task** for mistakes (tasks with no history).
-- [ ] **Learning log.** Skill, topic, minutes, notes; pays skills/academic XP;
-  Stats shows time per skill.
+- [x] **Learning log.** Skills, sessions (topic, minutes, count, confidence),
+  1 XP / 5 min to the skill's pillar, streaks, spaced-repetition review by
+  confidence; Learning section on Stats.
+- [ ] Link a task to a skill so completing "LeetCode 1h" logs the session too.
+- [ ] Review topics surface in the morning brief / get_today.
 - [ ] **Workout plans.** Each training day's exercises (sets, reps), and a log of
   what was actually done.
 - [ ] **Pantry and meals.** What's in stock; the AI suggests meals from it;

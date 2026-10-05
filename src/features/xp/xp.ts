@@ -11,7 +11,8 @@ export type XpReason =
   | "goal_completion"
   | "wish_fulfilled"
   | "dream_milestone"
-  | "transaction_logged";
+  | "transaction_logged"
+  | "learning";
 
 /** One row destined for `xp_log`. */
 export interface XpEntry {

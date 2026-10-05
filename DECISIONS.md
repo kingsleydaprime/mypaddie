@@ -275,3 +275,22 @@ is chased on both.
 A task with XP or slips is part of the record (and the XP ledger is
 append-only), so it can only be cancelled or stopped. Tasks with no history
 can be deleted.
+
+## 2026-10-05 — Learning log
+
+### Skills and sessions, not just tasks
+A task says *what to do*; a session records *what was learned* (topic,
+minutes, count + unit, confidence, notes). Skills are created on first
+mention ("DSA" = "dsa": unique on `lower(name)`; a simultaneous create is
+caught by the index and reuses the winner's row). Each skill has one pillar —
+`skills` for DSA/LeetCode, `academic` for coursework — and can link to a goal.
+
+### XP: 1 per 5 minutes, to the skill's pillar
+45 min = 9 XP, comparable to a normal task (10). At least 1, at most 60 per
+session. Idempotent per session, like tasks (`xp_log.learning_session_id`).
+
+### Spaced repetition by confidence
+A topic's latest confidence sets when it's due again: 1→1 day, 2→2, 3→4,
+4→7, 5→14. Simple Leitner-style intervals rather than an SM-2 algorithm —
+enough to bring shaky topics back soon and solid ones later, explainable in
+one line.
