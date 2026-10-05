@@ -1,6 +1,6 @@
 /** One nudge as decided by the database (private.collect_nudges). */
 export interface Nudge {
-  kind: "nudge" | "checkin" | "brief" | "headsup";
+  kind: "nudge" | "checkin" | "brief" | "headsup" | "reminder";
   level: number;
   title: string | null;
   items: string[] | null;
@@ -34,6 +34,18 @@ export function copyFor(n: Nudge): NotificationCopy {
   }
 
   const task = n.title ?? "That task";
+  if (n.kind === "reminder") {
+    // Level = which rung of the ladder: 1 evening before, 2 morning of, 3 in 30 min, 4 in 10 min.
+    const at = n.due ? ` at ${n.due}` : "";
+    const ladder: [string, string][] = [
+      [`Tomorrow${at}`, `${task}. Sort what you need tonight.`],
+      [`Today${at}`, `${task}. Plan the day around it.`],
+      ["In 30 minutes", `${task}${at}. Start wrapping up.`],
+      ["In 10 minutes", `${task}. Go.`],
+    ];
+    const [title, body] = ladder[Math.min(Math.max(n.level, 1), 4) - 1]!;
+    return { title, body, url: "/", tag: `task-${task}` };
+  }
   if (n.kind === "headsup") {
     return { title: n.due ? `Coming up at ${n.due}` : "Coming up", body: `${task}. Get ready.`, url: "/", tag: `task-${task}` };
   }

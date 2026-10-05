@@ -14,10 +14,11 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 ## Next
 - [x] **Academic pillar** (11 pillars). Coursework → academic; DSA/LeetCode → skills.
 - [x] **Edit tasks**: `update_task` (edit / cancel one day / stop a habit). App UI for it comes with Today.
-- [ ] **Time blocks and capacity.** Tasks get an estimated duration.
-  - Conflicts: "you already have a meeting at 9:00–10:00".
-  - Capacity: refuses new work when today/this week is full, unless you're
-    ahead (finished early).
+- [x] **Time blocks and capacity.** Durations, clash check ("you have Standup
+  at 09:00–10:00"), daily capacity (default 6h, editable, date-range periods).
+- [x] **Reminder ladder**: evening before, 09:00 on the day, 30 and 10 minutes before.
+- [x] **Becomes a must-do later** (`must_from`).
+- [x] **delete_task** for mistakes (tasks with no history).
 - [ ] **Learning log.** Skill, topic, minutes, notes; pays skills/academic XP;
   Stats shows time per skill.
 - [ ] **Workout plans.** Each training day's exercises (sets, reps), and a log of
@@ -30,6 +31,8 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - Dead push subscriptions aren't pruned yet: `/api/push` reports them as
   `gone`, but nothing deletes them (the route has no DB access by design).
   A small cron step reading `net._http_response` can do it.
-- Quiet hours (22:00–07:00) and brief time (08:00) are fixed; move to `settings`.
+- Quiet hours (22:00–07:00), brief (08:00), evening reminder (20:00) and morning
+  reminder (09:00) times are fixed; move to `settings`.
+- Capacity only counts the first day of a new habit, not every day it recurs.
 - Edit tasks from the app (tool exists; UI doesn't).
 - pgTAP doesn't run against the hosted project yet (see DECISIONS.md).

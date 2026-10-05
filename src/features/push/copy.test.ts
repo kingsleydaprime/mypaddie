@@ -34,4 +34,12 @@ describe("copyFor", () => {
   test("an empty brief is still friendly", () => {
     expect(copyFor({ kind: "brief", level: 1, title: null, items: [] }).body).toContain("Nothing scheduled");
   });
+
+  test("the reminder ladder: evening, morning, 30, 10", () => {
+    const r = (level: number) => copyFor({ kind: "reminder", level, title: "Standup", items: null, due: "14:00" });
+    expect(r(1)).toMatchObject({ title: "Tomorrow at 14:00", body: "Standup. Sort what you need tonight." });
+    expect(r(2)).toMatchObject({ title: "Today at 14:00" });
+    expect(r(3)).toMatchObject({ title: "In 30 minutes", body: "Standup at 14:00. Start wrapping up." });
+    expect(r(4)).toMatchObject({ title: "In 10 minutes", body: "Standup. Go." });
+  });
 });

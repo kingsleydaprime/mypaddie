@@ -50,10 +50,11 @@ export function planNotifications(nudges: readonly OutgoingNudge[], threshold = 
       for (const n of overdue) push(copyFor(n));
     }
 
-    const upcoming = group.filter((n) => n.kind === "headsup");
+    const upcoming = group.filter((n) => n.kind === "headsup" || n.kind === "reminder");
     if (upcoming.length >= threshold) {
+      const allTomorrow = upcoming.every((n) => n.kind === "reminder" && n.level === 1);
       push({
-        title: "Coming up",
+        title: allTomorrow ? "Tomorrow" : "Coming up",
         body: upcoming.map((n) => (n.due ? `${n.title} ${n.due}` : n.title)).join(" · "),
         url: "/",
         tag: "bundle-upcoming",

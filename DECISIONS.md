@@ -246,3 +246,32 @@ The first live run sent 18 notifications at once (≈9 overdue non-negotiables �
 Each rule now counts only nudges of its own kind: otherwise a heads-up
 suppressed the later check-in and restarted the escalation clock — caught
 while writing the SQL, pinned by a test.
+
+## 2026-10-05 — Time blocks, capacity, reminders
+
+### Capacity is a hard limit; clashes are not
+Your rule: when a day is full, nothing more goes on it. Committed time = the
+durations of that day's *open* tasks (30 min if unknown), so finishing work
+frees room — that's the "unless I finished early" exception, made continuous.
+Today's room is also capped by the time left before 22:00. There's no
+"add it anyway" for capacity; the only lever is `set_capacity`, a deliberate
+change (default 6h, plus date-range periods like exams that override it).
+Clashes (overlapping time blocks) *can* be overridden after confirmation —
+double-booking is sometimes deliberate.
+
+### Reminder ladder instead of one heads-up
+One-off timed tasks: evening before (20:00), 09:00 on the day (if it's more
+than 45 min away), 30 and 10 minutes before. Habits: only 10 minutes before —
+otherwise a daily habit reminds every evening forever. Per-task override via
+`reminders`. Simultaneous reminders bundle ("Tomorrow: Standup 09:00 · …").
+
+### Tasks can become non-negotiable later
+`must_from`: from that moment a task ranks and escalates like a must-do, even
+before it's due — for replying someone, updating the boss. Escalation now
+resets daily (the nudge key includes the day), so a must-do spanning two days
+is chased on both.
+
+### delete_task only for mistakes
+A task with XP or slips is part of the record (and the XP ledger is
+append-only), so it can only be cancelled or stopped. Tasks with no history
+can be deleted.

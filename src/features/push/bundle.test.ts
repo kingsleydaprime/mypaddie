@@ -6,6 +6,7 @@ const laptop = { endpoint: "https://push.example/laptop", p256dh: "k2", auth: "a
 const nudge = (title: string, level = 1, device = phone): OutgoingNudge => ({ ...device, kind: "nudge", level, title, items: null });
 const checkin = (title: string, device = phone): OutgoingNudge => ({ ...device, kind: "checkin", level: 1, title, items: null });
 const headsup = (title: string, due: string, device = phone): OutgoingNudge => ({ ...device, kind: "headsup", level: 0, title, items: null, due });
+const reminder = (title: string, level: number, due: string, device = phone): OutgoingNudge => ({ ...device, kind: "reminder", level, title, items: null, due });
 const brief = (items: string[], device = phone): OutgoingNudge => ({ ...device, kind: "brief", level: 1, title: null, items });
 
 describe("planNotifications", () => {
@@ -53,5 +54,16 @@ describe("planNotifications", () => {
 
   test("nothing in, nothing out", () => {
     expect(planNotifications([])).toEqual([]);
+  });
+
+  test("evening-before reminders bundle as 'Tomorrow'", () => {
+    const out = planNotifications([reminder("Standup", 1, "09:00"), reminder("Call boss", 1, "14:00"), reminder("Gym", 1, "18:00")]);
+    expect(out).toHaveLength(1);
+    expect(out[0]!.copy).toMatchObject({ title: "Tomorrow", body: "Standup 09:00 · Call boss 14:00 · Gym 18:00" });
+  });
+
+  test("mixed reminders bundle as 'Coming up'", () => {
+    const out = planNotifications([reminder("A", 3, "10:30"), reminder("B", 4, "10:10"), headsup("C", "10:15")]);
+    expect(out[0]!.copy.title).toBe("Coming up");
   });
 });
