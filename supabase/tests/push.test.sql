@@ -4,7 +4,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select set_config('search_path', current_setting('search_path') || ', ' || n.nspname, true)
   from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgtap';
-select plan(24);
+select plan(28);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com');
 -- Monday 2026-10-05 rows: a daily non-negotiable at 07:00, a Tue/Thu habit, an ordinary task at 10:00.
@@ -60,15 +60,27 @@ select is((select n->'items' from out2 where n->>'kind' = 'brief'), '["Morning r
 select is((select count(*)::int from jsonb_array_elements(private.collect_nudges('2026-10-06 08:20+01'))), 0,
   'one brief per day');
 
--- 10:15: the email task is overdue → one check-in; reading → level 3.
+-- 09:50: the 10:00 email task starts within 15 minutes → one heads-up.
+create temp table out_h as select jsonb_array_elements(private.collect_nudges('2026-10-06 09:50+01')) as n;
+select is((select n->>'kind' || '/' || (n->>'title') || '/' || (n->>'due') from out_h where n->>'kind' = 'headsup'), 'headsup/Email the lecturer/10:00',
+  '09:50: a heads-up 10 minutes before the timed task, with its time');
+select is((select count(*)::int from jsonb_array_elements(private.collect_nudges('2026-10-06 09:55+01')) n where n->>'kind' = 'headsup'),
+  0, 'only one heads-up per task');
+
+-- 10:15: the email task is overdue → one check-in.
 create temp table out3 as select jsonb_array_elements(private.collect_nudges('2026-10-06 10:15+01')) as n;
-select is((select string_agg(n->>'kind' || '/' || (n->>'level'), ',' order by n->>'kind') from out3), 'checkin/1,nudge/3',
-  '10:15: a check-in for the ordinary task, a third nudge for the reading');
+select is((select string_agg(n->>'kind' || '/' || (n->>'level'), ',' order by n->>'kind') from out3), 'checkin/1',
+  '10:15: the check-in still fires after its heads-up (the reading''s third nudge already went at 09:50)');
 select is((select count(*)::int from jsonb_array_elements(private.collect_nudges('2026-10-06 11:20+01'))), 1, '11:20: fourth nudge');
 select is((select count(*)::int from jsonb_array_elements(private.collect_nudges('2026-10-06 12:30+01')) n where n->>'kind' = 'checkin'),
   0, 'ordinary tasks only get one check-in');
 select is((select count(*)::int from jsonb_array_elements(private.collect_nudges('2026-10-06 13:00+01'))), 0,
   'after four nudges, the non-negotiable stops escalating');
+
+select is((select n->>'title' from jsonb_array_elements(private.collect_nudges('2026-10-06 17:50+01')) n where n->>'kind' = 'headsup'),
+  'Gym', '17:50: heads-up for the 18:00 habit');
+select is((select count(*)::int from jsonb_array_elements(private.collect_nudges('2026-10-06 17:51+01')) n where n->>'kind' = 'nudge'),
+  0, 'a heads-up doesn''t restart or trigger escalation');
 
 -- Doing the task stops its nudges; tomorrow's row starts fresh.
 update public.tasks set status = 'done', done_at = '2026-10-06 18:05+01' where series_id = 'cccccccc-0000-0000-0000-000000000002' and occurs_on = '2026-10-06';
@@ -80,8 +92,8 @@ select is(private.collect_nudges('2026-10-06 22:05+01'), '[]'::jsonb, 'quiet hou
 -- Without Vault secrets, the job runs safely and sends nothing.
 select lives_ok($$select private.send_nudges()$$, 'send_nudges is a no-op until configured');
 
-select is((select count(*)::int from cron.job where jobname = 'mypaddie-nudges' and schedule = '*/10 * * * *'), 1,
-  'the job is scheduled every 10 minutes');
+select is((select count(*)::int from cron.job where jobname = 'mypaddie-nudges' and schedule = '* * * * *'), 1,
+  'the job runs every minute');
 
 select * from finish();
 rollback;
