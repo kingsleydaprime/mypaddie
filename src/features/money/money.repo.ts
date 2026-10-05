@@ -2,7 +2,9 @@ import { DEFAULT_CONFIG } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { computeMoneyStage, type MoneyStage, type TransactionForMoney } from "./stage";
 import type { NeedForDeficit } from "./deficit";
-import { monthlyNeedsTotal, needsOutstanding } from "./purchase";
+import { flagSpend, monthlyNeedsTotal, needsOutstanding } from "./purchase";
+import { transactionLoggedXp } from "@/features/xp/xp";
+import type { Json } from "@/shared/supabase/database.types";
 import { DEFAULT_SPLIT, proposeWaterfall, validateSplit, type SplitPercentages } from "./waterfall";
 import { startOfMonth } from "@/shared/time";
 
@@ -115,4 +117,75 @@ export function proposalFor(income: number, budget: BudgetContext) {
     bufferTarget: budget.bufferTarget,
     split: budget.split,
   });
+}
+
+export interface NewTransaction {
+  amount: number;
+  direction: "in" | "out";
+  category: string;
+  tag: "need" | "want" | "unsure" | null;
+  spendLevel?: "floor" | "comfortable" | null;
+  itemId?: string | null;
+  note?: string | null;
+  /** ISO time it happened, for backfilling; default now. */
+  at?: string | null;
+}
+
+/**
+ * Logs money in or out. Spending is judged against the budget as it stood
+ * *before* this entry (flags), the matching bucket is drawn down and the
+ * logging XP paid atomically, and income comes back with a proposed split.
+ */
+export async function logTransaction(db: Db, tx: NewTransaction, now: Date) {
+  if (tx.direction === "out" && !tx.tag) throw new Error("outflows need a tag (need, want or unsure)");
+  const before = await loadBudget(db, now);
+  const tag = tx.direction === "out" ? tx.tag : null;
+  const flags =
+    tag === null
+      ? []
+      : flagSpend({ amount: tx.amount, tag, stage: before.stage.stage, needsOutstanding: before.needsOutstanding, wantsLeft: before.buckets.wants });
+
+  const xp = transactionLoggedXp();
+  // Generated RPC types mark every argument non-null; the SQL function accepts
+  // null for the optional ones, hence the casts.
+  const { data: id, error } = await db.rpc("record_transaction", {
+    p_amount: tx.amount,
+    p_direction: tx.direction,
+    p_category: tx.category,
+    p_tag: tag as "need",
+    p_spend_level: (tag === "need" ? tx.spendLevel ?? null : null) as "floor",
+    p_item_id: (tx.itemId ?? null) as string,
+    p_note: (tx.note ?? null) as string,
+    p_at: (tx.at ?? null) as string,
+    p_xp: xp as unknown as Json,
+  });
+  if (error) throw new Error(`logging the transaction: ${error.message}`);
+
+  return {
+    transactionId: id,
+    xpEarned: xp.reduce((s, e) => s + e.amount, 0),
+    flags,
+    proposedSplit: tx.direction === "in" ? proposalFor(tx.amount, before) : null,
+  };
+}
+
+export type SplitAmounts = Record<BucketName, number>;
+
+/** Moves an income entry into the buckets — the proposal, or his tweak. Once per income. */
+export async function acceptSplit(db: Db, transactionId: string, now: Date, amounts?: SplitAmounts) {
+  const { data: tx, error } = await db.from("transactions").select("amount, direction").eq("id", transactionId).maybeSingle();
+  if (error) throw new Error(`loading the income: ${error.message}`);
+  if (!tx || tx.direction !== "in") throw new Error("that isn't an income entry");
+
+  let split = amounts;
+  if (!split) {
+    const p = proposalFor(tx.amount, await loadBudget(db, now));
+    split = { needs: p.needs, buffer: p.buffer, savings: p.savings, wants: p.wants, flexible: p.flexible };
+  }
+  const total = Object.values(split).reduce((a, b) => a + b, 0);
+  if (total !== tx.amount) throw new Error(`the amounts add up to ${total}, but the income is ${tx.amount}`);
+
+  const { data: result, error: rpcError } = await db.rpc("apply_split", { p_transaction_id: transactionId, p_amounts: split });
+  if (rpcError) throw new Error(`applying the split: ${rpcError.message}`);
+  return { result: result as "applied" | "already_applied" | "not_found", applied: split };
 }

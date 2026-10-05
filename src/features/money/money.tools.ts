@@ -1,13 +1,12 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
-import { transactionLoggedXp } from "@/features/xp/xp";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import type { Json } from "@/shared/supabase/database.types";
 import { escapeLike } from "@/shared/supabase/like";
 import { planDeficit } from "./deficit";
-import { loadBudget, proposalFor, type BudgetContext } from "./money.repo";
-import { flagSpend, judgePurchase } from "./purchase";
+import { acceptSplit, loadBudget, logTransaction, proposalFor, type BudgetContext } from "./money.repo";
+import { judgePurchase } from "./purchase";
 
 const naira = z.number().int().positive().describe("Whole naira");
 
@@ -62,36 +61,26 @@ export function registerMoneyTools(server: McpServer) {
         if (args.direction === "out" && !args.tag) return toolError("log_transaction: outflows need a tag (need, want or unsure)");
         const db = dbFrom(ctx);
         const now = new Date();
-        const before = await loadBudget(db, now);
-        const tag = args.direction === "out" ? args.tag! : null;
-
-        const flags =
-          tag === null
-            ? []
-            : flagSpend({ amount: args.amount, tag, stage: before.stage.stage, needsOutstanding: before.needsOutstanding, wantsLeft: before.buckets.wants });
-
-        const xp = transactionLoggedXp();
-        // Generated RPC types mark every argument non-null; the SQL function accepts
-        // null for the optional ones, hence the casts below.
-        const { data: id, error } = await db.rpc("record_transaction", {
-          p_amount: args.amount,
-          p_direction: args.direction,
-          p_category: args.category,
-          p_tag: tag as "need",
-          p_spend_level: (tag === "need" ? args.spend_level ?? null : null) as "floor",
-          p_item_id: (args.item_id ?? null) as string,
-          p_note: (args.note ?? null) as string,
-          p_at: (args.at ?? null) as string,
-          p_xp: xp as unknown as Json,
-        });
-        if (error) return toolError(`log_transaction failed: ${error.message}`);
-
+        const logged = await logTransaction(
+          db,
+          {
+            amount: args.amount,
+            direction: args.direction,
+            category: args.category,
+            tag: args.tag ?? null,
+            spendLevel: args.spend_level,
+            itemId: args.item_id,
+            note: args.note,
+            at: args.at,
+          },
+          now,
+        );
         return ok(
           await withMode(db, now, {
-            transaction_id: id,
-            xpEarned: xp.reduce((s, e) => s + e.amount, 0),
-            flags,
-            ...(args.direction === "in" ? { proposedSplit: proposalFor(args.amount, before) } : {}),
+            transaction_id: logged.transactionId,
+            xpEarned: logged.xpEarned,
+            flags: logged.flags,
+            ...(logged.proposedSplit ? { proposedSplit: logged.proposedSplit } : {}),
           }),
         );
       } catch (error) {
@@ -171,22 +160,9 @@ export function registerMoneyTools(server: McpServer) {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const { data: tx, error } = await db.from("transactions").select("amount, direction").eq("id", args.transaction_id).maybeSingle();
-        if (error) return toolError(`accept_split failed: ${error.message}`);
-        if (!tx || tx.direction !== "in") return toolError("accept_split: that isn't an income entry");
-
-        let split = args.amounts;
-        if (!split) {
-          const p = proposalFor(tx.amount, await loadBudget(db, now));
-          split = { needs: p.needs, buffer: p.buffer, savings: p.savings, wants: p.wants, flexible: p.flexible };
-        }
-        const total = Object.values(split).reduce((a, b) => a + b, 0);
-        if (total !== tx.amount) return toolError(`accept_split: amounts add up to ${total}, but the income is ${tx.amount}`);
-
-        const { data: result, error: rpcError } = await db.rpc("apply_split", { p_transaction_id: args.transaction_id, p_amounts: split });
-        if (rpcError) return toolError(`accept_split failed: ${rpcError.message}`);
+        const { result, applied } = await acceptSplit(db, args.transaction_id, now, args.amounts);
         const after = await loadBudget(db, now);
-        return ok(await withMode(db, now, { result, applied: split, buckets: after.buckets }));
+        return ok(await withMode(db, now, { result, applied, buckets: after.buckets }));
       } catch (error) {
         return toolError(`accept_split failed: ${(error as Error).message}`);
       }

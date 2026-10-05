@@ -6,7 +6,7 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 ## Now: Day 3 — the phone app
 - [x] App shell, login gate, Today (top three only)
 - [x] Quests: browse and add across all five tiers
-- [ ] Money: stage, buckets, quick log, flags for bad calls
+- [x] Money: stage, buckets, quick log, flags for bad calls
 - [ ] Stats: pillars and levels, behind a tap
 - [ ] Paddie tab: shortcut to the chat apps
 - [ ] Push notifications via `pg_cron` (the database decides who to nudge; no admin key)
