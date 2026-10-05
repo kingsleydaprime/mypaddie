@@ -492,3 +492,25 @@ occurrence is a row keyed by UID + recurrence id; re-sync upserts title/time
 only, so his own `important` and cancellations survive, and removes what
 Google removed. Sync happens when Today loads (at most every 30 minutes),
 on demand, and on connect; failures are recorded and shown, not thrown.
+
+## 2026-10-05 — App shell, routes, one colour
+
+### One accent: gold
+Gold is the brand and the only accent (actions, progress, the active tab,
+the balance card). Green and red appear only where they mean something —
+money in / done, money out / overdue — never as decoration. Light mode uses
+a deeper gold (#8f6000): the original measured 2.95:1 under white text and
+2.72:1 as text, below WCAG AA's 4.5:1; the new one is 5.47:1 and 5.05:1.
+
+### Public site at /, the app at /app
+`(marketing)` holds the public landing page with its own layout; the app
+lives under `(app)/app/*` with the tab bar. Login falls back to /app, the
+manifest starts at /app, notifications open /app. Moved with a script that
+only rewrote a bare "/" where it meant "home" (not in the root layout type,
+a URL check, or a base64 decoder), then verified by the typecheck.
+
+### Navigation and Settings
+Quests · Money · Home (raised, centre) · Stats · Settings. "Paddie" became
+Settings: profile ("Who I'm becoming", edited by him — edit in place, save as
+a new version, or switch), nudges, schedule, Google Calendar, chat links,
+sign out. The AI reads the same profile every chat but doesn't own it.
