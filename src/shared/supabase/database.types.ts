@@ -168,13 +168,13 @@ isOneToOne: false
                   ]
                 },"transactions": {
                   Row: {
-                    "amount": number,"at": string,"category": string,"direction": Database["public"]['Enums']["money_direction"],"id": string,"item_id": string | null,"note": string | null,"spend_level": Database["public"]['Enums']["spend_level"] | null,"tag": Database["public"]['Enums']["money_tag"] | null,"user_id": string
+                    "amount": number,"at": string,"category": string,"direction": Database["public"]['Enums']["money_direction"],"id": string,"item_id": string | null,"note": string | null,"spend_level": Database["public"]['Enums']["spend_level"] | null,"split_applied_at": string | null,"tag": Database["public"]['Enums']["money_tag"] | null,"user_id": string
                   }
                   Insert: {
-                    "amount": number,"at"?: string,"category": string,"direction": Database["public"]['Enums']["money_direction"],"id"?: string,"item_id"?: string | null,"note"?: string | null,"spend_level"?: Database["public"]['Enums']["spend_level"] | null,"tag"?: Database["public"]['Enums']["money_tag"] | null,"user_id"?: string
+                    "amount": number,"at"?: string,"category": string,"direction": Database["public"]['Enums']["money_direction"],"id"?: string,"item_id"?: string | null,"note"?: string | null,"spend_level"?: Database["public"]['Enums']["spend_level"] | null,"split_applied_at"?: string | null,"tag"?: Database["public"]['Enums']["money_tag"] | null,"user_id"?: string
                   }
                   Update: {
-                    "amount"?: number,"at"?: string,"category"?: string,"direction"?: Database["public"]['Enums']["money_direction"],"id"?: string,"item_id"?: string | null,"note"?: string | null,"spend_level"?: Database["public"]['Enums']["spend_level"] | null,"tag"?: Database["public"]['Enums']["money_tag"] | null,"user_id"?: string
+                    "amount"?: number,"at"?: string,"category"?: string,"direction"?: Database["public"]['Enums']["money_direction"],"id"?: string,"item_id"?: string | null,"note"?: string | null,"spend_level"?: Database["public"]['Enums']["spend_level"] | null,"split_applied_at"?: string | null,"tag"?: Database["public"]['Enums']["money_tag"] | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -216,7 +216,13 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "award_xp":
+            "activate_identity":
+{ Args: { "p_id": string }; Returns: boolean
+                           },
+"apply_split":
+{ Args: { "p_amounts": Json,"p_transaction_id": string }; Returns: string
+                           },
+"award_xp":
 { Args: { "p_entries": Json }; Returns: number
                            },
 "complete_task":
@@ -224,6 +230,15 @@ isOneToOne: false
                            },
 "export_all":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"record_slip":
+{ Args: { "p_accepted": boolean,"p_task_id": string,"p_tone": Database["public"]['Enums']["mode"],"p_why": string,"p_why_category": string }; Returns: string
+                           },
+"record_transaction":
+{ Args: { "p_amount": number,"p_at": string,"p_category": string,"p_direction": Database["public"]['Enums']["money_direction"],"p_item_id": string,"p_note": string,"p_spend_level": Database["public"]['Enums']["spend_level"],"p_tag": Database["public"]['Enums']["money_tag"],"p_xp": Json }; Returns: string
+                           },
+"save_identity":
+{ Args: { "p_activate": boolean,"p_name": string,"p_text": string }; Returns: string
                            },
 "spawn_occurrence":
 { Args: { "p_due_at": string,"p_occurs_on": string,"p_series_id": string }; Returns: string
