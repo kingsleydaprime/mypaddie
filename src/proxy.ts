@@ -24,7 +24,7 @@ export async function proxy(request: NextRequest) {
 }
 
 // Every page except the MCP endpoint and its metadata (Bearer tokens, not
-// cookies), Next's static files, icons and the manifest.
+// cookies), the push route (called by the database), Next's static files, icons and the manifest.
 export const config = {
-  matcher: ["/((?!api/mcp|\\.well-known|_next/static|_next/image|icons|icon|manifest\\.webmanifest|sw\\.js).*)"],
+  matcher: ["/((?!api/mcp|api/push|\\.well-known|_next/static|_next/image|icons|icon|manifest\\.webmanifest|sw\\.js).*)"],
 };
