@@ -107,6 +107,14 @@ Considered: a static secret token (claude.ai connectors want OAuth), or the MCP
 server holding the service-role key (one leaked key = every table, RLS bypassed).
 Result: **no secret key exists anywhere in this app.**
 
+### Claude uses a client we registered, not automatic registration
+Checked the project's auth metadata: Supabase supports PKCE but not Claude's
+"published identity" (CIMD), and dynamic client registration (DCR) would let
+anyone who finds the URL register clients. So one **public** OAuth client named
+"Claude" is registered by hand (redirects: claude.ai and claude.com
+`/api/mcp/auth_callback`), no secret (PKCE replaces it), and DCR stays **off**.
+This reverses the earlier "enable DCR" step.
+
 ### Email + password, sign-ups disabled
 One user. Magic links were rejected because Supabase's built-in email sender is
 rate-limited to a few per hour. Disabling sign-ups means nobody else can even
@@ -141,3 +149,14 @@ rejected loudly. One less dependency, ~60 lines, fully tested.
 resource metadata is served path-specific
 (`/.well-known/oauth-protected-resource/api/mcp`) so the advertised resource is
 exactly the endpoint Claude connects to.
+
+### Composite foreign keys get composite indexes
+Supabase's advisor flagged the `(…_id, user_id)` foreign keys as unindexed:
+the single-column indexes didn't cover the pair. Replaced with composite ones.
+
+### Known gap: pgTAP doesn't run against the hosted project yet
+`supabase test db --linked` fails with `function plan(integer) does not exist`
+— the CLI's remote runner can't reach the schema pgTAP lives in (probably a
+privilege issue for its login role). The same migrations pass all 38 pgTAP
+tests on Supabase's Postgres image locally, and the hosted advisor reports RLS
+on every table with nothing exposed. Revisit before adding new policies.

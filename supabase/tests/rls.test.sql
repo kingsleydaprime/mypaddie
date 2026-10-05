@@ -3,6 +3,10 @@
 -- Run with: bunx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
+-- Find pgTAP wherever it's installed (the CLI's remote runner may put it
+-- somewhere not on this connection's search_path) and add that schema.
+select set_config('search_path', current_setting('search_path') || ', ' || n.nspname, true)
+  from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgtap';
 
 select plan(22);
 
