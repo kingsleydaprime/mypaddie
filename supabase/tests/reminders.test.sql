@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select set_config('search_path', current_setting('search_path') || ', ' || n.nspname, true)
   from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgtap';
-select plan(17);
+select plan(18);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com');
 insert into public.push_subscriptions (user_id, endpoint, p256dh, auth)
@@ -70,6 +70,13 @@ select is(pg_temp.nudges_at('2026-10-14 12:00+01'), '', 'before it turns must-do
 select is(pg_temp.nudges_at('2026-10-15 09:05+01'), 'Text the boss:1', 'once it''s a must-do, it escalates — even before its due date');
 select is(pg_temp.nudges_at('2026-10-15 10:10+01'), 'Text the boss:2', '…an hour later, firmer');
 select is(pg_temp.nudges_at('2026-10-16 08:00+01'), 'Text the boss:1', 'escalation starts fresh the next day');
+
+-- A custom note travels with the reminder.
+insert into public.tasks (user_id, title, due_at, reminder_note) values
+  ('11111111-1111-1111-1111-111111111111', 'Bank visit', '2026-10-20 11:00+01', 'Bring the signed form and your ID');
+insert into private.nudges (user_id, kind, level, day, sent_at) values ('11111111-1111-1111-1111-111111111111', 'brief', 1, '2026-10-20', now());
+select is((select n->>'note' from jsonb_array_elements(private.collect_nudges('2026-10-20 10:52+01')) n where n->>'title' = 'Bank visit'),
+  'Bring the signed form and your ID', 'the reminder carries his note');
 
 select * from finish();
 rollback;

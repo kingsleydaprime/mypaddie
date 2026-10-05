@@ -323,6 +323,8 @@ export interface NewTask {
   forceClash?: boolean;
   /** Completing it logs practice time for this skill. */
   skillId?: string | null;
+  /** His own words for this task's notifications. */
+  reminderNote?: string | null;
 }
 
 export type Reminder = "eve" | "morning" | "30" | "10";
@@ -368,6 +370,7 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = DEFA
       reminders: task.reminders ?? null,
       must_from: task.mustFrom?.toISOString() ?? null,
       skill_id: task.skillId ?? null,
+      reminder_note: task.reminderNote?.trim() || null,
     })
     .select("id, title, due_at, recurrence")
     .single();
@@ -400,6 +403,7 @@ export interface TaskChanges {
   mustFrom?: Date | null;
   forceClash?: boolean;
   skillId?: string | null;
+  reminderNote?: string | null;
 }
 
 export type UpdateResult =
@@ -510,6 +514,7 @@ export async function updateTask(
     if (changes.reminders !== undefined) patch.reminders = changes.reminders;
     if (changes.mustFrom !== undefined) patch.must_from = changes.mustFrom?.toISOString() ?? null;
     if (changes.skillId !== undefined) patch.skill_id = changes.skillId;
+    if (changes.reminderNote !== undefined) patch.reminder_note = changes.reminderNote?.trim() || null;
     if (moves) patch.due_at = newDueAt(row);
     if (Object.keys(patch).length > 0) {
       const { error: e } = await db.from("tasks").update(patch).eq("id", row.id);

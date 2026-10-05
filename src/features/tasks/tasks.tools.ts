@@ -48,6 +48,7 @@ export function registerTaskTools(server: McpServer) {
         becomes_must_do_at: z.iso.datetime({ offset: true }).optional().describe("When it turns non-negotiable, e.g. 2026-10-15T09:00:00+01:00"),
         force_clash: z.boolean().default(false).describe("Only after he confirms a double-booking"),
         skill: z.string().trim().min(1).optional().describe("Completing it logs practice time for this skill (e.g. 'LeetCode 1h' → DSA)"),
+        reminder_note: z.string().trim().max(200).optional().describe("His own words for the notifications, e.g. 'Bring the signed form'"),
       }),
     },
     async (
@@ -65,6 +66,7 @@ export function registerTaskTools(server: McpServer) {
         becomes_must_do_at?: string;
         force_clash: boolean;
         skill?: string;
+        reminder_note?: string;
       },
       ctx: ToolContext,
     ) => {
@@ -88,6 +90,7 @@ export function registerTaskTools(server: McpServer) {
             mustFrom: args.becomes_must_do_at ? new Date(args.becomes_must_do_at) : null,
             forceClash: args.force_clash,
             skillId,
+            reminderNote: args.reminder_note,
           },
           now,
         );
@@ -123,6 +126,7 @@ export function registerTaskTools(server: McpServer) {
         becomes_must_do_at: z.iso.datetime({ offset: true }).nullable().optional(),
         force_clash: z.boolean().default(false),
         skill: z.string().trim().min(1).nullable().optional().describe("null = unlink"),
+        reminder_note: z.string().trim().max(200).nullable().optional().describe("null = back to the default wording"),
       }),
     },
     async (
@@ -141,6 +145,7 @@ export function registerTaskTools(server: McpServer) {
         becomes_must_do_at?: string | null;
         force_clash: boolean;
         skill?: string | null;
+        reminder_note?: string | null;
       },
       ctx: ToolContext,
     ) => {
@@ -163,6 +168,7 @@ export function registerTaskTools(server: McpServer) {
             mustFrom: args.becomes_must_do_at === undefined ? undefined : args.becomes_must_do_at ? new Date(args.becomes_must_do_at) : null,
             forceClash: args.force_clash,
             skillId,
+            reminderNote: args.reminder_note,
           },
           args.action,
         );

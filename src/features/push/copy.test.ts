@@ -53,4 +53,20 @@ describe("copyFor", () => {
     });
     expect(copyFor({ kind: "event", level: 1, title: "Wedding", items: null, eventKind: "wedding", days: 5 }).title).toBe("In 5 days");
   });
+
+  test("a custom note becomes the body; the title still says when", () => {
+    expect(copyFor({ kind: "reminder", level: 3, title: "Bank visit", items: null, due: "11:00", note: "Bring the signed form" })).toMatchObject({
+      title: "In 30 minutes",
+      body: "Bring the signed form",
+    });
+  });
+
+  test("on an escalation the note goes under Paddie's line", () => {
+    const body = copyFor({ kind: "nudge", level: 2, title: "Call Mum", items: null, note: "before she sleeps" }).body;
+    expect(body).toBe("Still waiting on Call Mum. The day is not getting longer.\nbefore she sleeps");
+  });
+
+  test("a blank note is ignored", () => {
+    expect(copyFor({ kind: "checkin", level: 1, title: "X", items: null, note: "  " }).body).toBe("Time's passed. Did you do it?");
+  });
 });

@@ -22,6 +22,7 @@ const body = z.object({
       eventKind: z.string().nullable().optional(),
       person: z.string().nullable().optional(),
       days: z.number().int().nullable().optional(),
+      note: z.string().nullable().optional(),
     }),
   ),
 });

@@ -11,6 +11,8 @@ export interface Nudge {
   person?: string | null;
   /** Days until the event (for the week heads-up). */
   days?: number | null;
+  /** His own words for this task/event, if he set any. */
+  note?: string | null;
 }
 
 export interface NotificationCopy {
@@ -28,6 +30,14 @@ export interface NotificationCopy {
  * recovering still feels worth it.
  */
 export function copyFor(n: Nudge): NotificationCopy {
+  const base = defaultCopy(n);
+  const note = n.note?.trim();
+  if (!note || n.kind === "brief") return base;
+  // Escalations keep Paddie's firm line and add the note; everything else says it in his words.
+  return { ...base, body: n.kind === "nudge" ? `${base.body}\n${note}` : note };
+}
+
+function defaultCopy(n: Nudge): NotificationCopy {
   if (n.kind === "brief") {
     const items = n.items ?? [];
     return {

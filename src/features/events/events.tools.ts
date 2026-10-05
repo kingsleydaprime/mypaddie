@@ -2,13 +2,12 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
 import { loadSchedule } from "@/features/settings/settings.repo";
-import { createTask, loadDayTasks } from "@/features/tasks/tasks.repo";
-import { findClashes } from "@/features/tasks/capacity";
 import { DEFAULT_CONFIG } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
-import { addDays, dayKey, formatLocal, zonedInstant } from "@/shared/time";
+import { dayKey, formatLocal, zonedInstant } from "@/shared/time";
 import { EVENT_KINDS, upcoming, type EventKind } from "./events";
-import { changeEvent, insertEvent, loadUpcomingEvents } from "./events.repo";
+import { addEvent } from "./add-event";
+import { changeEvent, loadUpcomingEvents } from "./events.repo";
 
 const tz = DEFAULT_CONFIG.timeZone;
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
@@ -24,6 +23,7 @@ const fields = {
   person: z.string().trim().optional(),
   location: z.string().trim().optional(),
   notes: z.string().optional(),
+  reminder_note: z.string().trim().max(200).optional().describe("His own words for the notifications, e.g. 'Buy flowers on the way'"),
 };
 
 export function registerEventTools(server: McpServer) {
@@ -47,53 +47,16 @@ export function registerEventTools(server: McpServer) {
     async (
       args: {
         title: string; kind: EventKind; date: string; start_time?: string; end_time?: string; important: boolean; yearly?: boolean;
-        person?: string; location?: string; notes?: string; prep?: { days_before: number; title?: string; duration_minutes?: number };
+        person?: string; location?: string; notes?: string; reminder_note?: string; prep?: { days_before: number; title?: string; duration_minutes?: number };
       },
       ctx: ToolContext,
     ) => {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const allDay = !args.start_time;
-        const startsAt = zonedInstant(args.date, args.start_time ?? "00:00", tz);
-        const endsAt = args.start_time && args.end_time ? zonedInstant(args.date, args.end_time, tz) : null;
-        if (endsAt && endsAt <= startsAt) return toolError("add_event: the end must be after the start");
-        const yearly = args.yearly ?? (args.kind === "birthday" || args.kind === "anniversary");
-
-        const event = await insertEvent(db, {
-          title: args.title, kind: args.kind, startsAt, endsAt, allDay, important: args.important, yearly,
-          person: args.person, location: args.location, notes: args.notes,
-        });
-
-        // Informational: events aren't refused for clashing — you go to the wedding.
-        const day = dayKey(upcoming([event], now, 3660)[0]?.at ?? startsAt, tz);
-        const clashes = allDay
-          ? []
-          : findClashes(startsAt, endsAt ? Math.round((endsAt.getTime() - startsAt.getTime()) / 60_000) : 60, await loadDayTasks(db, day), `event:${event.id}`)
-              .map((c) => ({ title: c.title, at: formatLocal(c.start, tz) }));
-
-        let prep = null;
-        if (args.prep) {
-          const prepDay = addDays(day, -args.prep.days_before);
-          prep = await createTask(
-            db,
-            {
-              title: args.prep.title ?? `Prep: ${args.title}`,
-              itemId: null,
-              baseXp: 10,
-              dueDate: prepDay < dayKey(now, tz) ? dayKey(now, tz) : prepDay,
-              dueTime: null,
-              recurrence: null,
-              nonNegotiable: false,
-              weights: [{ pillar: "relationships", weight: 50 }, { pillar: "character", weight: 50 }],
-              durationMinutes: args.prep.duration_minutes ?? 60,
-              mustFrom: zonedInstant(prepDay < dayKey(now, tz) ? dayKey(now, tz) : prepDay, "09:00", tz),
-            },
-            now,
-          );
-        }
-        const view = upcoming([event], now, 3660)[0];
-        return ok(await withMode(db, now, { event: { id: event.id, title: event.title, quadrant: view?.quadrant, daysAway: view?.daysAway, yearly }, clashes, prep }));
+        const created = await addEvent(db, args, now);
+        if ("error" in created) return toolError(`add_event: ${created.error}`);
+        return ok(await withMode(db, now, { ...created }));
       } catch (error) {
         return toolError(`add_event failed: ${(error as Error).message}`);
       }
@@ -118,12 +81,13 @@ export function registerEventTools(server: McpServer) {
         person: z.string().trim().optional(),
         location: z.string().trim().optional(),
         notes: z.string().optional(),
+        reminder_note: z.string().trim().max(200).nullable().optional(),
       }),
     },
     async (
       args: {
         id: string; action: "edit" | "cancel" | "done" | "delete"; title?: string; kind?: EventKind; date?: string;
-        start_time?: string | null; end_time?: string | null; important?: boolean; yearly?: boolean; person?: string; location?: string; notes?: string;
+        start_time?: string | null; end_time?: string | null; important?: boolean; yearly?: boolean; person?: string; location?: string; notes?: string; reminder_note?: string | null;
       },
       ctx: ToolContext,
     ) => {
@@ -131,6 +95,7 @@ export function registerEventTools(server: McpServer) {
         const db = dbFrom(ctx);
         const changes: Parameters<typeof changeEvent>[3] = {
           title: args.title, kind: args.kind, important: args.important, yearly: args.yearly, person: args.person, location: args.location, notes: args.notes,
+          reminderNote: args.reminder_note,
         };
         if (args.date !== undefined || args.start_time !== undefined || args.end_time !== undefined) {
           const { data: cur } = await db.from("events").select("starts_at, ends_at, all_day").eq("id", args.id).maybeSingle();

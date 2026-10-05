@@ -1,7 +1,7 @@
 import type { Db } from "@/shared/supabase/token-client";
 import { blockOn, type EventKind, type EventLike } from "./events";
 
-const COLUMNS = "id, title, kind, starts_at, ends_at, all_day, important, yearly, status, person, location, notes";
+const COLUMNS = "id, title, kind, starts_at, ends_at, all_day, important, yearly, status, person, location, notes, reminder_note";
 
 type Row = {
   id: string;
@@ -16,9 +16,10 @@ type Row = {
   person: string | null;
   location: string | null;
   notes: string | null;
+  reminder_note: string | null;
 };
 
-export type EventRecord = EventLike & { person: string | null; location: string | null; notes: string | null };
+export type EventRecord = EventLike & { person: string | null; location: string | null; notes: string | null; reminderNote: string | null };
 
 const toEvent = (r: Row): EventRecord => ({
   id: r.id,
@@ -33,6 +34,7 @@ const toEvent = (r: Row): EventRecord => ({
   person: r.person,
   location: r.location,
   notes: r.notes,
+  reminderNote: r.reminder_note,
 });
 
 /** Every upcoming event (yearly ones keep their original date; occurrences are computed). */
@@ -63,6 +65,7 @@ export interface NewEvent {
   person?: string | null;
   location?: string | null;
   notes?: string | null;
+  reminderNote?: string | null;
 }
 
 export async function insertEvent(db: Db, e: NewEvent) {
@@ -79,6 +82,7 @@ export async function insertEvent(db: Db, e: NewEvent) {
       person: e.person ?? null,
       location: e.location ?? null,
       notes: e.notes ?? null,
+      reminder_note: e.reminderNote?.trim() || null,
     })
     .select(COLUMNS)
     .single();
@@ -110,9 +114,11 @@ export async function changeEvent(
           ...(changes.person !== undefined ? { person: changes.person } : {}),
           ...(changes.location !== undefined ? { location: changes.location } : {}),
           ...(changes.notes !== undefined ? { notes: changes.notes } : {}),
+          ...(changes.reminderNote !== undefined ? { reminder_note: changes.reminderNote?.trim() || null } : {}),
         }
       : { status: action === "cancel" ? "cancelled" : "done" };
   const { data, error } = await db.from("events").update(patch).eq("id", id).select("id");
   if (error) throw new Error(`updating the event: ${error.message}`);
   return { result: data.length ? (action === "edit" ? ("updated" as const) : action === "cancel" ? ("cancelled" as const) : ("done" as const)) : ("not_found" as const) };
 }
+
