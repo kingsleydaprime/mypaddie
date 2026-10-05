@@ -1,4 +1,11 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
+import { registerIdentityTools } from "@/features/identity/identity.tools";
+import { registerItemTools } from "@/features/items/items.tools";
+import { registerMemoryTools } from "@/features/memory/memory.tools";
+import { registerModeTools } from "@/features/mode/mode.tools";
+import { registerMoneyTools } from "@/features/money/money.tools";
+import { registerSlipTools } from "@/features/slips/slips.tools";
+import { registerStatsTools } from "@/features/stats/stats.tools";
 import { registerTaskTools } from "@/features/tasks/tasks.tools";
 import { registerTodayTools } from "@/features/today/today.tools";
 import { verifyToken } from "@/shared/mcp/auth";
@@ -7,9 +14,16 @@ const handler = createMcpHandler(
   (server) => {
     registerTodayTools(server);
     registerTaskTools(server);
+    registerItemTools(server);
+    registerSlipTools(server);
+    registerModeTools(server);
+    registerMoneyTools(server);
+    registerStatsTools(server);
+    registerMemoryTools(server);
+    registerIdentityTools(server);
   },
   {
-    serverInfo: { name: "mypaddie", version: "0.2.0" },
+    serverInfo: { name: "mypaddie", version: "0.3.0" },
     instructions:
       "MyPaddie is Kingsley's private life coach. Call get_today first in every chat. Every tool result includes " +
       "`mode` (curious, strict, soft, strictest, softest) with the facts behind it — set your tone from it.",

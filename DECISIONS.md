@@ -160,3 +160,40 @@ the single-column indexes didn't cover the pair. Replaced with composite ones.
 privilege issue for its login role). The same migrations pass all 38 pgTAP
 tests on Supabase's Postgres image locally, and the hosted advisor reports RLS
 on every table with nothing exposed. Revisit before adding new policies.
+
+## 2026-10-05 — Remaining tools
+
+### Five tools beyond the blueprint's list
+`add_task` (an item like a daily reading habit needs a schedulable task),
+`set_mode` (overrides existed in the engine but nothing could set one),
+`log_checkin` (soft mode needs energy data), `accept_split` (a proposal is
+only a proposal until accepted), `save_identity`/`activate_identity`
+("several versions, switch between them").
+
+### The don't-buy-this check
+First matching rule wins: need in disguise → yes; deficit → no; this month's
+needs not covered → no; over the wants bucket → no; serves a goal → yes;
+asked again ≥24h after a "wait" → yes; otherwise wait 24h. The audit has no
+budgets, so only the need/goal/wait rules apply there. The AI judges "need in
+disguise" and "serves a goal"; the engine judges the money. The 24-hour clock
+starts at the *first* wait, so re-asking doesn't restart it.
+
+### Bad money calls are flagged after the fact, never penalised
+`log_transaction` returns `flags` for a want bought in deficit, before needs
+are covered, or beyond the wants bucket, and the AI points it out. Logging
+still pays XP — the blueprint is explicit that honest logging is never
+punished. Nothing is flagged during the judgement-free audit.
+
+### Buckets are envelopes, not bank balances
+Spending draws down its envelope (wants → wants, everything else → needs),
+floored at zero. Income reaches buckets only through `accept_split`, which
+can apply once per income entry (`transactions.split_applied_at` is the guard)
+and must add up to the income exactly. The emergency buffer target defaults
+to one month of needs.
+
+### Levels: 100·(n−1)² XP to reach level n
+100 → 2, 400 → 3, 900 → 4. Early levels come fast, later ones mean something.
+
+### `plan_day` deferred
+Meals, chore batching and fun blocks need real data to design well (Day 4).
+`get_today`'s top three covers "what next" until then.
