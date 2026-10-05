@@ -110,3 +110,8 @@ export function zonedInstant(day: string, time: string, timeZone: string): Date 
 export function formatLocal(at: Date, timeZone: string): string {
   return `${dayKey(at, timeZone)} ${localTimeOf(at, timeZone)}`;
 }
+
+/** First instant of the local calendar month containing `at`. */
+export function startOfMonth(at: Date, timeZone: string): Date {
+  return zonedInstant(`${dayKey(at, timeZone).slice(0, 7)}-01`, "00:00", timeZone);
+}
