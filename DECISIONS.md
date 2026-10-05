@@ -211,3 +211,24 @@ habit (new days copy the latest row, so that's also "from now on"). `cancel`
 skips one occurrence without penalty — a decision isn't ignoring it. `stop`
 cancels what's open and dissolves the series, keeping past rows as history.
 Done tasks are frozen: their XP is in the append-only ledger.
+
+## 2026-10-05 — Day 3 (phone app)
+
+### The PWA reuses the repos the AI tools use
+Screens call the same `*.repo.ts` functions as the MCP tools (completeTask,
+logTransaction, acceptSplit, loadStats…), through a cookie session that is the
+same RLS identity. The app and the AI can't disagree.
+
+### Push: the database decides, the app only words and sends
+Vercel's free plan runs cron once a day — useless for escalating nudges — so
+`pg_cron` (every 10 minutes) is the scheduler. It creates today's habit rows,
+decides which nudges are due (`private.collect_nudges`, recorded in
+`private.nudges` so none repeat), and POSTs them to `/api/push` with a shared
+secret from Vault. The route has no database access. Rejected: having the
+route load data itself, which needs the service-role key on Vercel.
+Cost: the recurrence rule exists in SQL (`private.recurs_on`) as well as
+TypeScript; both are tested against the same cases.
+This also closes the hole in "catch up on demand": habit rows now exist each
+morning even if the app wasn't opened.
+Rules: quiet 22:00–07:00; brief from 08:00 once a day; non-negotiables up to
+4 escalating nudges an hour apart; ordinary tasks one "did you do it?".

@@ -7,9 +7,9 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [x] App shell, login gate, Today (top three only)
 - [x] Quests: browse and add across all five tiers
 - [x] Money: stage, buckets, quick log, flags for bad calls
-- [ ] Stats: pillars and levels, behind a tap
-- [ ] Paddie tab: shortcut to the chat apps
-- [ ] Push notifications via `pg_cron` (the database decides who to nudge; no admin key)
+- [x] Stats: pillars and levels, behind a tap
+- [x] Paddie tab: shortcut to the chat apps, nudge switch, sign out
+- [x] Push notifications via `pg_cron` (the database decides who to nudge; no admin key)
 
 ## Next
 - [x] **Academic pillar** (11 pillars). Coursework → academic; DSA/LeetCode → skills.
@@ -27,4 +27,9 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [ ] `plan_day` (deferred from Day 2), built on time blocks + pantry.
 
 ## Known gaps
+- Dead push subscriptions aren't pruned yet: `/api/push` reports them as
+  `gone`, but nothing deletes them (the route has no DB access by design).
+  A small cron step reading `net._http_response` can do it.
+- Quiet hours (22:00–07:00) and brief time (08:00) are fixed; move to `settings`.
+- Edit tasks from the app (tool exists; UI doesn't).
 - pgTAP doesn't run against the hosted project yet (see DECISIONS.md).
