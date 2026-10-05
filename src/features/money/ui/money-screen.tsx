@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatNaira } from "@/shared/format";
 import type { Db } from "@/shared/supabase/token-client";
 import { planDeficit } from "../deficit";
@@ -25,7 +26,10 @@ export async function MoneyScreen({ db }: { db: Db }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">Money</h1>
+      <header className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Money</h1>
+        <Link href="/pantry" className="rounded-xl border border-line px-4 py-2 text-sm font-medium">Pantry ›</Link>
+      </header>
 
       <section className="rounded-2xl border border-line bg-surface p-5">
         {s.stage === "audit" ? (
