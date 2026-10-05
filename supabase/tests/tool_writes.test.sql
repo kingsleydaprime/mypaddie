@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select set_config('search_path', current_setting('search_path') || ', ' || n.nspname, true)
   from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgtap';
-select plan(17);
+select plan(21);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com'),
@@ -52,6 +52,22 @@ select is(
 select lives_ok($$select public.save_identity('v1', 'calm', true); select public.save_identity('v2', 'bold', true)$$,
   'saving an active version deactivates the old one');
 select is((select string_agg(name, ',') from public.identity_profiles where is_active), 'v2', 'only the newest is active');
+
+-- ── set_task_weights ───────────────────────────────────────────────────────
+insert into public.task_pillars (task_id, pillar, weight) values ('bbbbbbbb-0000-0000-0000-000000000001', 'physical', 100);
+select lives_ok(
+  $$select public.set_task_weights('bbbbbbbb-0000-0000-0000-000000000001', '[{"pillar":"physical","weight":60},{"pillar":"academic","weight":40}]');
+    set constraints task_pillars_sum_to_100 immediate; set constraints task_pillars_sum_to_100 deferred$$,
+  'weights are replaced in one go, including the new academic pillar');
+select is((select string_agg(pillar || ':' || weight, ',' order by pillar) from public.task_pillars
+  where task_id = 'bbbbbbbb-0000-0000-0000-000000000001'), 'physical:60,academic:40', 'old split gone, new split in');
+select throws_ok(
+  $$select public.set_task_weights('bbbbbbbb-0000-0000-0000-000000000001', '[{"pillar":"physical","weight":70}]');
+    set constraints task_pillars_sum_to_100 immediate$$,
+  '23514', null, 'a replacement that doesn''t sum to 100 is still rejected');
+select throws_ok(
+  $$select public.set_task_weights('99999999-0000-0000-0000-000000000000', '[{"pillar":"physical","weight":100}]')$$,
+  'P0002', null, 'an unknown task is rejected');
 
 select * from finish();
 rollback;

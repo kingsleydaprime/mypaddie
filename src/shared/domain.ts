@@ -14,6 +14,8 @@ export const PILLARS = [
   "skills",
   "creativity",
   "relationships",
+  // Added 2026-10-05, appended so tie-break order for existing pillars is unchanged.
+  "academic",
 ] as const;
 export type Pillar = (typeof PILLARS)[number];
 
