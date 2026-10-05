@@ -24,10 +24,12 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
   confidence; Learning section on Stats.
 - [ ] Link a task to a skill so completing "LeetCode 1h" logs the session too.
 - [ ] Review topics surface in the morning brief / get_today.
-- [ ] **Workout plans.** Each training day's exercises (sets, reps), and a log of
-  what was actually done.
-- [ ] **Pantry and meals.** What's in stock; the AI suggests meals from it;
-  shopping and cooking update it. Groundwork for meal proposals.
+- [x] **Workout plans.** Training days become weekly tasks; today's workout with
+  last time's numbers; logs, personal bests; Training on Stats.
+- [x] **Pantry and meals.** Stock with units and low levels, shopping list,
+  cook_meal uses ingredients up, meal history; Pantry page off Money.
+- [ ] Workout screen in the app (today's exercises, log sets with taps).
+- [ ] Pantry editing in the app (it's chat-only for now).
 - [ ] `plan_day` (deferred from Day 2), built on time blocks + pantry.
 
 ## Known gaps

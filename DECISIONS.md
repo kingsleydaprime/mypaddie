@@ -294,3 +294,30 @@ A topic's latest confidence sets when it's due again: 1→1 day, 2→2, 3→4,
 4→7, 5→14. Simple Leitner-style intervals rather than an SM-2 algorithm —
 enough to bring shaky topics back soon and solid ones later, explainable in
 one line.
+
+## 2026-10-05 — Workouts and pantry
+
+### Training days are tasks
+Activating a plan turns each training day into a weekly recurring task, so
+Today, reminders, capacity, clashes, nudges and XP all apply without a second
+scheduling system. Replacing the plan stops the old plan's tasks. Logging a
+workout completes today's training task (that's what pays XP: physical 50 /
+mental 30 / emotional 20); an unplanned workout becomes a one-off task done on
+the spot. XP only ever flows through tasks, so it stays idempotent.
+
+### Time blocks are on time all day
+Found while building workouts: a training task is due at its *start* (18:00),
+so logging it at 19:05 counted as late and paid half XP. Now a task with a
+duration is late only after its day ends; a task without one (a deadline)
+is still late after its due time. `lateAfter()` in the XP engine.
+
+### Personal bests
+Heavier wins; at equal weight more reps win; holds compare seconds,
+bodyweight compares reps. A first attempt isn't a "best" — nothing to beat.
+
+### Pantry: one unit per item, no conversions
+Common spellings normalise (kilograms → kg, can → tins, derica → cups); a
+different unit for an existing item is refused rather than silently mixed —
+the AI converts. Stock floors at zero. Cooking with an ingredient that isn't
+logged reports it as missing instead of failing. No XP for meals or pantry
+bookkeeping: eating is the food task's job.

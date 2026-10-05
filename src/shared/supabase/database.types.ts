@@ -76,6 +76,19 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"meals": {
+                  Row: {
+                    "at": string,"id": string,"ingredients": NonNullable<Json>,"name": string,"notes": string | null,"user_id": string
+                  }
+                  Insert: {
+                    "at"?: string,"id"?: string,"ingredients"?: NonNullable<Json>,"name": string,"notes"?: string | null,"user_id"?: string
+                  }
+                  Update: {
+                    "at"?: string,"id"?: string,"ingredients"?: NonNullable<Json>,"name"?: string,"notes"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"memories": {
                   Row: {
                     "at": string,"category": string,"id": string,"source": string | null,"text": string,"user_id": string
@@ -85,6 +98,19 @@ isOneToOne: false
                   }
                   Update: {
                     "at"?: string,"category"?: string,"id"?: string,"source"?: string | null,"text"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"pantry_items": {
+                  Row: {
+                    "category": string,"id": string,"low_at": number | null,"name": string,"quantity": number,"unit": string,"updated_at": string,"user_id": string
+                  }
+                  Insert: {
+                    "category"?: string,"id"?: string,"low_at"?: number | null,"name": string,"quantity"?: number,"unit": string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Update: {
+                    "category"?: string,"id"?: string,"low_at"?: number | null,"name"?: string,"quantity"?: number,"unit"?: string,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     
@@ -236,6 +262,101 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"workout_days": {
+                  Row: {
+                    "duration_minutes": number,"id": string,"name": string,"plan_id": string,"position": number,"series_id": string | null,"start_time": string | null,"user_id": string,"weekdays": string
+                  }
+                  Insert: {
+                    "duration_minutes"?: number,"id"?: string,"name": string,"plan_id": string,"position"?: number,"series_id"?: string | null,"start_time"?: string | null,"user_id"?: string,"weekdays": string
+                  }
+                  Update: {
+                    "duration_minutes"?: number,"id"?: string,"name"?: string,"plan_id"?: string,"position"?: number,"series_id"?: string | null,"start_time"?: string | null,"user_id"?: string,"weekdays"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "workout_days_plan_id_user_id_fkey"
+      columns: ["plan_id","user_id"]
+isOneToOne: false
+      referencedRelation: "workout_plans"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"workout_entries": {
+                  Row: {
+                    "exercise": string,"id": string,"log_id": string,"position": number,"reps": number | null,"seconds": number | null,"sets": number | null,"user_id": string,"weight_kg": number | null
+                  }
+                  Insert: {
+                    "exercise": string,"id"?: string,"log_id": string,"position"?: number,"reps"?: number | null,"seconds"?: number | null,"sets"?: number | null,"user_id"?: string,"weight_kg"?: number | null
+                  }
+                  Update: {
+                    "exercise"?: string,"id"?: string,"log_id"?: string,"position"?: number,"reps"?: number | null,"seconds"?: number | null,"sets"?: number | null,"user_id"?: string,"weight_kg"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "workout_entries_log_id_user_id_fkey"
+      columns: ["log_id","user_id"]
+isOneToOne: false
+      referencedRelation: "workout_logs"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"workout_exercises": {
+                  Row: {
+                    "day_id": string,"id": string,"name": string,"notes": string | null,"position": number,"reps": string | null,"seconds": number | null,"sets": number | null,"user_id": string,"weight_kg": number | null
+                  }
+                  Insert: {
+                    "day_id": string,"id"?: string,"name": string,"notes"?: string | null,"position"?: number,"reps"?: string | null,"seconds"?: number | null,"sets"?: number | null,"user_id"?: string,"weight_kg"?: number | null
+                  }
+                  Update: {
+                    "day_id"?: string,"id"?: string,"name"?: string,"notes"?: string | null,"position"?: number,"reps"?: string | null,"seconds"?: number | null,"sets"?: number | null,"user_id"?: string,"weight_kg"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "workout_exercises_day_id_user_id_fkey"
+      columns: ["day_id","user_id"]
+isOneToOne: false
+      referencedRelation: "workout_days"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"workout_logs": {
+                  Row: {
+                    "at": string,"day_id": string | null,"duration_minutes": number | null,"feel": number | null,"id": string,"notes": string | null,"task_id": string | null,"user_id": string
+                  }
+                  Insert: {
+                    "at"?: string,"day_id"?: string | null,"duration_minutes"?: number | null,"feel"?: number | null,"id"?: string,"notes"?: string | null,"task_id"?: string | null,"user_id"?: string
+                  }
+                  Update: {
+                    "at"?: string,"day_id"?: string | null,"duration_minutes"?: number | null,"feel"?: number | null,"id"?: string,"notes"?: string | null,"task_id"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "workout_logs_day_id_user_id_fkey"
+      columns: ["day_id","user_id"]
+isOneToOne: false
+      referencedRelation: "workout_days"
+      referencedColumns: ["id","user_id"]
+    },{
+      foreignKeyName: "workout_logs_task_id_user_id_fkey"
+      columns: ["task_id","user_id"]
+isOneToOne: false
+      referencedRelation: "tasks"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"workout_plans": {
+                  Row: {
+                    "created_at": string,"id": string,"is_active": boolean,"name": string,"user_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"xp_log": {
                   Row: {
                     "amount": number,"at": string,"id": string,"item_id": string | null,"learning_session_id": string | null,"note": string | null,"pillar": Database["public"]['Enums']["pillar"],"reason": Database["public"]['Enums']["xp_reason"],"task_id": string | null,"user_id": string
@@ -276,6 +397,9 @@ isOneToOne: false
             "activate_identity":
 { Args: { "p_id": string }; Returns: boolean
                            },
+"adjust_pantry":
+{ Args: { "p_changes": Json }; Returns: Json
+                           },
 "apply_split":
 { Args: { "p_amounts": Json,"p_transaction_id": string }; Returns: string
                            },
@@ -284,6 +408,9 @@ isOneToOne: false
                            },
 "complete_task":
 { Args: { "p_done_at": string,"p_entries": Json,"p_task_id": string }; Returns: Json
+                           },
+"cook_meal":
+{ Args: { "p_at": string,"p_ingredients": Json,"p_name": string,"p_notes": string }; Returns: Json
                            },
 "export_all":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -297,8 +424,14 @@ isOneToOne: false
 "record_transaction":
 { Args: { "p_amount": number,"p_at": string,"p_category": string,"p_direction": Database["public"]['Enums']["money_direction"],"p_item_id": string,"p_note": string,"p_spend_level": Database["public"]['Enums']["spend_level"],"p_tag": Database["public"]['Enums']["money_tag"],"p_xp": Json }; Returns: string
                            },
+"record_workout":
+{ Args: { "p_at": string,"p_day_id": string,"p_duration": number,"p_entries": Json,"p_feel": number,"p_notes": string,"p_task_id": string }; Returns: string
+                           },
 "save_identity":
 { Args: { "p_activate": boolean,"p_name": string,"p_text": string }; Returns: string
+                           },
+"save_workout_plan":
+{ Args: { "p_days": Json,"p_name": string }; Returns: string
                            },
 "set_task_weights":
 { Args: { "p_task_id": string,"p_weights": Json }; Returns: undefined

@@ -4,12 +4,14 @@ import { registerItemTools } from "@/features/items/items.tools";
 import { registerLearningTools } from "@/features/learning/learning.tools";
 import { registerMemoryTools } from "@/features/memory/memory.tools";
 import { registerModeTools } from "@/features/mode/mode.tools";
+import { registerPantryTools } from "@/features/pantry/pantry.tools";
 import { registerMoneyTools } from "@/features/money/money.tools";
 import { registerSlipTools } from "@/features/slips/slips.tools";
 import { registerStatsTools } from "@/features/stats/stats.tools";
 import { registerCapacityTools } from "@/features/tasks/capacity.tools";
 import { registerTaskTools } from "@/features/tasks/tasks.tools";
 import { registerTodayTools } from "@/features/today/today.tools";
+import { registerWorkoutTools } from "@/features/workouts/workouts.tools";
 import { verifyToken } from "@/shared/mcp/auth";
 
 const handler = createMcpHandler(
@@ -25,9 +27,11 @@ const handler = createMcpHandler(
     registerStatsTools(server);
     registerMemoryTools(server);
     registerIdentityTools(server);
+    registerWorkoutTools(server);
+    registerPantryTools(server);
   },
   {
-    serverInfo: { name: "mypaddie", version: "0.5.0" },
+    serverInfo: { name: "mypaddie", version: "0.6.0" },
     instructions:
       "MyPaddie is Kingsley's private life coach. Call get_today first in every chat. Every tool result includes " +
       "`mode` (curious, strict, soft, strictest, softest) with the facts behind it — set your tone from it.",
