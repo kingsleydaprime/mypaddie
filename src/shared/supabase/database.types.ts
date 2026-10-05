@@ -57,6 +57,25 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"learning_sessions": {
+                  Row: {
+                    "at": string,"confidence": number | null,"count": number | null,"id": string,"minutes": number,"notes": string | null,"skill_id": string,"topic": string | null,"unit": string | null,"user_id": string
+                  }
+                  Insert: {
+                    "at"?: string,"confidence"?: number | null,"count"?: number | null,"id"?: string,"minutes": number,"notes"?: string | null,"skill_id": string,"topic"?: string | null,"unit"?: string | null,"user_id"?: string
+                  }
+                  Update: {
+                    "at"?: string,"confidence"?: number | null,"count"?: number | null,"id"?: string,"minutes"?: number,"notes"?: string | null,"skill_id"?: string,"topic"?: string | null,"unit"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "learning_sessions_skill_id_user_id_fkey"
+      columns: ["skill_id","user_id"]
+isOneToOne: false
+      referencedRelation: "skills"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
                 },"memories": {
                   Row: {
                     "at": string,"category": string,"id": string,"source": string | null,"text": string,"user_id": string
@@ -121,6 +140,25 @@ export type Database = {
                   }
                   Relationships: [
                     
+                  ]
+                },"skills": {
+                  Row: {
+                    "created_at": string,"id": string,"item_id": string | null,"name": string,"pillar": Database["public"]['Enums']["pillar"],"status": string,"user_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"item_id"?: string | null,"name": string,"pillar"?: Database["public"]['Enums']["pillar"],"status"?: string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"item_id"?: string | null,"name"?: string,"pillar"?: Database["public"]['Enums']["pillar"],"status"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "skills_item_id_user_id_fkey"
+      columns: ["item_id","user_id"]
+isOneToOne: false
+      referencedRelation: "items"
+      referencedColumns: ["id","user_id"]
+    }
                   ]
                 },"slips": {
                   Row: {
@@ -200,13 +238,13 @@ isOneToOne: false
                   ]
                 },"xp_log": {
                   Row: {
-                    "amount": number,"at": string,"id": string,"item_id": string | null,"note": string | null,"pillar": Database["public"]['Enums']["pillar"],"reason": Database["public"]['Enums']["xp_reason"],"task_id": string | null,"user_id": string
+                    "amount": number,"at": string,"id": string,"item_id": string | null,"learning_session_id": string | null,"note": string | null,"pillar": Database["public"]['Enums']["pillar"],"reason": Database["public"]['Enums']["xp_reason"],"task_id": string | null,"user_id": string
                   }
                   Insert: {
-                    "amount": number,"at"?: string,"id"?: string,"item_id"?: string | null,"note"?: string | null,"pillar": Database["public"]['Enums']["pillar"],"reason": Database["public"]['Enums']["xp_reason"],"task_id"?: string | null,"user_id"?: string
+                    "amount": number,"at"?: string,"id"?: string,"item_id"?: string | null,"learning_session_id"?: string | null,"note"?: string | null,"pillar": Database["public"]['Enums']["pillar"],"reason": Database["public"]['Enums']["xp_reason"],"task_id"?: string | null,"user_id"?: string
                   }
                   Update: {
-                    "amount"?: number,"at"?: string,"id"?: string,"item_id"?: string | null,"note"?: string | null,"pillar"?: Database["public"]['Enums']["pillar"],"reason"?: Database["public"]['Enums']["xp_reason"],"task_id"?: string | null,"user_id"?: string
+                    "amount"?: number,"at"?: string,"id"?: string,"item_id"?: string | null,"learning_session_id"?: string | null,"note"?: string | null,"pillar"?: Database["public"]['Enums']["pillar"],"reason"?: Database["public"]['Enums']["xp_reason"],"task_id"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -214,6 +252,12 @@ isOneToOne: false
       columns: ["item_id","user_id"]
 isOneToOne: false
       referencedRelation: "items"
+      referencedColumns: ["id","user_id"]
+    },{
+      foreignKeyName: "xp_log_learning_session_id_user_id_fkey"
+      columns: ["learning_session_id","user_id"]
+isOneToOne: false
+      referencedRelation: "learning_sessions"
       referencedColumns: ["id","user_id"]
     },{
       foreignKeyName: "xp_log_task_id_user_id_fkey"
@@ -244,6 +288,9 @@ isOneToOne: false
 "export_all":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"record_learning":
+{ Args: { "p_at": string,"p_confidence": number,"p_count": number,"p_minutes": number,"p_notes": string,"p_skill_id": string,"p_topic": string,"p_unit": string,"p_xp": Json }; Returns: string
+                           },
 "record_slip":
 { Args: { "p_accepted": boolean,"p_task_id": string,"p_tone": Database["public"]['Enums']["mode"],"p_why": string,"p_why_category": string }; Returns: string
                            },
@@ -261,7 +308,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "bucket_name": "needs"|"buffer"|"savings"|"wants"|"flexible","item_status": "active"|"done"|"paused"|"dropped","mode": "curious"|"strict"|"soft"|"strictest"|"softest","money_direction": "in"|"out","money_tag": "need"|"want"|"unsure","pillar": "spiritual"|"mental"|"physical"|"financial"|"emotional"|"social"|"character"|"skills"|"creativity"|"relationships"|"academic","purchase_verdict": "yes"|"wait_24h"|"no","spend_level": "floor"|"comfortable","task_status": "pending"|"done"|"skipped"|"cancelled","tier": "need"|"want"|"goal"|"wish"|"dream","xp_reason": "completion"|"late_completion"|"ignored_need"|"goal_completion"|"wish_fulfilled"|"dream_milestone"|"transaction_logged"
+            "bucket_name": "needs"|"buffer"|"savings"|"wants"|"flexible","item_status": "active"|"done"|"paused"|"dropped","mode": "curious"|"strict"|"soft"|"strictest"|"softest","money_direction": "in"|"out","money_tag": "need"|"want"|"unsure","pillar": "spiritual"|"mental"|"physical"|"financial"|"emotional"|"social"|"character"|"skills"|"creativity"|"relationships"|"academic","purchase_verdict": "yes"|"wait_24h"|"no","spend_level": "floor"|"comfortable","task_status": "pending"|"done"|"skipped"|"cancelled","tier": "need"|"want"|"goal"|"wish"|"dream","xp_reason": "completion"|"late_completion"|"ignored_need"|"goal_completion"|"wish_fulfilled"|"dream_milestone"|"transaction_logged"|"learning"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -377,7 +424,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "bucket_name": ["needs", "buffer", "savings", "wants", "flexible"],"item_status": ["active", "done", "paused", "dropped"],"mode": ["curious", "strict", "soft", "strictest", "softest"],"money_direction": ["in", "out"],"money_tag": ["need", "want", "unsure"],"pillar": ["spiritual", "mental", "physical", "financial", "emotional", "social", "character", "skills", "creativity", "relationships", "academic"],"purchase_verdict": ["yes", "wait_24h", "no"],"spend_level": ["floor", "comfortable"],"task_status": ["pending", "done", "skipped", "cancelled"],"tier": ["need", "want", "goal", "wish", "dream"],"xp_reason": ["completion", "late_completion", "ignored_need", "goal_completion", "wish_fulfilled", "dream_milestone", "transaction_logged"]
+            "bucket_name": ["needs", "buffer", "savings", "wants", "flexible"],"item_status": ["active", "done", "paused", "dropped"],"mode": ["curious", "strict", "soft", "strictest", "softest"],"money_direction": ["in", "out"],"money_tag": ["need", "want", "unsure"],"pillar": ["spiritual", "mental", "physical", "financial", "emotional", "social", "character", "skills", "creativity", "relationships", "academic"],"purchase_verdict": ["yes", "wait_24h", "no"],"spend_level": ["floor", "comfortable"],"task_status": ["pending", "done", "skipped", "cancelled"],"tier": ["need", "want", "goal", "wish", "dream"],"xp_reason": ["completion", "late_completion", "ignored_need", "goal_completion", "wish_fulfilled", "dream_milestone", "transaction_logged", "learning"]
           }
         }
 } as const
