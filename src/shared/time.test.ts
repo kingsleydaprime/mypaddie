@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { dayKey, daysBetween, startOfNextDay, withinLastDays } from "./time";
+import { addDays, dayKey, daysBetween, localTimeOf, startOfNextDay, weekdayOf, withinLastDays, zonedInstant } from "./time";
 
 const LAGOS = "Africa/Lagos"; // UTC+1, no DST
 const at = (iso: string) => new Date(iso);
@@ -59,5 +59,36 @@ describe("startOfNextDay", () => {
     expect(startOfNextDay(at("2026-03-29T10:00:00Z"), "Europe/London").toISOString()).toBe(
       "2026-03-29T23:00:00.000Z",
     );
+  });
+});
+
+describe("addDays / weekdayOf", () => {
+  test("crosses month and year ends", () => {
+    expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
+    expect(addDays("2027-01-01", -1)).toBe("2026-12-31");
+  });
+  test("2026-10-05 is a Monday", () => {
+    expect(weekdayOf("2026-10-05")).toBe(1);
+    expect(weekdayOf("2026-10-11")).toBe(0);
+  });
+});
+
+describe("localTimeOf / zonedInstant", () => {
+  test("Lagos is UTC+1", () => {
+    expect(localTimeOf(new Date("2026-10-06T06:00:00Z"), LAGOS)).toBe("07:00");
+    expect(zonedInstant("2026-10-06", "07:00", LAGOS).toISOString()).toBe("2026-10-06T06:00:00.000Z");
+  });
+  test("just after local midnight is the previous UTC day", () => {
+    expect(zonedInstant("2026-10-06", "00:30", LAGOS).toISOString()).toBe("2026-10-05T23:30:00.000Z");
+  });
+  test("round-trips through localTimeOf", () => {
+    const at = zonedInstant("2026-10-06", "21:45", LAGOS);
+    expect(localTimeOf(at, LAGOS)).toBe("21:45");
+    expect(dayKey(at, LAGOS)).toBe("2026-10-06");
+  });
+  test("respects DST in zones that have it", () => {
+    // London is UTC+1 in summer, UTC+0 in winter.
+    expect(zonedInstant("2026-07-01", "09:00", "Europe/London").toISOString()).toBe("2026-07-01T08:00:00.000Z");
+    expect(zonedInstant("2026-12-01", "09:00", "Europe/London").toISOString()).toBe("2026-12-01T09:00:00.000Z");
   });
 });

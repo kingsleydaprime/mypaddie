@@ -55,3 +55,58 @@ export function startOfNextDay(at: Date, timeZone: string): Date {
   }
   return new Date(hi * MINUTE);
 }
+
+/** "YYYY-MM-DD" shifted by whole calendar days. Pure date arithmetic, no zone involved. */
+export function addDays(day: string, days: number): string {
+  const t = Date.parse(`${day}T00:00:00Z`) + days * DAY_MS;
+  return new Date(t).toISOString().slice(0, 10);
+}
+
+/** Day of week for a "YYYY-MM-DD", 0 = Sunday … 6 = Saturday. */
+export function weekdayOf(day: string): number {
+  return new Date(`${day}T00:00:00Z`).getUTCDay();
+}
+
+/** Wall-clock "HH:MM" of an instant in the given zone. */
+export function localTimeOf(at: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(at);
+}
+
+/** Minutes the zone is ahead of UTC at a given instant (Lagos: +60). */
+function offsetMinutes(at: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(at);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)!.value);
+  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  return Math.round((asUtc - Math.floor(at.getTime() / 1000) * 1000) / 60000);
+}
+
+/**
+ * The instant at which the wall clock in `timeZone` reads `day` `time`.
+ * e.g. zonedInstant("2026-10-06", "07:00", "Africa/Lagos") → 06:00Z.
+ * Guesses with the offset at the naive UTC reading, then corrects once,
+ * which is exact except inside a DST gap (where the clock time doesn't exist).
+ */
+export function zonedInstant(day: string, time: string, timeZone: string): Date {
+  const naive = Date.parse(`${day}T${time}:00Z`);
+  const first = naive - offsetMinutes(new Date(naive), timeZone) * 60000;
+  return new Date(naive - offsetMinutes(new Date(first), timeZone) * 60000);
+}
+
+/** "YYYY-MM-DD HH:MM" in the given zone — how times are shown to the AI and to you. */
+export function formatLocal(at: Date, timeZone: string): string {
+  return `${dayKey(at, timeZone)} ${localTimeOf(at, timeZone)}`;
+}
