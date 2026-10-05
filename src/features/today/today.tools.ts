@@ -4,6 +4,8 @@ import { upcoming } from "@/features/events/events";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
 import { loadActiveIdentity } from "@/features/identity/identity.repo";
 import { loadLearning } from "@/features/learning/learning.repo";
+import { dayEndsAt } from "@/features/settings/schedule";
+import { loadSchedule } from "@/features/settings/settings.repo";
 import { loadMode } from "@/features/mode/mode.repo";
 import { loadMoneyStage } from "@/features/money/money.repo";
 import type { MoneyStage } from "@/features/money/stage";
@@ -54,7 +56,7 @@ export function registerTodayTools(server: McpServer) {
         const db = dbFrom(ctx);
         const now = new Date();
         const caughtUp = await catchUp(db, now);
-        const [tasks, mode, money, capacity, dayTasks, identity, events, learning] = await Promise.all([
+        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule] = await Promise.all([
           loadTasksAroundToday(db, now),
           loadMode(db, now),
           loadMoneyStage(db, now),
@@ -63,9 +65,10 @@ export function registerTodayTools(server: McpServer) {
           loadActiveIdentity(db),
           loadUpcomingEvents(db),
           loadLearning(db, now),
+          loadSchedule(db),
         ]);
-        const soon = upcoming(events, now, 7);
-        const room = roomOn(dayKey(now, tz), dayTasks, capacity, now);
+        const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
+        const room = roomOn(dayKey(now, tz), dayTasks, capacity, now, undefined, dayEndsAt(schedule));
         const focus = pickFocus(tasks, now);
         return ok({
           now: formatLocal(now, tz),

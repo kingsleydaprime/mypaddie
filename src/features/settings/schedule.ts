@@ -1,0 +1,83 @@
+import { z } from "zod";
+
+const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "use HH:MM, 24-hour");
+
+export const mealSchema = z.object({
+  name: z.string().trim().min(1).max(30),
+  at: time,
+  minutes: z.number().int().min(5).max(120),
+});
+
+export const scheduleSchema = z.object({
+  /** No nudges between these. May cross midnight (22:00 → 07:00). */
+  quietStart: time,
+  quietEnd: time,
+  briefAt: time,
+  /** Evening-before reminders (tasks and events). */
+  eveningAt: time,
+  /** Morning-of reminders (tasks and events). */
+  morningAt: time,
+  /** Within this many days an event is "close". */
+  eventCloseDays: z.number().int().min(1).max(60),
+  meals: z.array(mealSchema).max(6),
+});
+
+export type Schedule = z.infer<typeof scheduleSchema>;
+export type Meal = z.infer<typeof mealSchema>;
+
+export const DEFAULT_SCHEDULE: Schedule = {
+  quietStart: "22:00",
+  quietEnd: "07:00",
+  briefAt: "08:00",
+  eveningAt: "20:00",
+  morningAt: "09:00",
+  eventCloseDays: 7,
+  meals: [
+    { name: "Breakfast", at: "08:00", minutes: 20 },
+    { name: "Lunch", at: "13:00", minutes: 30 },
+    { name: "Dinner", at: "19:00", minutes: 40 },
+  ],
+};
+
+/** Is a local "HH:MM" inside quiet hours? Handles windows that cross midnight. */
+export function isQuiet(t: string, s: Pick<Schedule, "quietStart" | "quietEnd">): boolean {
+  return s.quietStart > s.quietEnd ? t >= s.quietStart || t < s.quietEnd : t >= s.quietStart && t < s.quietEnd;
+}
+
+/**
+ * When the active day ends — for "time left today" and the planner. Quiet
+ * hours that start after midnight mean the day runs to the end of the day.
+ */
+export function dayEndsAt(s: Pick<Schedule, "quietStart">): string {
+  return s.quietStart >= "12:00" ? s.quietStart : "23:59";
+}
+
+/** Saved settings merged over the defaults; anything invalid falls back to its default. */
+export function readSchedule(saved: unknown): Schedule {
+  const merged: Record<string, unknown> = { ...DEFAULT_SCHEDULE };
+  if (saved && typeof saved === "object") {
+    for (const [k, v] of Object.entries(saved)) {
+      const field = scheduleSchema.shape[k as keyof Schedule];
+      if (field?.safeParse(v).success) merged[k] = v;
+    }
+  }
+  return scheduleSchema.parse(merged);
+}
+
+export type ScheduleChange = Partial<Schedule>;
+
+/**
+ * Applies a change and checks the result makes sense as a whole: quiet hours
+ * that aren't empty, and reminder times that aren't inside them (a brief at
+ * 06:00 with quiet hours until 07:00 would simply never arrive).
+ */
+export function applyScheduleChange(current: Schedule, change: ScheduleChange): { ok: true; schedule: Schedule } | { ok: false; error: string } {
+  const parsed = scheduleSchema.partial().safeParse(change);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "invalid setting" };
+  const next = { ...current, ...parsed.data };
+  if (next.quietStart === next.quietEnd) return { ok: false, error: "quiet hours can't start and end at the same time" };
+  for (const [label, t] of [["morning brief", next.briefAt], ["evening reminder", next.eveningAt], ["morning reminder", next.morningAt]] as const) {
+    if (isQuiet(t, next)) return { ok: false, error: `the ${label} at ${t} falls inside quiet hours (${next.quietStart}–${next.quietEnd}), so it would never arrive` };
+  }
+  return { ok: true, schedule: next };
+}

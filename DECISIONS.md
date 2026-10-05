@@ -358,3 +358,13 @@ count — but with no XP: the task already paid it, and paying twice would make
 linked tasks worth double. Topics due for review appear in get_today and as one
 quiet line on Today; the push brief stays task-only because it's assembled in
 SQL and the review schedule lives in TypeScript.
+
+### Schedule settings, per user, validated as a whole
+Quiet hours (may cross midnight), brief time, evening/morning reminder times,
+event "close" days and meals live in one `schedule` setting merged over
+defaults. The nudge job now applies each user's own quiet hours instead of one
+global check. A change is validated as a whole: a reminder time inside quiet
+hours is refused with the reason, because it would silently never arrive.
+Malformed stored values fall back to defaults in both TS and SQL, so a bad
+setting can't break the nudge job. "Time left today" and the planner end at
+the start of quiet hours (or at midnight if quiet hours start after it).

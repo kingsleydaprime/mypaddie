@@ -3,7 +3,7 @@ import { dayKey, zonedInstant } from "@/shared/time";
 
 /** Minutes assumed for a task with no duration — for capacity and for clashes. */
 export const DEFAULT_DURATION = 30;
-/** Nothing gets scheduled into quiet hours, so today's room ends here. */
+/** Default end of the active day (the start of quiet hours). */
 const DAY_ENDS_AT = "22:00";
 
 export interface CapacityPeriod {
@@ -53,12 +53,14 @@ export function roomOn(
   setting: CapacitySetting,
   now: Date,
   config: EngineConfig = DEFAULT_CONFIG,
+  /** When the active day ends ("HH:MM") — the start of his quiet hours. */
+  dayEndsAt: string = DAY_ENDS_AT,
 ): DayRoom {
   const { minutes: capacity, label } = capacityFor(day, setting);
   const committed = tasksOnDay.filter((t) => t.status === "pending").reduce((s, t) => s + minutesOf(t), 0);
   let available = Math.max(0, capacity - committed);
   if (day === dayKey(now, config.timeZone)) {
-    const leftToday = Math.floor((zonedInstant(day, DAY_ENDS_AT, config.timeZone).getTime() - now.getTime()) / 60_000);
+    const leftToday = Math.floor((zonedInstant(day, dayEndsAt, config.timeZone).getTime() - now.getTime()) / 60_000);
     available = Math.min(available, Math.max(0, leftToday));
   }
   return { day, capacity, label, committed, available };

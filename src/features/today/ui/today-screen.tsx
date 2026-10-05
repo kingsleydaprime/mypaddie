@@ -2,6 +2,7 @@ import { upcoming } from "@/features/events/events";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
 import { loadLearning } from "@/features/learning/learning.repo";
 import { loadMode } from "@/features/mode/mode.repo";
+import { loadSchedule } from "@/features/settings/settings.repo";
 import type { Mode } from "@/shared/domain";
 import { catchUp, loadTasksAroundToday } from "@/features/tasks/tasks.repo";
 import { DEFAULT_CONFIG } from "@/shared/config";
@@ -45,11 +46,11 @@ function Row({ item, now, big }: { item: FocusItem; now: Date; big?: boolean }) 
 export async function TodayScreen({ db }: { db: Db }) {
   const now = new Date();
   await catchUp(db, now);
-  const [tasks, mode, events, learning] = await Promise.all([loadTasksAroundToday(db, now), loadMode(db, now), loadUpcomingEvents(db), loadLearning(db, now)]);
+  const [tasks, mode, events, learning, schedule] = await Promise.all([loadTasksAroundToday(db, now), loadMode(db, now), loadUpcomingEvents(db), loadLearning(db, now), loadSchedule(db)]);
   const review = learning
     .filter((l) => l.skill.status === "active")
     .flatMap((l) => l.summary.reviewDue.map((t) => `${t.topic} (${l.skill.name})`));
-  const soon = upcoming(events, now, 7);
+  const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
   const todayEvents = soon.filter((e) => e.daysAway === 0);
   const prepare = soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now");
   const focus = pickFocus(tasks, now);

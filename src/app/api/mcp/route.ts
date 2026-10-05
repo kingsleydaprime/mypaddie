@@ -8,6 +8,7 @@ import { registerModeTools } from "@/features/mode/mode.tools";
 import { registerPantryTools } from "@/features/pantry/pantry.tools";
 import { registerPlanningTools } from "@/features/planning/planning.tools";
 import { registerMoneyTools } from "@/features/money/money.tools";
+import { registerSettingsTools } from "@/features/settings/settings.tools";
 import { registerSlipTools } from "@/features/slips/slips.tools";
 import { registerStatsTools } from "@/features/stats/stats.tools";
 import { registerCapacityTools } from "@/features/tasks/capacity.tools";
@@ -33,9 +34,10 @@ const handler = createMcpHandler(
     registerPantryTools(server);
     registerEventTools(server);
     registerPlanningTools(server);
+    registerSettingsTools(server);
   },
   {
-    serverInfo: { name: "mypaddie", version: "0.8.0" },
+    serverInfo: { name: "mypaddie", version: "0.9.0" },
     instructions:
       "MyPaddie is Kingsley's private life coach. Call get_today first in every chat. Every tool result includes " +
       "`mode` (curious, strict, soft, strictest, softest) with the facts behind it — set your tone from it. get_today also returns `becoming`, his " +

@@ -66,7 +66,13 @@ export interface EventView {
 }
 
 /** Upcoming events within `horizonDays`, by occurrence, with their quadrant. */
-export function upcoming(events: readonly EventLike[], now: Date, horizonDays: number, config: EngineConfig = DEFAULT_CONFIG): EventView[] {
+export function upcoming(
+  events: readonly EventLike[],
+  now: Date,
+  horizonDays: number,
+  config: EngineConfig = DEFAULT_CONFIG,
+  closeDays: number = CLOSE_DAYS,
+): EventView[] {
   const tz = config.timeZone;
   const today = dayKey(now, tz);
   return events
@@ -74,7 +80,7 @@ export function upcoming(events: readonly EventLike[], now: Date, horizonDays: n
     .map((e) => {
       const at = nextOccurrence(e, today, config);
       const daysAway = daysBetween(now, at, tz);
-      return { id: e.id, title: e.title, kind: e.kind, at, allDay: e.allDay, important: e.important, daysAway, quadrant: quadrant(e.important, daysAway) };
+      return { id: e.id, title: e.title, kind: e.kind, at, allDay: e.allDay, important: e.important, daysAway, quadrant: quadrant(e.important, daysAway, closeDays) };
     })
     .filter((v) => v.daysAway >= 0 && v.daysAway <= horizonDays && (v.allDay || v.daysAway > 0 || v.at.getTime() >= now.getTime() - 60 * 60_000))
     .sort((a, b) => a.at.getTime() - b.at.getTime());

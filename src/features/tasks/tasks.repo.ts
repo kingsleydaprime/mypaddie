@@ -4,6 +4,8 @@ import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
 import type { Tier } from "@/shared/domain";
 import type { Database, Json } from "@/shared/supabase/database.types";
 import { eventBlocksOn } from "@/features/events/events.repo";
+import { dayEndsAt } from "@/features/settings/schedule";
+import { loadSchedule } from "@/features/settings/settings.repo";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, localTimeOf, zonedInstant } from "@/shared/time";
 import {
@@ -293,7 +295,8 @@ async function guardDay(
     const clashes = findClashes(opts.start, opts.minutes, tasks);
     if (clashes.length > 0) return { result: "clash", clashes };
   }
-  const check = checkCapacity(roomOn(opts.day, tasks, await loadCapacity(db), opts.now, config), opts.minutes);
+  const dayEnd = dayEndsAt(await loadSchedule(db));
+  const check = checkCapacity(roomOn(opts.day, tasks, await loadCapacity(db), opts.now, config, dayEnd), opts.minutes);
   return check.ok ? null : { result: "over_capacity", room: check.room, adding: check.adding };
 }
 

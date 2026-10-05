@@ -1,0 +1,23 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { requireDb } from "@/shared/supabase/session";
+import { updateSchedule } from "./settings.repo";
+
+export type SettingsState = null | { ok: true } | { error: string };
+
+export async function saveSettingsAction(_prev: SettingsState, form: FormData): Promise<SettingsState> {
+  const get = (k: string) => String(form.get(k) ?? "");
+  const db = await requireDb("/paddie");
+  const result = await updateSchedule(db, {
+    quietStart: get("quietStart"),
+    quietEnd: get("quietEnd"),
+    briefAt: get("briefAt"),
+    eveningAt: get("eveningAt"),
+    morningAt: get("morningAt"),
+    eventCloseDays: Number(get("eventCloseDays")),
+  });
+  if (!result.ok) return { error: result.error };
+  revalidatePath("/paddie");
+  return { ok: true };
+}

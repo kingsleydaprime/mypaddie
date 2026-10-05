@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
+import { loadSchedule } from "@/features/settings/settings.repo";
 import { createTask, loadDayTasks } from "@/features/tasks/tasks.repo";
 import { findClashes } from "@/features/tasks/capacity";
 import { DEFAULT_CONFIG } from "@/shared/config";
@@ -163,7 +164,7 @@ export function registerEventTools(server: McpServer) {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const views = upcoming(await loadUpcomingEvents(db), now, days);
+        const views = upcoming(await loadUpcomingEvents(db), now, days, undefined, (await loadSchedule(db)).eventCloseDays);
         const group = (q: string) =>
           views.filter((v) => v.quadrant === q).map((v) => ({ id: v.id, title: v.title, kind: v.kind, when: v.allDay ? dayKey(v.at, tz) : formatLocal(v.at, tz), daysAway: v.daysAway }));
         return ok(await withMode(db, now, { prepare_now: group("prepare_now"), plan_ahead: group("plan_ahead"), fit_in: group("fit_in"), someday: group("someday") }));

@@ -4,6 +4,8 @@ import { withMode } from "@/features/mode/mode.repo";
 import { DEFAULT_CONFIG } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { dayKey } from "@/shared/time";
+import { dayEndsAt } from "@/features/settings/schedule";
+import { loadSchedule } from "@/features/settings/settings.repo";
 import { roomOn } from "./capacity";
 import { loadCapacity, loadDayTasks, saveCapacity } from "./tasks.repo";
 
@@ -25,8 +27,8 @@ export function registerCapacityTools(server: McpServer) {
         const db = dbFrom(ctx);
         const now = new Date();
         const day = date ?? dayKey(now, DEFAULT_CONFIG.timeZone);
-        const [setting, tasks] = await Promise.all([loadCapacity(db), loadDayTasks(db, day)]);
-        const room = roomOn(day, tasks, setting, now);
+        const [setting, tasks, schedule] = await Promise.all([loadCapacity(db), loadDayTasks(db, day), loadSchedule(db)]);
+        const room = roomOn(day, tasks, setting, now, undefined, dayEndsAt(schedule));
         return ok(
           await withMode(db, now, {
             defaultHours: hours(setting.defaultMinutes),

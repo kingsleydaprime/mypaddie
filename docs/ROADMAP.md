@@ -36,7 +36,8 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
   repeats; reminder ladder; block time for clashes and capacity; prep tasks.
 - [x] **Who I'm becoming**: in every get_today; `update_identity`; on Paddie tab.
 - [ ] Events in the app (list + add), and a "Plan my day" button on Today.
-- [ ] "Close" (7 days) and meal times as settings.
+- [x] Schedule settings: quiet hours, brief, evening/morning reminder times,
+  event "close" days, meals — per user, in the nudge job, capacity and planner.
 
 ## Later (ideas, 2026-10-05)
 - [ ] **Applications** (jobs, scholarships…): link, org, deadline, requirements
@@ -50,8 +51,6 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - Dead push subscriptions aren't pruned yet: `/api/push` reports them as
   `gone`, but nothing deletes them (the route has no DB access by design).
   A small cron step reading `net._http_response` can do it.
-- Quiet hours (22:00–07:00), brief (08:00), evening reminder (20:00) and morning
-  reminder (09:00) times are fixed; move to `settings`.
 - Capacity only counts the first day of a new habit, not every day it recurs.
 - Edit tasks from the app (tool exists; UI doesn't).
 - pgTAP doesn't run against the hosted project yet (see DECISIONS.md).
