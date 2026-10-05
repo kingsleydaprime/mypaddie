@@ -5,6 +5,17 @@ import type { Tier } from "@/shared/domain";
 import type { Database, Json } from "@/shared/supabase/database.types";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, localTimeOf, zonedInstant } from "@/shared/time";
+import {
+  checkCapacity,
+  DEFAULT_CAPACITY,
+  DEFAULT_DURATION,
+  findClashes,
+  roomOn,
+  type CapacitySetting,
+  type Clash,
+  type DayRoom,
+  type DayTask,
+} from "./capacity";
 import { parseRecurrence, planOccurrences, type SeriesForSpawn } from "./recurrence";
 
 /** How far back catch-up looks for ignored needs and recurring templates. */
@@ -12,7 +23,7 @@ const LOOKBACK_DAYS = 14;
 const SERIES_LOOKBACK_DAYS = 60;
 
 const TASK_COLUMNS =
-  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, item_id, items(tier), task_pillars(pillar, weight)";
+  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, item_id, items(tier), task_pillars(pillar, weight)";
 
 type TaskRow = {
   id: string;
@@ -22,6 +33,7 @@ type TaskRow = {
   due_at: string | null;
   done_at: string | null;
   is_non_negotiable: boolean;
+  must_from: string | null;
   item_id: string | null;
   items: { tier: Tier } | null;
   task_pillars: PillarWeight[];
@@ -33,7 +45,8 @@ export interface LoadedTask extends TaskForXp {
   itemId: string | null;
 }
 
-function toTask(row: TaskRow): LoadedTask {
+/** `now` turns a task whose must_from has passed into a non-negotiable. */
+function toTask(row: TaskRow, now?: Date): LoadedTask {
   return {
     id: row.id,
     title: row.title,
@@ -43,7 +56,8 @@ function toTask(row: TaskRow): LoadedTask {
     dueAt: row.due_at ? new Date(row.due_at) : null,
     doneAt: row.done_at ? new Date(row.done_at) : null,
     weights: row.task_pillars,
-    isNonNegotiable: row.is_non_negotiable,
+    isNonNegotiable:
+      row.is_non_negotiable || (now !== undefined && row.must_from !== null && Date.parse(row.must_from) <= now.getTime()),
     itemId: row.item_id,
   };
 }
@@ -68,7 +82,7 @@ export async function loadTasksAroundToday(db: Db, now: Date, config = DEFAULT_C
     .or(`and(due_at.gte.${from},due_at.lt.${to}),and(due_at.is.null,status.in.(pending,skipped))`)
     .returns<TaskRow[]>();
   if (error) fail("loading today's tasks", error);
-  return data.map(toTask);
+  return data.map((r) => toTask(r, now));
 }
 
 /** Needs that were due before today and are still open — candidates for "ignored". */
@@ -89,7 +103,7 @@ export async function loadOpenPastNeeds(
     .returns<TaskRow[]>();
   if (error) fail("loading past needs", error);
 
-  const tasks = data.map(toTask);
+  const tasks = data.map((r) => toTask(r));
   if (tasks.length === 0) return { tasks, slips: [] };
 
   const { data: slips, error: slipError } = await db
@@ -194,11 +208,75 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = D
   };
 }
 
+// ─── Capacity and time blocks ───────────────────────────────────────────────
+
+const CAPACITY_KEY = "capacity";
+
+export async function loadCapacity(db: Db): Promise<CapacitySetting> {
+  const { data, error } = await db.from("settings").select("value").eq("key", CAPACITY_KEY).maybeSingle();
+  if (error) fail("loading capacity", error);
+  const v = data?.value as Partial<CapacitySetting> | undefined;
+  if (!v || typeof v.defaultMinutes !== "number" || !Array.isArray(v.periods)) return DEFAULT_CAPACITY;
+  return { defaultMinutes: v.defaultMinutes, periods: v.periods };
+}
+
+export async function saveCapacity(db: Db, setting: CapacitySetting) {
+  const { error } = await db
+    .from("settings")
+    .upsert({ key: CAPACITY_KEY, value: setting as unknown as { [key: string]: Json } }, { onConflict: "user_id,key" });
+  if (error) fail("saving capacity", error);
+}
+
+/** Tasks on one local day (by due time), for capacity and clash checks. */
+export async function loadDayTasks(db: Db, day: string, config = DEFAULT_CONFIG): Promise<DayTask[]> {
+  const from = zonedInstant(day, "00:00", config.timeZone).toISOString();
+  const to = zonedInstant(addDays(day, 1), "00:00", config.timeZone).toISOString();
+  const { data, error } = await db
+    .from("tasks")
+    .select("id, title, due_at, duration_minutes, status")
+    .gte("due_at", from)
+    .lt("due_at", to);
+  if (error) fail("loading the day", error);
+  return data.map((t) => ({
+    id: t.id,
+    title: t.title,
+    dueAt: t.due_at ? new Date(t.due_at) : null,
+    durationMinutes: t.duration_minutes,
+    status: t.status,
+  }));
+}
+
+/** Why a task can't go where it was asked to. */
+export type Refusal =
+  | { result: "clash"; clashes: Clash[] }
+  | { result: "over_capacity"; room: DayRoom; adding: number };
+
+/**
+ * The two checks before anything lands on a day:
+ *   clash    — overlaps another block; skipped when `forceClash` (a deliberate double-booking)
+ *   capacity — the day is full; no override (change capacity instead)
+ */
+async function guardDay(
+  db: Db,
+  opts: { day: string; start: Date | null; minutes: number; excludeId: string | null; forceClash: boolean; now: Date },
+  config: EngineConfig,
+): Promise<Refusal | null> {
+  const tasks = (await loadDayTasks(db, opts.day, config)).filter((t) => t.id !== opts.excludeId);
+  if (opts.start && !opts.forceClash) {
+    const clashes = findClashes(opts.start, opts.minutes, tasks);
+    if (clashes.length > 0) return { result: "clash", clashes };
+  }
+  const check = checkCapacity(roomOn(opts.day, tasks, await loadCapacity(db), opts.now, config), opts.minutes);
+  return check.ok ? null : { result: "over_capacity", room: check.room, adding: check.adding };
+}
+
+// ─── Create ──────────────────────────────────────────────────────────────────
+
 export interface NewTask {
   title: string;
   itemId: string | null;
   baseXp: number;
-  /** Local date "YYYY-MM-DD"; defaults to today. */
+  /** Local date "YYYY-MM-DD"; defaults to today when a time or recurrence is given. */
   dueDate: string | null;
   /** Local time "HH:MM"; null = any time that day. */
   dueTime: string | null;
@@ -206,19 +284,42 @@ export interface NewTask {
   recurrence: string | null;
   nonNegotiable: boolean;
   weights: PillarWeight[];
+  durationMinutes?: number | null;
+  /** Which reminders; null/undefined = the default for its kind. */
+  reminders?: Reminder[] | null;
+  /** When it turns into a must-do. */
+  mustFrom?: Date | null;
+  /** Book it even if it overlaps something (never bypasses capacity). */
+  forceClash?: boolean;
 }
 
+export type Reminder = "eve" | "morning" | "30" | "10";
+
+export type CreateResult = { result: "created"; task: { id: string; title: string; due_at: string | null; recurrence: string | null } } | Refusal;
+
 /**
- * Creates a task and its pillar weights. Weights and recurrence are validated
- * before anything is written; if the weights insert still fails, the task row
- * is removed again so there's never a task that can't pay XP.
+ * Creates a task and its pillar weights, after the clash and capacity checks.
+ * Weights and recurrence are validated before anything is written; if the
+ * weights insert still fails, the task row is removed again so there's never
+ * a task that can't pay XP. A habit is checked against its first day only.
  */
-export async function createTask(db: Db, task: NewTask, now: Date, config = DEFAULT_CONFIG) {
+export async function createTask(db: Db, task: NewTask, now: Date, config = DEFAULT_CONFIG): Promise<CreateResult> {
   validateWeights(task.weights);
   if (task.recurrence) parseRecurrence(task.recurrence);
 
+  const hasDay = task.dueDate !== null || task.dueTime !== null || task.recurrence !== null;
   const day = task.dueDate ?? dayKey(now, config.timeZone);
-  const dueAt = task.dueTime ? zonedInstant(day, task.dueTime, config.timeZone) : task.dueDate ? zonedInstant(day, "23:59", config.timeZone) : null;
+  const start = task.dueTime ? zonedInstant(day, task.dueTime, config.timeZone) : null;
+  const dueAt = start ?? (task.dueDate ? zonedInstant(day, "23:59", config.timeZone) : null);
+
+  if (hasDay) {
+    const refusal = await guardDay(
+      db,
+      { day, start, minutes: task.durationMinutes ?? DEFAULT_DURATION, excludeId: null, forceClash: task.forceClash ?? false, now },
+      config,
+    );
+    if (refusal) return refusal;
+  }
 
   const { data, error } = await db
     .from("tasks")
@@ -231,6 +332,9 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = DEFA
       is_non_negotiable: task.nonNegotiable,
       series_id: task.recurrence ? crypto.randomUUID() : null,
       occurs_on: task.recurrence ? day : null,
+      duration_minutes: task.durationMinutes ?? null,
+      reminders: task.reminders ?? null,
+      must_from: task.mustFrom?.toISOString() ?? null,
     })
     .select("id, title, due_at, recurrence")
     .single();
@@ -243,8 +347,10 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = DEFA
     await db.from("tasks").delete().eq("id", data.id);
     fail("saving pillar weights", weightError);
   }
-  return data;
+  return { result: "created", task: data };
 }
+
+// ─── Update ──────────────────────────────────────────────────────────────────
 
 export interface TaskChanges {
   title?: string;
@@ -256,28 +362,35 @@ export interface TaskChanges {
   nonNegotiable?: boolean;
   recurrence?: string;
   weights?: PillarWeight[];
+  durationMinutes?: number | null;
+  reminders?: Reminder[] | null;
+  mustFrom?: Date | null;
+  forceClash?: boolean;
 }
 
 export type UpdateResult =
   | { result: "updated"; rows: number }
   | { result: "cancelled" | "stopped"; rows: number }
-  | { result: "not_found" | "already_done" };
+  | { result: "not_found" | "already_done" }
+  | Refusal;
 
 /**
  * Edits a task. For a recurring habit the change applies to this day and every
  * later pending day — new days copy the latest row, so this also changes the
  * habit going forward. Done tasks can't be edited: their XP is in the ledger.
+ * Moving or lengthening a task re-runs the clash and capacity checks.
  */
 export async function updateTask(
   db: Db,
   taskId: string,
   changes: TaskChanges,
   action: "edit" | "cancel" | "stop",
+  now: Date = new Date(),
   config = DEFAULT_CONFIG,
 ): Promise<UpdateResult> {
   const { data: task, error } = await db
     .from("tasks")
-    .select("id, status, series_id, occurs_on, due_at, recurrence")
+    .select("id, status, series_id, occurs_on, due_at, recurrence, duration_minutes")
     .eq("id", taskId)
     .maybeSingle();
   if (error) fail("loading the task", error);
@@ -291,7 +404,7 @@ export async function updateTask(
   }
 
   if (action === "stop") {
-    if (!task.series_id) return updateTask(db, taskId, changes, "cancel", config);
+    if (!task.series_id) return updateTask(db, taskId, changes, "cancel", now, config);
     // Cancel what's still open, then dissolve the series so nothing new spawns.
     // Past rows stay as history (as one-offs).
     const { data: open, error: e1 } = await db
@@ -309,6 +422,36 @@ export async function updateTask(
     if (!task.series_id) throw new Error("this is a one-off task; add a new recurring task instead");
   }
   if (changes.dueDate && task.series_id) throw new Error("a habit's days come from its recurrence; change that instead");
+
+  const newDueAt = (row: { occurs_on: string | null; due_at: string | null }): string | null => {
+    const day = changes.dueDate ?? row.occurs_on ?? (row.due_at ? dayKey(new Date(row.due_at), config.timeZone) : dayKey(now, config.timeZone));
+    const time = changes.dueTime === undefined ? (row.due_at ? localTimeOf(new Date(row.due_at), config.timeZone) : null) : changes.dueTime;
+    return time ? zonedInstant(day, time, config.timeZone).toISOString() : row.occurs_on ? null : zonedInstant(day, "23:59", config.timeZone).toISOString();
+  };
+  const moves = changes.dueDate !== undefined || changes.dueTime !== undefined;
+
+  // Re-check the day this task lands on, if its time or length changes.
+  if (moves || changes.durationMinutes !== undefined) {
+    const dueAt = moves ? newDueAt(task) : task.due_at;
+    if (dueAt) {
+      const at = new Date(dueAt);
+      // 23:59 is how "any time that day" is stored: it counts for capacity but isn't a block.
+      const timed = localTimeOf(at, config.timeZone) !== "23:59";
+      const refusal = await guardDay(
+        db,
+        {
+          day: dayKey(at, config.timeZone),
+          start: timed ? at : null,
+          minutes: (changes.durationMinutes !== undefined ? changes.durationMinutes : task.duration_minutes) ?? DEFAULT_DURATION,
+          excludeId: task.id,
+          forceClash: changes.forceClash ?? false,
+          now,
+        },
+        config,
+      );
+      if (refusal) return refusal;
+    }
+  }
 
   // This row, plus later pending rows of the same habit.
   let targets: { id: string; occurs_on: string | null; due_at: string | null }[] = [task];
@@ -329,11 +472,10 @@ export async function updateTask(
     if (changes.baseXp !== undefined) patch.base_xp = changes.baseXp;
     if (changes.nonNegotiable !== undefined) patch.is_non_negotiable = changes.nonNegotiable;
     if (changes.recurrence !== undefined) patch.recurrence = changes.recurrence;
-    if (changes.dueDate !== undefined || changes.dueTime !== undefined) {
-      const day = changes.dueDate ?? row.occurs_on ?? (row.due_at ? dayKey(new Date(row.due_at), config.timeZone) : dayKey(new Date(), config.timeZone));
-      const time = changes.dueTime === undefined ? (row.due_at ? localTimeOf(new Date(row.due_at), config.timeZone) : null) : changes.dueTime;
-      patch.due_at = time ? zonedInstant(day, time, config.timeZone).toISOString() : row.occurs_on ? null : zonedInstant(day, "23:59", config.timeZone).toISOString();
-    }
+    if (changes.durationMinutes !== undefined) patch.duration_minutes = changes.durationMinutes;
+    if (changes.reminders !== undefined) patch.reminders = changes.reminders;
+    if (changes.mustFrom !== undefined) patch.must_from = changes.mustFrom?.toISOString() ?? null;
+    if (moves) patch.due_at = newDueAt(row);
     if (Object.keys(patch).length > 0) {
       const { error: e } = await db.from("tasks").update(patch).eq("id", row.id);
       if (e) fail("updating the task", e);
@@ -344,4 +486,28 @@ export async function updateTask(
     }
   }
   return { result: "updated", rows: targets.length };
+}
+
+// ─── Delete ──────────────────────────────────────────────────────────────────
+
+export type DeleteResult = { result: "deleted" | "not_found" } | { result: "has_history"; xpEntries: number; slips: number };
+
+/**
+ * For mistakes only: a task that never earned or lost XP and has no slips.
+ * Anything with history is part of the record — cancel or stop it instead.
+ */
+export async function deleteTask(db: Db, taskId: string): Promise<DeleteResult> {
+  const [task, xp, slips] = await Promise.all([
+    db.from("tasks").select("id").eq("id", taskId).maybeSingle(),
+    db.from("xp_log").select("id", { count: "exact", head: true }).eq("task_id", taskId),
+    db.from("slips").select("id", { count: "exact", head: true }).eq("task_id", taskId),
+  ]);
+  for (const r of [task, xp, slips]) if (r.error) fail("checking the task", r.error);
+  if (!task.data) return { result: "not_found" };
+  if ((xp.count ?? 0) > 0 || (slips.count ?? 0) > 0) {
+    return { result: "has_history", xpEntries: xp.count ?? 0, slips: slips.count ?? 0 };
+  }
+  const { error } = await db.from("tasks").delete().eq("id", taskId);
+  if (error) fail("deleting the task", error);
+  return { result: "deleted" };
 }

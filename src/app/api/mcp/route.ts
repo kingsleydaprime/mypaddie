@@ -6,6 +6,7 @@ import { registerModeTools } from "@/features/mode/mode.tools";
 import { registerMoneyTools } from "@/features/money/money.tools";
 import { registerSlipTools } from "@/features/slips/slips.tools";
 import { registerStatsTools } from "@/features/stats/stats.tools";
+import { registerCapacityTools } from "@/features/tasks/capacity.tools";
 import { registerTaskTools } from "@/features/tasks/tasks.tools";
 import { registerTodayTools } from "@/features/today/today.tools";
 import { verifyToken } from "@/shared/mcp/auth";
@@ -14,6 +15,7 @@ const handler = createMcpHandler(
   (server) => {
     registerTodayTools(server);
     registerTaskTools(server);
+    registerCapacityTools(server);
     registerItemTools(server);
     registerSlipTools(server);
     registerModeTools(server);
@@ -23,7 +25,7 @@ const handler = createMcpHandler(
     registerIdentityTools(server);
   },
   {
-    serverInfo: { name: "mypaddie", version: "0.3.0" },
+    serverInfo: { name: "mypaddie", version: "0.4.0" },
     instructions:
       "MyPaddie is Kingsley's private life coach. Call get_today first in every chat. Every tool result includes " +
       "`mode` (curious, strict, soft, strictest, softest) with the facts behind it — set your tone from it.",

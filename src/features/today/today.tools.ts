@@ -3,10 +3,11 @@ import { z } from "zod";
 import { loadMode } from "@/features/mode/mode.repo";
 import { loadMoneyStage } from "@/features/money/money.repo";
 import type { MoneyStage } from "@/features/money/stage";
-import { catchUp, loadTasksAroundToday } from "@/features/tasks/tasks.repo";
+import { roomOn } from "@/features/tasks/capacity";
+import { catchUp, loadCapacity, loadDayTasks, loadTasksAroundToday } from "@/features/tasks/tasks.repo";
 import { DEFAULT_CONFIG } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
-import { formatLocal } from "@/shared/time";
+import { dayKey, formatLocal } from "@/shared/time";
 import { pickFocus, type FocusItem } from "./focus";
 
 const tz = DEFAULT_CONFIG.timeZone;
@@ -49,11 +50,14 @@ export function registerTodayTools(server: McpServer) {
         const db = dbFrom(ctx);
         const now = new Date();
         const caughtUp = await catchUp(db, now);
-        const [tasks, mode, money] = await Promise.all([
+        const [tasks, mode, money, capacity, dayTasks] = await Promise.all([
           loadTasksAroundToday(db, now),
           loadMode(db, now),
           loadMoneyStage(db, now),
+          loadCapacity(db),
+          loadDayTasks(db, dayKey(now, tz)),
         ]);
+        const room = roomOn(dayKey(now, tz), dayTasks, capacity, now);
         const focus = pickFocus(tasks, now);
         return ok({
           now: formatLocal(now, tz),
@@ -62,6 +66,8 @@ export function registerTodayTools(server: McpServer) {
           rest: focus.rest.map(item),
           doneToday: focus.doneToday,
           money: moneySummary(money),
+          // How full today is, in minutes. Mention only if he's near or over, or asks.
+          plate: { capacity: room.capacity, committed: room.committed, available: room.available, label: room.label },
           caughtUp,
         });
       } catch (error) {
