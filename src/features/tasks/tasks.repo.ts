@@ -208,6 +208,9 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = D
   const result = (outcome as { result: string }).result;
   if (result !== "completed") return { result: result as "already_done", title: task.title };
 
+  // A task that was an application requirement ticks it off.
+  await db.from("application_requirements").update({ done: true }).eq("task_id", taskId);
+
   // Practice for a skill: record the time. No XP here — the task just paid it.
   let practiceLogged: { minutes: number } | undefined;
   if (data.skill_id) {

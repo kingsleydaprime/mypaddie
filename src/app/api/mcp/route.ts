@@ -1,4 +1,5 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
+import { registerApplicationTools } from "@/features/applications/applications.tools";
 import { registerEventTools } from "@/features/events/events.tools";
 import { registerIdentityTools } from "@/features/identity/identity.tools";
 import { registerItemTools } from "@/features/items/items.tools";
@@ -35,9 +36,10 @@ const handler = createMcpHandler(
     registerEventTools(server);
     registerPlanningTools(server);
     registerSettingsTools(server);
+    registerApplicationTools(server);
   },
   {
-    serverInfo: { name: "mypaddie", version: "0.9.0" },
+    serverInfo: { name: "mypaddie", version: "0.10.0" },
     instructions:
       "MyPaddie is Kingsley's private life coach. Call get_today first in every chat. Every tool result includes " +
       "`mode` (curious, strict, soft, strictest, softest) with the facts behind it — set your tone from it. get_today also returns `becoming`, his " +

@@ -69,4 +69,13 @@ describe("copyFor", () => {
   test("a blank note is ignored", () => {
     expect(copyFor({ kind: "checkin", level: 1, title: "X", items: null, note: "  " }).body).toBe("Time's passed. Did you do it?");
   });
+
+  test("application reminders say what's missing and when it really closes", () => {
+    expect(copyFor({ kind: "application", level: 3, title: "Scholarship X", items: ["Essay", "2nd reference"], days: 3, due: "Mon 16 Nov 05:59" })).toMatchObject({
+      title: "Scholarship X: 3 days to your target",
+      body: "Still missing: Essay, 2nd reference. Closes Mon 16 Nov 05:59 your time.",
+      url: "/applications",
+    });
+    expect(copyFor({ kind: "application", level: 5, title: "Job Y", items: [], due: null }).body).toBe("Everything's ready — submit early.");
+  });
 });

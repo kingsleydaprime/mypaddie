@@ -5,7 +5,45 @@ export type Database = {
   
   "public": {
           Tables: {
-            "buckets": {
+            "application_requirements": {
+                  Row: {
+                    "application_id": string,"done": boolean,"id": string,"position": number,"task_id": string | null,"title": string,"user_id": string
+                  }
+                  Insert: {
+                    "application_id": string,"done"?: boolean,"id"?: string,"position"?: number,"task_id"?: string | null,"title": string,"user_id"?: string
+                  }
+                  Update: {
+                    "application_id"?: string,"done"?: boolean,"id"?: string,"position"?: number,"task_id"?: string | null,"title"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "application_requirements_application_id_user_id_fkey"
+      columns: ["application_id","user_id"]
+isOneToOne: false
+      referencedRelation: "applications"
+      referencedColumns: ["id","user_id"]
+    },{
+      foreignKeyName: "application_requirements_task_id_user_id_fkey"
+      columns: ["task_id","user_id"]
+isOneToOne: false
+      referencedRelation: "tasks"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"applications": {
+                  Row: {
+                    "created_at": string,"deadline_at": string | null,"deadline_tz": string | null,"description": string | null,"id": string,"kind": string,"link": string | null,"notes": string | null,"org": string | null,"results_expected": string | null,"status": string,"submitted_at": string | null,"target_days_before": number,"title": string,"user_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"deadline_at"?: string | null,"deadline_tz"?: string | null,"description"?: string | null,"id"?: string,"kind"?: string,"link"?: string | null,"notes"?: string | null,"org"?: string | null,"results_expected"?: string | null,"status"?: string,"submitted_at"?: string | null,"target_days_before"?: number,"title": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"deadline_at"?: string | null,"deadline_tz"?: string | null,"description"?: string | null,"id"?: string,"kind"?: string,"link"?: string | null,"notes"?: string | null,"org"?: string | null,"results_expected"?: string | null,"status"?: string,"submitted_at"?: string | null,"target_days_before"?: number,"title"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"buckets": {
                   Row: {
                     "balance": number,"name": Database["public"]['Enums']["bucket_name"],"target_pct": number | null,"user_id": string
                   }

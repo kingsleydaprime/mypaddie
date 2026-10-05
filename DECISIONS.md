@@ -438,3 +438,32 @@ Future habit days don't exist as rows yet (they're created each morning), and
 any-time rows, and projected occurrences from each habit's latest row. So
 capacity, clashes, "how full is Tuesday" and planning ahead all see habits,
 and a new habit is checked against its next 14 days, not just the first.
+
+## 2026-10-05 — Applications
+
+### Deadlines keep their own time zone
+A deadline is entered exactly as published (date, time, IANA zone) and
+stored as an instant, so DST is handled by the zone database: "23:59 New
+York" is 04:59 Lagos in October but 05:59 in November — the test suite
+itself caught that mistake in my own expectation. Misspelt zones are refused
+rather than read as UTC. The app shows the deadline in his time and as
+published.
+
+### Aim early: a target date
+Reminders and requirement tasks aim at a target (default 3 days before the
+deadline, per application), because portals crash and references are late.
+"Past target" is its own state — the deadline may still be open.
+
+### Requirements are tasks
+Each requirement becomes a task due on the target that turns must-do 2 days
+before it, so it shows on Today and gets nudged. Completing the task ticks
+the requirement; ticking the requirement completes the task (paying XP). If
+the target day is full, the requirement is saved and the refusal reported.
+Submitting (or any closed status) cancels open requirement tasks; changing the
+deadline moves them.
+
+### Their own reminder collector
+14/7/3/1/0 days before the target listing what's still missing, a Monday
+"apply soon" for rolling deadlines, and a results-day check. It's a separate
+function beside collect_nudges (left untouched), joined in send_nudges.
+Application notifications are never bundled: deadlines are rare and specific.

@@ -44,8 +44,8 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
   event "close" days, meals — per user, in the nudge job, capacity and planner.
 
 ## Later (ideas, 2026-10-05)
-- [ ] **Applications** (jobs, scholarships…): link, org, deadline, requirements
-  checklist → tasks, pipeline status, deadline reminders.
+- [x] **Applications**: deadline in its own time zone, target date, requirements
+  → tasks, pipeline, own reminder ladder; Quests → Applications.
 - [ ] **Updates** (to a manager, a person, a spreadsheet): recipient + channel +
   cadence on top of tasks; `draft_update` from what was done since the last one.
 - [ ] **Google Calendar import** via the private iCal URL (read-only, no Google

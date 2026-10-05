@@ -14,7 +14,7 @@ const body = z.object({
       endpoint: z.url(),
       p256dh: z.string(),
       auth: z.string(),
-      kind: z.enum(["nudge", "checkin", "brief", "headsup", "reminder", "event"]),
+      kind: z.enum(["nudge", "checkin", "brief", "headsup", "reminder", "event", "application"]),
       level: z.number().int(),
       title: z.string().nullable(),
       items: z.array(z.string()).nullable(),

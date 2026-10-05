@@ -1,6 +1,6 @@
 /** One nudge as decided by the database (private.collect_nudges). */
 export interface Nudge {
-  kind: "nudge" | "checkin" | "brief" | "headsup" | "reminder" | "event";
+  kind: "nudge" | "checkin" | "brief" | "headsup" | "reminder" | "event" | "application";
   level: number;
   title: string | null;
   items: string[] | null;
@@ -49,6 +49,16 @@ function defaultCopy(n: Nudge): NotificationCopy {
   }
 
   const task = n.title ?? "That task";
+  if (n.kind === "application") {
+    const missing = n.items ?? [];
+    const still = missing.length ? `Still missing: ${missing.join(", ")}.` : "Everything's ready — submit early.";
+    const closes = n.due ? ` Closes ${n.due} your time.` : "";
+    const tag = `application-${task}`;
+    if (n.level === 6) return { title: task, body: "Rolling deadline — places go to early applicants. Apply soon.", url: "/applications", tag };
+    if (n.level === 7) return { title: task, body: "Results are due around now. Check your email and the portal.", url: "/applications", tag };
+    const when = n.level === 5 ? "Your target is today" : `${n.days ?? "A few"} days to your target`;
+    return { title: `${task}: ${when}`, body: `${still}${closes}`, url: "/applications", tag };
+  }
   if (n.kind === "event") {
     const celebrates = n.eventKind === "birthday" || n.eventKind === "anniversary";
     const who = n.person ?? task;

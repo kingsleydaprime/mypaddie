@@ -65,9 +65,12 @@ export async function QuestsScreen({ db, tier }: { db: Db; tier: Tier | null }) 
     <div className="flex flex-col gap-5">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Quests</h1>
-        <Link href={`/quests/new${tier ? `?tier=${tier}` : ""}`} className="rounded-xl bg-gold px-4 py-2.5 font-semibold text-on-gold">
-          + Add
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/applications" className="rounded-xl border border-line px-3 py-2.5 text-sm font-medium">Applications ›</Link>
+          <Link href={`/quests/new${tier ? `?tier=${tier}` : ""}`} className="rounded-xl bg-gold px-4 py-2.5 font-semibold text-on-gold">
+            + Add
+          </Link>
+        </div>
       </header>
 
       <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="Filter by tier">
