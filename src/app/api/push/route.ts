@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import webpush from "web-push";
 import { z } from "zod";
-import { copyFor } from "@/features/push/copy";
+import { planNotifications } from "@/features/push/bundle";
 
 /**
  * Called by the database's scheduler (private.send_nudges) with nudges it has
@@ -14,10 +14,11 @@ const body = z.object({
       endpoint: z.url(),
       p256dh: z.string(),
       auth: z.string(),
-      kind: z.enum(["nudge", "checkin", "brief"]),
+      kind: z.enum(["nudge", "checkin", "brief", "headsup"]),
       level: z.number().int(),
       title: z.string().nullable(),
       items: z.array(z.string()).nullable(),
+      due: z.string().nullable().optional(),
     }),
   ),
 });
@@ -43,25 +44,31 @@ export async function POST(req: Request) {
   if (!parsed.success) return new Response("Bad request", { status: 400 });
 
   webpush.setVapidDetails(subject, publicKey, privateKey);
+  // Several nudges at once for one device become one notification (see bundle.ts).
+  const notifications = planNotifications(parsed.data.nudges);
   const results = await Promise.allSettled(
-    parsed.data.nudges.map((n) =>
+    notifications.map((n) =>
       webpush.sendNotification(
-        { endpoint: n.endpoint, keys: { p256dh: n.p256dh, auth: n.auth } },
-        JSON.stringify(copyFor(n)),
+        { endpoint: n.subscription.endpoint, keys: { p256dh: n.subscription.p256dh, auth: n.subscription.auth } },
+        JSON.stringify(n.copy),
         { TTL: 60 * 60 },
       ),
     ),
   );
 
   // 404/410 = the device unsubscribed or reinstalled. Reported back so it can be pruned.
-  const gone = parsed.data.nudges
-    .filter((_, i) => {
-      const r = results[i]!;
-      return r.status === "rejected" && [404, 410].includes((r.reason as { statusCode?: number }).statusCode ?? 0);
-    })
-    .map((n) => n.endpoint);
+  const gone = [
+    ...new Set(
+      notifications
+        .filter((_, i) => {
+          const r = results[i]!;
+          return r.status === "rejected" && [404, 410].includes((r.reason as { statusCode?: number }).statusCode ?? 0);
+        })
+        .map((n) => n.subscription.endpoint),
+    ),
+  ];
   const failed = results.filter((r) => r.status === "rejected").length;
-  if (failed > gone.length) console.error("push: some notifications failed", results.filter((r) => r.status === "rejected"));
+  if (failed > 0) console.error("push: some notifications failed", results.filter((r) => r.status === "rejected"));
 
   return Response.json({ sent: results.length - failed, failed, gone });
 }

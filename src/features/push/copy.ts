@@ -1,9 +1,11 @@
 /** One nudge as decided by the database (private.collect_nudges). */
 export interface Nudge {
-  kind: "nudge" | "checkin" | "brief";
+  kind: "nudge" | "checkin" | "brief" | "headsup";
   level: number;
   title: string | null;
   items: string[] | null;
+  /** Local "HH:MM" the task is due, when it has a time. */
+  due?: string | null;
 }
 
 export interface NotificationCopy {
@@ -32,6 +34,9 @@ export function copyFor(n: Nudge): NotificationCopy {
   }
 
   const task = n.title ?? "That task";
+  if (n.kind === "headsup") {
+    return { title: n.due ? `Coming up at ${n.due}` : "Coming up", body: `${task}. Get ready.`, url: "/", tag: `task-${task}` };
+  }
   if (n.kind === "checkin") {
     return { title: task, body: "Time's passed. Did you do it?", url: "/", tag: `task-${task}` };
   }

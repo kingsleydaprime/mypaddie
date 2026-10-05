@@ -232,3 +232,17 @@ This also closes the hole in "catch up on demand": habit rows now exist each
 morning even if the app wasn't opened.
 Rules: quiet 22:00–07:00; brief from 08:00 once a day; non-negotiables up to
 4 escalating nudges an hour apart; ordinary tasks one "did you do it?".
+
+### Nudges every minute, bundled, with heads-ups for timed tasks
+The first live run sent 18 notifications at once (≈9 overdue non-negotiables ×
+2 subscribed devices). Three changes:
+- `pg_cron` runs every minute, so a nudge lands within a minute of the due time
+  (was up to 10). Cheap: one small query; the app is only called when there's
+  something to send.
+- 3+ overdue items for one device in the same run become one notification
+  ("4 things need you: … Pick one."). Heads-ups bundle separately; the brief
+  never bundles. Done in TypeScript (`bundle.ts`), after the database decides.
+- A heads-up 15 minutes before any pending task with a time, once per task.
+Each rule now counts only nudges of its own kind: otherwise a heads-up
+suppressed the later check-in and restarted the escalation clock — caught
+while writing the SQL, pinned by a test.
