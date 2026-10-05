@@ -1,0 +1,25 @@
+import { createMcpHandler, withMcpAuth } from "mcp-handler";
+import { registerTaskTools } from "@/features/tasks/tasks.tools";
+import { registerTodayTools } from "@/features/today/today.tools";
+import { verifyToken } from "@/shared/mcp/auth";
+
+const handler = createMcpHandler(
+  (server) => {
+    registerTodayTools(server);
+    registerTaskTools(server);
+  },
+  {
+    serverInfo: { name: "mypaddie", version: "0.2.0" },
+    instructions:
+      "MyPaddie is Kingsley's private life coach. Call get_today first in every chat. Every tool result includes " +
+      "`mode` (curious, strict, soft, strictest, softest) with the facts behind it — set your tone from it.",
+  },
+);
+
+// No token, a bad token, or an expired one → 401 pointing Claude at the login flow.
+const authed = withMcpAuth(handler, verifyToken, {
+  required: true,
+  resourceMetadataPath: "/.well-known/oauth-protected-resource/api/mcp",
+});
+
+export { authed as GET, authed as POST, authed as DELETE };
