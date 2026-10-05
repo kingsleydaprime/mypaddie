@@ -117,3 +117,9 @@ export function summarizeTraining(
       .sort((a, b) => (b.best.weightKg ?? 0) - (a.best.weightKg ?? 0) || a.exercise.localeCompare(b.exercise)),
   };
 }
+
+/** A plan's rep target as a starting number for logging: "8-12" → 8, "10" → 10, "AMRAP" → null. */
+export function repsToPrefill(target: string | null): number | null {
+  const m = target?.match(/\d+/);
+  return m ? Number(m[0]) : null;
+}

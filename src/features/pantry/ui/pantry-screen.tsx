@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { Db } from "@/shared/supabase/token-client";
 import { byCategory, shoppingList } from "../pantry";
 import { loadPantry, recentMeals } from "../pantry.repo";
+import { AddPantryItem } from "./add-item";
+import { PantryItemRow } from "./pantry-item";
 
 const label = (s: string) => s[0]!.toUpperCase() + s.slice(1);
 const fmt = (q: number) => (Number.isInteger(q) ? String(q) : q.toFixed(2).replace(/0$/, ""));
@@ -10,7 +12,7 @@ export async function PantryScreen({ db }: { db: Db }) {
   const now = new Date();
   const [items, meals] = await Promise.all([loadPantry(db), recentMeals(db, 7, now)]);
   const list = shoppingList(items);
-  const stocked = byCategory(items.filter((i) => i.quantity > 0));
+  const stocked = byCategory(items);
 
   return (
     <div className="flex flex-col gap-6">
@@ -33,9 +35,11 @@ export async function PantryScreen({ db }: { db: Db }) {
         </section>
       )}
 
+      <AddPantryItem />
+
       {stocked.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-line px-4 py-3 text-sm text-muted">
-          Nothing in stock yet. Tell Paddie what you bought: &ldquo;5kg rice, a crate of eggs, 3 tins of tomato paste&rdquo;.
+          Nothing here yet. Add items above, or tell Paddie what you bought: &ldquo;5kg rice, a crate of eggs, 3 tins of tomato paste&rdquo;.
         </p>
       ) : (
         stocked.map(([category, xs]) => (
@@ -43,12 +47,7 @@ export async function PantryScreen({ db }: { db: Db }) {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">{label(category)}</h2>
             <ul className="flex flex-col divide-y divide-line rounded-2xl border border-line bg-surface">
               {xs.map((i) => (
-                <li key={i.name} className="flex items-center justify-between px-4 py-3">
-                  <span>{i.name}</span>
-                  <span className={i.lowAt !== null && i.quantity <= i.lowAt ? "font-semibold text-gold" : "text-muted"}>
-                    {fmt(i.quantity)} {i.unit}
-                  </span>
-                </li>
+                <PantryItemRow key={i.name} item={i} />
               ))}
             </ul>
           </section>

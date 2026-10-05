@@ -29,8 +29,8 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [x] **Pantry and meals.** Stock with units and low levels, shopping list,
   cook_meal uses ingredients up, meal history; Pantry page off Money.
 - [x] Edit tasks from the app (tap a task on Today).
-- [ ] Workout screen in the app (today's exercises, log sets with taps).
-- [ ] Pantry editing in the app (it's chat-only for now).
+- [x] Workout screen: today's session with last time's numbers, log with taps, new bests.
+- [x] Pantry editing: −/+ by unit, edit amount/low level/category, add, remove.
 - [x] `plan_day` / `accept_day_plan`: fixed blocks, meals, tasks by priority,
   batched chores, free time; respects capacity.
 - [x] **Events**: meetings, birthdays, weddings… important × close; yearly

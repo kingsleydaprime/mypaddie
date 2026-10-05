@@ -53,3 +53,21 @@ export function byCategory(items: readonly PantryItem[]): [string, PantryItem[]]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([c, xs]) => [c, [...xs].sort((a, b) => a.name.localeCompare(b.name))]);
 }
+
+/** How much one tap of − / + changes an item, by its unit. */
+export function stepFor(unit: string): number {
+  switch (normalizeUnit(unit)) {
+    case "kg":
+    case "l":
+      return 0.5;
+    case "g":
+    case "ml":
+      return 100;
+    default:
+      return 1;
+  }
+}
+
+/** Units offered when adding an item (anything else can still be typed). */
+export const COMMON_UNITS = ["pieces", "kg", "g", "l", "ml", "tins", "cups", "packs", "bags", "bottles", "tubers", "bunches"] as const;
+export const CATEGORIES = ["grains", "protein", "vegetables", "fruit", "spices", "oils", "drinks", "snacks", "other"] as const;

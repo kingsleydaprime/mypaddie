@@ -5,6 +5,7 @@ import {
   lastPerformance,
   newBests,
   personalBest,
+  repsToPrefill,
   summarizeTraining,
   weekdayCode,
   WORKOUT_WEIGHTS,
@@ -104,5 +105,17 @@ describe("summarizeTraining", () => {
   });
   test("nothing logged", () => {
     expect(summarizeTraining([], now)).toEqual({ last7: 0, last30: 0, lastWorkout: null, bests: [] });
+  });
+});
+
+describe("repsToPrefill", () => {
+  test.each([
+    ["8", 8],
+    ["8-12", 8],
+    ["8–12", 8],
+    ["AMRAP", null],
+    [null, null],
+  ] as const)("%p → %p", (target, n) => {
+    expect(repsToPrefill(target)).toBe(n);
   });
 });

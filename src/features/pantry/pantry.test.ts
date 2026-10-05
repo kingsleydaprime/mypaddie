@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { byCategory, normalizeUnit, shoppingList, type PantryItem } from "./pantry";
+import { byCategory, normalizeUnit, shoppingList, stepFor, type PantryItem } from "./pantry";
 
 describe("normalizeUnit", () => {
   test.each([
@@ -44,5 +44,20 @@ describe("byCategory", () => {
   test("groups and sorts", () => {
     const groups = byCategory([item("Rice", 1, null, "grains"), item("Eggs", 1, null, "protein"), item("Beans", 1, null, "grains")]);
     expect(groups.map(([c, xs]) => `${c}: ${xs.map((x) => x.name).join(", ")}`)).toEqual(["grains: Beans, Rice", "protein: Eggs"]);
+  });
+});
+
+describe("stepFor", () => {
+  test.each([
+    ["kg", 0.5],
+    ["kilograms", 0.5],
+    ["l", 0.5],
+    ["g", 100],
+    ["ml", 100],
+    ["pieces", 1],
+    ["tins", 1],
+    ["handful", 1],
+  ])("%p → %p", (unit, step) => {
+    expect(stepFor(unit)).toBe(step);
   });
 });

@@ -381,3 +381,11 @@ Task edit, Events and Plan my day reuse updateTask/deleteTask, addEvent and
 proposeDay/acceptDay. addEvent lives in its own file (`add-event.ts`) because
 it needs tasks.repo, and tasks.repo needs events.repo — keeping it out of
 events.repo avoids a circular import.
+
+### Workout and pantry screens
+The workout screen pre-fills each exercise with the plan's *target* and shows
+last time's numbers beside it — the target is what you meant to do, last
+time is what to beat; you only change what differed. Rep targets like "8-12"
+pre-fill as 8, "AMRAP" stays blank. Pantry −/+ steps by unit (1 piece/tin,
+0.5 kg/l, 100 g/ml); every change goes through adjustPantry, so the
+one-unit-per-item rule protects the app exactly as it protects the AI.

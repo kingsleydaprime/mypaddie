@@ -113,9 +113,10 @@ export async function TodayScreen({ db }: { db: Db }) {
 
       {focus.doneToday > 0 && <p className="text-center text-sm text-muted">{focus.doneToday} done today.</p>}
 
-      <nav className="grid grid-cols-2 gap-3">
-        <Link href="/plan" className="rounded-xl border border-line px-4 py-3 text-center font-medium">Plan my day</Link>
-        <Link href="/events" className="rounded-xl border border-line px-4 py-3 text-center font-medium">Events</Link>
+      <nav className="grid grid-cols-3 gap-2">
+        <Link href="/plan" className="rounded-xl border border-line px-2 py-3 text-center text-sm font-medium">Plan my day</Link>
+        <Link href="/events" className="rounded-xl border border-line px-2 py-3 text-center text-sm font-medium">Events</Link>
+        <Link href="/workout" className="rounded-xl border border-line px-2 py-3 text-center text-sm font-medium">Workout</Link>
       </nav>
     </div>
   );

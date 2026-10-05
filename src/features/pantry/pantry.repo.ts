@@ -1,4 +1,5 @@
 import type { Json } from "@/shared/supabase/database.types";
+import { escapeLike } from "@/shared/supabase/like";
 import type { Db } from "@/shared/supabase/token-client";
 import { normalizeUnit, type PantryItem } from "./pantry";
 
@@ -61,4 +62,9 @@ export async function recentMeals(db: Db, days: number, now: Date) {
   const { data, error } = await db.from("meals").select("name, ingredients, notes, at").gte("at", since).order("at", { ascending: false });
   if (error) throw new Error(`loading meals: ${error.message}`);
   return data;
+}
+
+export async function removePantryItem(db: Db, name: string) {
+  const { error } = await db.from("pantry_items").delete().ilike("name", escapeLike(name.trim()));
+  if (error) throw new Error(`removing ${name}: ${error.message}`);
 }
