@@ -46,15 +46,21 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 ## Later (ideas, 2026-10-05)
 - [x] **Applications**: deadline in its own time zone, target date, requirements
   → tasks, pipeline, own reminder ladder; Quests → Applications.
-- [ ] **Updates** (to a manager, a person, a spreadsheet): recipient + channel +
-  cadence on top of tasks; `draft_update` from what was done since the last one.
-- [ ] **Google Calendar import** via the private iCal URL (read-only, no Google
-  OAuth): imported events count for clashes, capacity, reminders and plan_day.
+- [x] **Updates**: recipient, channel, topic, format, cadence; `draft_update` from
+  what was actually done since the last one; Quests → Updates.
+- [x] **Google Calendar import** via the private iCal URL (read-only), synced on
+  open, keeps his own flags; Paddie → Google Calendar.
 
 ## Done: infrastructure
 - [x] Hosted pgTAP via `bun run db:test:hosted` (always rolled back).
 - [x] Dead push subscriptions pruned by the nudge job.
 - [x] Habits counted on every day they occur (capacity, clashes, planning).
+
+## Ideas for later
+- Separate money accounts (OPay, bank, cash).
+- Two-way calendar sync (needs Google OAuth + verification).
+- Undo an income split, so split income can be voided.
+- Push for calendar events imported only on app open: sync from the scheduler too.
 
 ## Known gaps
 - Voiding income that's already been split into buckets (needs a split undo).

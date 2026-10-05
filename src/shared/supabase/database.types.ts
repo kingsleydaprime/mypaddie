@@ -71,13 +71,13 @@ isOneToOne: false
                   ]
                 },"events": {
                   Row: {
-                    "all_day": boolean,"created_at": string,"ends_at": string | null,"id": string,"important": boolean,"kind": string,"location": string | null,"notes": string | null,"person": string | null,"reminder_note": string | null,"starts_at": string,"status": string,"title": string,"user_id": string,"yearly": boolean
+                    "all_day": boolean,"created_at": string,"ends_at": string | null,"external_uid": string | null,"id": string,"important": boolean,"kind": string,"location": string | null,"notes": string | null,"person": string | null,"reminder_note": string | null,"source": string,"starts_at": string,"status": string,"title": string,"user_id": string,"yearly": boolean
                   }
                   Insert: {
-                    "all_day"?: boolean,"created_at"?: string,"ends_at"?: string | null,"id"?: string,"important"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"reminder_note"?: string | null,"starts_at": string,"status"?: string,"title": string,"user_id"?: string,"yearly"?: boolean
+                    "all_day"?: boolean,"created_at"?: string,"ends_at"?: string | null,"external_uid"?: string | null,"id"?: string,"important"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"reminder_note"?: string | null,"source"?: string,"starts_at": string,"status"?: string,"title": string,"user_id"?: string,"yearly"?: boolean
                   }
                   Update: {
-                    "all_day"?: boolean,"created_at"?: string,"ends_at"?: string | null,"id"?: string,"important"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"reminder_note"?: string | null,"starts_at"?: string,"status"?: string,"title"?: string,"user_id"?: string,"yearly"?: boolean
+                    "all_day"?: boolean,"created_at"?: string,"ends_at"?: string | null,"external_uid"?: string | null,"id"?: string,"important"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"reminder_note"?: string | null,"source"?: string,"starts_at"?: string,"status"?: string,"title"?: string,"user_id"?: string,"yearly"?: boolean
                   }
                   Relationships: [
                     
@@ -319,6 +319,44 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"update_log": {
+                  Row: {
+                    "content": string | null,"id": string,"sent_at": string,"update_id": string,"user_id": string
+                  }
+                  Insert: {
+                    "content"?: string | null,"id"?: string,"sent_at"?: string,"update_id": string,"user_id"?: string
+                  }
+                  Update: {
+                    "content"?: string | null,"id"?: string,"sent_at"?: string,"update_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "update_log_update_id_user_id_fkey"
+      columns: ["update_id","user_id"]
+isOneToOne: false
+      referencedRelation: "updates"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"updates": {
+                  Row: {
+                    "about": string,"active": boolean,"channel": string,"created_at": string,"format": string | null,"id": string,"last_sent_at": string | null,"recipient": string,"task_id": string | null,"user_id": string
+                  }
+                  Insert: {
+                    "about": string,"active"?: boolean,"channel"?: string,"created_at"?: string,"format"?: string | null,"id"?: string,"last_sent_at"?: string | null,"recipient": string,"task_id"?: string | null,"user_id"?: string
+                  }
+                  Update: {
+                    "about"?: string,"active"?: boolean,"channel"?: string,"created_at"?: string,"format"?: string | null,"id"?: string,"last_sent_at"?: string | null,"recipient"?: string,"task_id"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "updates_task_id_user_id_fkey"
+      columns: ["task_id","user_id"]
+isOneToOne: false
+      referencedRelation: "tasks"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
                 },"workout_days": {
                   Row: {
                     "duration_minutes": number,"id": string,"name": string,"plan_id": string,"position": number,"series_id": string | null,"start_time": string | null,"user_id": string,"weekdays": string
@@ -480,6 +518,9 @@ isOneToOne: false
                            },
 "record_transaction":
 { Args: { "p_amount": number,"p_at": string,"p_category": string,"p_direction": Database["public"]['Enums']["money_direction"],"p_item_id": string,"p_note": string,"p_spend_level": Database["public"]['Enums']["spend_level"],"p_tag": Database["public"]['Enums']["money_tag"],"p_xp": Json }; Returns: string
+                           },
+"record_update_sent":
+{ Args: { "p_at": string,"p_content": string,"p_update_id": string }; Returns: string
                            },
 "record_workout":
 { Args: { "p_at": string,"p_day_id": string,"p_duration": number,"p_entries": Json,"p_feel": number,"p_notes": string,"p_task_id": string }; Returns: string

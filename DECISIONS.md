@@ -467,3 +467,28 @@ deadline moves them.
 "apply soon" for rolling deadlines, and a results-day check. It's a separate
 function beside collect_nudges (left untouched), joined in send_nudges.
 Application notifications are never bundled: deadlines are rare and specific.
+
+## 2026-10-05 — Updates and Google Calendar
+
+### Updates: tasks plus a "since the last one" marker
+An update (recipient, channel, topic, optional format) is carried by a task —
+recurring for regular ones, reminded the morning of and 30 minutes before.
+`draft_update` returns what was actually done since the last one sent
+(completed tasks, learning by skill, workouts, application milestones; update
+tasks themselves excluded) and the AI writes it in his format, using only
+what fits the topic. An empty digest is reported as empty — never padded with
+invented work. `mark_update_sent` logs it, moves the marker, and completes
+that day's task.
+
+### Google Calendar: read-only iCal import, not two-way sync
+The private iCal URL needs no Google OAuth (whose testing-mode refresh
+tokens expire every 7 days, and whose calendar scope needs verification).
+Because the server fetches a user-supplied URL, it accepts only
+`https://calendar.google.com/calendar/ical/…​.ics` (SSRF), refuses redirects,
+times out at 15 s and caps the feed at 5 MB. The link is a secret: never
+returned in full. ical.js does RRULE expansion, EXDATEs, moved occurrences
+and VTIMEZONEs; floating times mean Lagos, not the server's zone. Each
+occurrence is a row keyed by UID + recurrence id; re-sync upserts title/time
+only, so his own `important` and cancellations survive, and removes what
+Google removed. Sync happens when Today loads (at most every 30 minutes),
+on demand, and on connect; failures are recorded and shown, not thrown.
