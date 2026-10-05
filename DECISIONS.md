@@ -95,3 +95,49 @@ personal budget needs it.
 `tasks.base_xp`, `tasks.title`, `items.priority`, `items.floor_amount` /
 `comfortable_amount`, `slips.accepted`, `xp_log.item_id`, and a `checkins` table
 (daily energy 1–5) because soft mode needs mood data the blueprint didn't store.
+
+## 2026-10-05 — Day 2 (connector)
+
+### Claude signs in *as you*: Supabase Auth is the OAuth server
+Claude's connectors speak OAuth 2.1 + PKCE; Supabase Auth now is an OAuth 2.1
+server (beta, all plans). So connecting Claude means logging into MyPaddie and
+clicking Allow; Claude gets an ordinary Supabase token for your user, and every
+tool call runs under the same RLS the pgTAP tests prove.
+Considered: a static secret token (claude.ai connectors want OAuth), or the MCP
+server holding the service-role key (one leaked key = every table, RLS bypassed).
+Result: **no secret key exists anywhere in this app.**
+
+### Email + password, sign-ups disabled
+One user. Magic links were rejected because Supabase's built-in email sender is
+rate-limited to a few per hour. Disabling sign-ups means nobody else can even
+create an account to try.
+
+### Catch-up on demand, not a nightly job
+`get_today` first creates due recurring rows and applies ignored-need
+deductions, then answers. Idempotent at the database level (unique
+`(series_id, occurs_on)`, partial unique indexes on `xp_log`, `on conflict do
+nothing`), so repeated or simultaneous calls are harmless. Avoids a cron job and
+the admin key it would need. Day 3's push notifications will need a scheduler
+anyway; revisit then.
+Missed days are backfilled (up to 7) so an unopened app doesn't erase ignored
+needs; the cap stops a long absence becoming a wall of deductions.
+
+### Writes go through three database functions
+`complete_task` (mark done + pay XP in one transaction), `award_xp` (insert,
+skip duplicates), `spawn_occurrence` (copy a habit onto a new day). All
+`security invoker`, so RLS applies. They exist because the REST API can't do
+multi-statement transactions or `on conflict do nothing` on a partial index.
+Considered making XP writes server-only so the client can't award itself
+points: not worth it for a one-user app (you'd only be cheating yourself).
+
+### Our own recurrence subset instead of the `rrule` library
+Only `FREQ=DAILY` and `FREQ=WEEKLY;BYDAY=…` — all habits need. Anything else is
+rejected loudly. One less dependency, ~60 lines, fully tested.
+
+### MCP layer
+`mcp-handler` 2.x (MCP SDK v2, spec 2026-07-28) in a Next.js route at
+`/api/mcp`. Tools live in their feature (`*.tools.ts`), DB access in
+`*.repo.ts`, rules stay pure. Every tool result includes `mode`. Protected
+resource metadata is served path-specific
+(`/.well-known/oauth-protected-resource/api/mcp`) so the advertised resource is
+exactly the endpoint Claude connects to.
