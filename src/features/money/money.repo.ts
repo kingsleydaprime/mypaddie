@@ -2,6 +2,7 @@ import { DEFAULT_CONFIG } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { computeMoneyStage, type MoneyStage, type TransactionForMoney } from "./stage";
 import type { NeedForDeficit } from "./deficit";
+import { balanceOf, correctionFor } from "./balance";
 import { flagSpend, monthlyNeedsTotal, needsOutstanding } from "./purchase";
 import { transactionLoggedXp } from "@/features/xp/xp";
 import type { Json } from "@/shared/supabase/database.types";
@@ -21,8 +22,9 @@ export async function loadMoneyStage(db: Db, now: Date, config = DEFAULT_CONFIG)
   const since = new Date(now.getTime() - (2 * config.money.periodDays + 1) * 86_400_000).toISOString();
   const columns = "amount, direction, tag, category, at";
   const [first, recent] = await Promise.all([
-    db.from("transactions").select(columns).order("at", { ascending: true }).limit(1),
-    db.from("transactions").select(columns).gte("at", since).lte("at", now.toISOString()),
+    // Opening balances, corrections and voided entries never count as income or spending.
+    db.from("transactions").select(columns).eq("kind", "normal").is("voided_at", null).order("at", { ascending: true }).limit(1),
+    db.from("transactions").select(columns).eq("kind", "normal").is("voided_at", null).gte("at", since).lte("at", now.toISOString()),
   ]);
   if (first.error) throw new Error(`loading first transaction: ${first.error.message}`);
   if (recent.error) throw new Error(`loading transactions: ${recent.error.message}`);
@@ -69,7 +71,7 @@ export async function loadBudget(db: Db, now: Date, config = DEFAULT_CONFIG): Pr
     loadMoneyStage(db, now, config),
     db.from("buckets").select("name, balance"),
     db.from("items").select("id, title, priority, floor_amount, comfortable_amount").eq("tier", "need").eq("status", "active"),
-    db.from("transactions").select("amount").eq("direction", "out").in("tag", ["need", "unsure"]).gte("at", monthStart),
+    db.from("transactions").select("amount").eq("kind", "normal").is("voided_at", null).eq("direction", "out").in("tag", ["need", "unsure"]).gte("at", monthStart),
     db.from("settings").select("key, value").in("key", ["split_pct", "buffer_target"]),
   ]);
   for (const res of [buckets, needs, spent, settings]) {
@@ -188,4 +190,78 @@ export async function acceptSplit(db: Db, transactionId: string, now: Date, amou
   const { data: result, error: rpcError } = await db.rpc("apply_split", { p_transaction_id: transactionId, p_amounts: split });
   if (rpcError) throw new Error(`applying the split: ${rpcError.message}`);
   return { result: result as "applied" | "already_applied" | "not_found", applied: split };
+}
+
+// ─── Balance, history, corrections ─────────────────────────────────────────
+
+export async function loadBalance(db: Db): Promise<{ balance: number; hasHistory: boolean }> {
+  const { data, error } = await db.from("transactions").select("amount, direction, voided_at");
+  if (error) throw new Error(`loading balance: ${error.message}`);
+  return {
+    balance: balanceOf(data.map((t) => ({ amount: t.amount, direction: t.direction, voided: t.voided_at !== null }))),
+    hasHistory: data.some((t) => t.voided_at === null),
+  };
+}
+
+/** Make the balance match what's really in his account. */
+export async function setBalance(db: Db, actual: number, now: Date) {
+  const { balance, hasHistory } = await loadBalance(db);
+  const correction = correctionFor(actual, balance, hasHistory);
+  if (!correction) return { result: "unchanged" as const, balance };
+  const { error } = await db.from("transactions").insert({
+    amount: correction.amount,
+    direction: correction.direction,
+    category: correction.kind === "opening" ? "Opening balance" : "Balance correction",
+    kind: correction.kind,
+    at: now.toISOString(),
+  });
+  if (error) throw new Error(`setting the balance: ${error.message}`);
+  return { result: "set" as const, balance: actual, recorded: correction };
+}
+
+export async function listTransactions(db: Db, opts: { limit?: number; includeVoided?: boolean } = {}) {
+  let q = db
+    .from("transactions")
+    .select("id, amount, direction, category, tag, note, kind, at, voided_at, void_reason, split_applied_at")
+    .order("at", { ascending: false })
+    .limit(opts.limit ?? 50);
+  if (!opts.includeVoided) q = q.is("voided_at", null);
+  const { data, error } = await q;
+  if (error) throw new Error(`loading transactions: ${error.message}`);
+  return data;
+}
+
+export type TransactionRow = Awaited<ReturnType<typeof listTransactions>>[number];
+
+/** Void a mistake: stays on the record, stops counting, money back in its bucket, logging XP taken back. */
+export async function voidTransaction(db: Db, id: string, reason: string | null) {
+  const reversal = transactionLoggedXp().map((e) => ({ ...e, amount: -e.amount, note: "voided" }));
+  const { data, error } = await db.rpc("void_transaction", { p_id: id, p_reason: (reason ?? null) as string, p_xp_reversal: reversal as unknown as Json });
+  if (error) throw new Error(`voiding: ${error.message}`);
+  return data as "voided" | "already_voided" | "split_applied" | "not_found";
+}
+
+/** Narration and category can change; amount and tag can't (they already moved bucket money). */
+export async function editTransaction(db: Db, id: string, changes: { note?: string | null; category?: string }) {
+  const { data, error } = await db
+    .from("transactions")
+    .update({
+      ...(changes.note !== undefined ? { note: changes.note?.trim() || null } : {}),
+      ...(changes.category ? { category: changes.category.trim() } : {}),
+    })
+    .eq("id", id)
+    .is("voided_at", null)
+    .select("id");
+  if (error) throw new Error(`editing: ${error.message}`);
+  return data.length ? ("updated" as const) : ("not_found" as const);
+}
+
+export async function setPurchaseInterest(db: Db, id: string, interest: "interested" | "not_interested" | "bought") {
+  const { data, error } = await db
+    .from("purchase_checks")
+    .update({ interest, interest_changed_at: new Date().toISOString() })
+    .eq("id", id)
+    .select("id");
+  if (error) throw new Error(`updating the purchase check: ${error.message}`);
+  return data.length ? ("updated" as const) : ("not_found" as const);
 }

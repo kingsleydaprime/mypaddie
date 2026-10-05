@@ -389,3 +389,26 @@ time is what to beat; you only change what differed. Rep targets like "8-12"
 pre-fill as 8, "AMRAP" stays blank. Pantry −/+ steps by unit (1 piece/tin,
 0.5 kg/l, 100 g/ml); every change goes through adjustPantry, so the
 one-unit-per-item rule protects the app exactly as it protects the AI.
+
+## 2026-10-05 — Balance, voiding, purchase interest
+
+### Balance is real money; buckets are envelopes
+Balance = opening balance + everything in − everything out, ignoring voided
+entries. It's separate from the buckets (budget labels). "Set balance"
+records an `opening` entry the first time and an `adjustment` after that, so
+the number can always be reconciled with the real account. Opening and
+adjustment entries never count as income or spending — otherwise starting
+with ₦85k would look like ₦85k income and wreck the audit.
+
+### Mistakes are voided, not deleted
+A voided transaction stays on the record with its reason but stops counting
+everywhere; its bucket money goes back and its logging XP is reversed (or
+log-then-delete would be free XP). Narration and category are editable;
+amount and need/want tag aren't, because they already moved bucket money —
+void and re-log instead. Income already split into buckets can't be voided
+yet (unwinding a split is its own problem).
+
+### Purchase checks: change your mind, keep the record
+`interest`: interested / not_interested / bought. Not-interested checks sink
+and grey out but stay visible — the record of what he almost bought is the
+point.

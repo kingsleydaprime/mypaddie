@@ -5,7 +5,19 @@ import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import type { Json } from "@/shared/supabase/database.types";
 import { escapeLike } from "@/shared/supabase/like";
 import { planDeficit } from "./deficit";
-import { acceptSplit, loadBudget, logTransaction, proposalFor, type BudgetContext } from "./money.repo";
+import {
+  acceptSplit,
+  editTransaction,
+  listTransactions,
+  loadBalance,
+  loadBudget,
+  logTransaction,
+  proposalFor,
+  setBalance,
+  setPurchaseInterest,
+  voidTransaction,
+  type BudgetContext,
+} from "./money.repo";
 import { judgePurchase } from "./purchase";
 
 const naira = z.number().int().positive().describe("Whole naira");
@@ -94,7 +106,7 @@ export function registerMoneyTools(server: McpServer) {
     {
       title: "Get money status",
       description:
-        "Current money stage (audit → no judgement yet; deficit → needs exceed income; surplus → income covers " +
+        "His balance (real money: opening balance + in − out), the current money stage (audit → no judgement yet; deficit → needs exceed income; surplus → income covers " +
         "needs), bucket balances, and this month's needs. In deficit, includes the plan: income funds the cheapest " +
         "honest version of each need in priority order, plus the gap as one number and the hidden wants inside needs.",
       inputSchema: z.object({}),
@@ -104,10 +116,10 @@ export function registerMoneyTools(server: McpServer) {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const budget = await loadBudget(db, now);
+        const [budget, { balance }] = await Promise.all([loadBudget(db, now), loadBalance(db)]);
         const deficitPlan =
           budget.stage.stage === "deficit" ? planDeficit(budget.stage.totals.income, budget.needItems) : undefined;
-        return ok(await withMode(db, now, { ...budgetSummary(budget), ...(deficitPlan ? { deficitPlan } : {}) }));
+        return ok(await withMode(db, now, { balance, ...budgetSummary(budget), ...(deficitPlan ? { deficitPlan } : {}) }));
       } catch (error) {
         return toolError(`get_money_status failed: ${(error as Error).message}`);
       }
@@ -225,6 +237,101 @@ export function registerMoneyTools(server: McpServer) {
         return ok(await withMode(db, now, { item: args.item, price: args.price, ...decision }));
       } catch (error) {
         return toolError(`check_purchase failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "set_balance",
+    {
+      title: "Set balance",
+      description:
+        "Make his balance match what's really in his account(s): 'I have ₦85,000'. The first time this records " +
+        "his opening balance; later it records a correction for the difference (bank charges, a forgotten spend) " +
+        "— mention the difference so he can think about what wasn't logged. Never counts as income or spending.",
+      inputSchema: z.object({ amount: z.number().int().nonnegative().describe("Whole naira actually in his account(s) now") }),
+    },
+    async ({ amount }: { amount: number }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        const now = new Date();
+        return ok(await withMode(db, now, { ...(await setBalance(db, amount, now)) }));
+      } catch (error) {
+        return toolError(`set_balance failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "list_transactions",
+    {
+      title: "List transactions",
+      description: "Recent transactions with ids (for voiding or editing), newest first.",
+      inputSchema: z.object({ limit: z.number().int().min(1).max(200).default(30), include_voided: z.boolean().default(false) }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ limit, include_voided }: { limit: number; include_voided: boolean }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        return ok(await withMode(db, new Date(), { transactions: await listTransactions(db, { limit, includeVoided: include_voided }) }));
+      } catch (error) {
+        return toolError(`list_transactions failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "void_transaction",
+    {
+      title: "Void transaction",
+      description:
+        "Undo a transaction logged by mistake (a duplicate, a wrong entry). It stays on the record marked voided, " +
+        "stops counting everywhere, its bucket money goes back, and the logging XP is taken back. To fix an amount " +
+        "or need/want tag: void it and log it again. Income already split into buckets can't be voided this way.",
+      inputSchema: z.object({ id: z.uuid(), reason: z.string().trim().max(200).optional() }),
+    },
+    async ({ id, reason }: { id: string; reason?: string }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        return ok(await withMode(db, new Date(), { result: await voidTransaction(db, id, reason ?? null) }));
+      } catch (error) {
+        return toolError(`void_transaction failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "edit_transaction",
+    {
+      title: "Edit transaction",
+      description: "Change a transaction's narration (note) or category. Amounts and need/want tags can't change — void and re-log instead.",
+      inputSchema: z.object({ id: z.uuid(), note: z.string().trim().max(500).nullable().optional(), category: z.string().trim().min(1).optional() }),
+    },
+    async ({ id, note, category }: { id: string; note?: string | null; category?: string }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        return ok(await withMode(db, new Date(), { result: await editTransaction(db, id, { note, category }) }));
+      } catch (error) {
+        return toolError(`edit_transaction failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "update_purchase_check",
+    {
+      title: "Update purchase check",
+      description:
+        "Mark a past purchase check as not_interested (changed his mind — kept on record), interested (wants it " +
+        "again), or bought. Nothing is deleted: it keeps him honest about what he almost bought.",
+      inputSchema: z.object({ id: z.uuid(), interest: z.enum(["interested", "not_interested", "bought"]) }),
+    },
+    async ({ id, interest }: { id: string; interest: "interested" | "not_interested" | "bought" }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        return ok(await withMode(db, new Date(), { result: await setPurchaseInterest(db, id, interest) }));
+      } catch (error) {
+        return toolError(`update_purchase_check failed: ${(error as Error).message}`);
       }
     },
   );

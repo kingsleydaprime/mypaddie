@@ -30,6 +30,8 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
   cook_meal uses ingredients up, meal history; Pantry page off Money.
 - [x] Edit tasks from the app (tap a task on Today).
 - [x] Workout screen: today's session with last time's numbers, log with taps, new bests.
+- [x] Balance card (OPay-style), set balance, history, void, edit narration,
+  purchase checks: not interested / interested again.
 - [x] Pantry editing: −/+ by unit, edit amount/low level/category, add, remove.
 - [x] `plan_day` / `accept_day_plan`: fixed blocks, meals, tasks by priority,
   batched chores, free time; respects capacity.
@@ -50,6 +52,8 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
   OAuth): imported events count for clashes, capacity, reminders and plan_day.
 
 ## Known gaps
+- Voiding income that's already been split into buckets (needs a split undo).
+- One balance for everything; separate accounts (OPay, bank, cash) later.
 - Edit/delete events and meals from the app (chat only for now).
 - Dead push subscriptions aren't pruned yet: `/api/push` reports them as
   `gone`, but nothing deletes them (the route has no DB access by design).

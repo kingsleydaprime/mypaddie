@@ -60,8 +60,8 @@ function SplitCard({ state }: { state: Extract<LogState, { ok: true }> }) {
   );
 }
 
-export function QuickLog() {
-  const [direction, setDirection] = useState<"out" | "in">("out");
+export function QuickLog({ initialDirection = "out" }: { initialDirection?: "out" | "in" }) {
+  const [direction, setDirection] = useState<"out" | "in">(initialDirection);
   const [tag, setTag] = useState<"need" | "want" | "unsure" | null>(null);
   const [category, setCategory] = useState("");
   const [state, action, pending] = useActionState<LogState, FormData>(async (prev, fd) => {

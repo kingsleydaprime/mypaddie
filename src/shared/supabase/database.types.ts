@@ -143,13 +143,13 @@ isOneToOne: false
                   ]
                 },"purchase_checks": {
                   Row: {
-                    "decided_at": string,"id": string,"item": string,"price": number,"reasons": NonNullable<Json>,"user_id": string,"verdict": Database["public"]['Enums']["purchase_verdict"]
+                    "decided_at": string,"id": string,"interest": string,"interest_changed_at": string | null,"item": string,"price": number,"reasons": NonNullable<Json>,"user_id": string,"verdict": Database["public"]['Enums']["purchase_verdict"]
                   }
                   Insert: {
-                    "decided_at"?: string,"id"?: string,"item": string,"price": number,"reasons"?: NonNullable<Json>,"user_id"?: string,"verdict": Database["public"]['Enums']["purchase_verdict"]
+                    "decided_at"?: string,"id"?: string,"interest"?: string,"interest_changed_at"?: string | null,"item": string,"price": number,"reasons"?: NonNullable<Json>,"user_id"?: string,"verdict": Database["public"]['Enums']["purchase_verdict"]
                   }
                   Update: {
-                    "decided_at"?: string,"id"?: string,"item"?: string,"price"?: number,"reasons"?: NonNullable<Json>,"user_id"?: string,"verdict"?: Database["public"]['Enums']["purchase_verdict"]
+                    "decided_at"?: string,"id"?: string,"interest"?: string,"interest_changed_at"?: string | null,"item"?: string,"price"?: number,"reasons"?: NonNullable<Json>,"user_id"?: string,"verdict"?: Database["public"]['Enums']["purchase_verdict"]
                   }
                   Relationships: [
                     
@@ -264,13 +264,13 @@ isOneToOne: false
                   ]
                 },"transactions": {
                   Row: {
-                    "amount": number,"at": string,"category": string,"direction": Database["public"]['Enums']["money_direction"],"id": string,"item_id": string | null,"note": string | null,"spend_level": Database["public"]['Enums']["spend_level"] | null,"split_applied_at": string | null,"tag": Database["public"]['Enums']["money_tag"] | null,"user_id": string
+                    "amount": number,"at": string,"category": string,"direction": Database["public"]['Enums']["money_direction"],"id": string,"item_id": string | null,"kind": string,"note": string | null,"spend_level": Database["public"]['Enums']["spend_level"] | null,"split_applied_at": string | null,"tag": Database["public"]['Enums']["money_tag"] | null,"user_id": string,"void_reason": string | null,"voided_at": string | null
                   }
                   Insert: {
-                    "amount": number,"at"?: string,"category": string,"direction": Database["public"]['Enums']["money_direction"],"id"?: string,"item_id"?: string | null,"note"?: string | null,"spend_level"?: Database["public"]['Enums']["spend_level"] | null,"split_applied_at"?: string | null,"tag"?: Database["public"]['Enums']["money_tag"] | null,"user_id"?: string
+                    "amount": number,"at"?: string,"category": string,"direction": Database["public"]['Enums']["money_direction"],"id"?: string,"item_id"?: string | null,"kind"?: string,"note"?: string | null,"spend_level"?: Database["public"]['Enums']["spend_level"] | null,"split_applied_at"?: string | null,"tag"?: Database["public"]['Enums']["money_tag"] | null,"user_id"?: string,"void_reason"?: string | null,"voided_at"?: string | null
                   }
                   Update: {
-                    "amount"?: number,"at"?: string,"category"?: string,"direction"?: Database["public"]['Enums']["money_direction"],"id"?: string,"item_id"?: string | null,"note"?: string | null,"spend_level"?: Database["public"]['Enums']["spend_level"] | null,"split_applied_at"?: string | null,"tag"?: Database["public"]['Enums']["money_tag"] | null,"user_id"?: string
+                    "amount"?: number,"at"?: string,"category"?: string,"direction"?: Database["public"]['Enums']["money_direction"],"id"?: string,"item_id"?: string | null,"kind"?: string,"note"?: string | null,"spend_level"?: Database["public"]['Enums']["spend_level"] | null,"split_applied_at"?: string | null,"tag"?: Database["public"]['Enums']["money_tag"] | null,"user_id"?: string,"void_reason"?: string | null,"voided_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -457,6 +457,9 @@ isOneToOne: false
                            },
 "spawn_occurrence":
 { Args: { "p_due_at": string,"p_occurs_on": string,"p_series_id": string }; Returns: string
+                           },
+"void_transaction":
+{ Args: { "p_id": string,"p_reason": string,"p_xp_reversal": Json }; Returns: string
                            }
           }
           Enums: {
