@@ -1,4 +1,6 @@
 import { signOut } from "@/app/login/sign-out";
+import { calendarStatus } from "@/features/calendar/calendar.repo";
+import { CalendarSettings } from "@/features/calendar/ui/calendar-settings";
 import { loadActiveIdentity } from "@/features/identity/identity.repo";
 import { NudgeToggle } from "@/features/push/ui/nudge-toggle";
 import { loadSchedule } from "@/features/settings/settings.repo";
@@ -14,7 +16,7 @@ const CHATS = [
 /** Chat lives in the AI apps (the connector plan); this tab just gets you there. */
 export default async function PaddiePage() {
   const db = await requireDb("/paddie");
-  const [identity, schedule] = await Promise.all([loadActiveIdentity(db), loadSchedule(db)]);
+  const [identity, schedule, calendar] = await Promise.all([loadActiveIdentity(db), loadSchedule(db), calendarStatus(db)]);
   return (
     <div className="flex flex-col gap-6">
       <header>
@@ -46,6 +48,7 @@ export default async function PaddiePage() {
       </ul>
       <NudgeToggle />
       <SettingsForm schedule={schedule} />
+      <CalendarSettings status={calendar} />
       <form action={signOut} className="mt-6">
         <button className="w-full rounded-xl border border-line px-4 py-3 text-muted">Sign out</button>
       </form>

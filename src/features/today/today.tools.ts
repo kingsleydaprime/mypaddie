@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { upcoming } from "@/features/events/events";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
+import { syncCalendar } from "@/features/calendar/calendar.repo";
 import { loadActiveIdentity } from "@/features/identity/identity.repo";
 import { loadLearning } from "@/features/learning/learning.repo";
 import { dayEndsAt } from "@/features/settings/schedule";
@@ -56,6 +57,8 @@ export function registerTodayTools(server: McpServer) {
         const db = dbFrom(ctx);
         const now = new Date();
         const caughtUp = await catchUp(db, now);
+        // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
+        await syncCalendar(db, now).catch(() => null);
         const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule] = await Promise.all([
           loadTasksAroundToday(db, now),
           loadMode(db, now),
