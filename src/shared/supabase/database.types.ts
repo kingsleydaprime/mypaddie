@@ -31,6 +31,19 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"events": {
+                  Row: {
+                    "all_day": boolean,"created_at": string,"ends_at": string | null,"id": string,"important": boolean,"kind": string,"location": string | null,"notes": string | null,"person": string | null,"starts_at": string,"status": string,"title": string,"user_id": string,"yearly": boolean
+                  }
+                  Insert: {
+                    "all_day"?: boolean,"created_at"?: string,"ends_at"?: string | null,"id"?: string,"important"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"starts_at": string,"status"?: string,"title": string,"user_id"?: string,"yearly"?: boolean
+                  }
+                  Update: {
+                    "all_day"?: boolean,"created_at"?: string,"ends_at"?: string | null,"id"?: string,"important"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"starts_at"?: string,"status"?: string,"title"?: string,"user_id"?: string,"yearly"?: boolean
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"identity_profiles": {
                   Row: {
                     "created_at": string,"id": string,"is_active": boolean,"name": string,"text": string,"user_id": string

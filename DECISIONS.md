@@ -321,3 +321,32 @@ different unit for an existing item is refused rather than silently mixed —
 the AI converts. Stock floors at zero. Cooking with an ingredient that isn't
 logged reports it as missing instead of failing. No XP for meals or pantry
 bookkeeping: eating is the food task's job.
+
+## 2026-10-05 — Identity, events, planning
+
+### "Who I'm becoming" is loaded every chat
+The blueprint says the profile is loaded into every chat; until now the AI
+only saw it if it thought to ask. `get_today` (the first call of every chat)
+now returns it, the server instructions say to coach toward it, and any
+connected AI can edit it in place (`update_identity`) or save a new version.
+
+### Events are separate from tasks
+A task is something you *do*; an event is something you *attend or remember*.
+Attention comes from two facts — important? close (≤ 7 days)? — giving
+prepare-now / plan-ahead / fit-in / someday. Birthdays and anniversaries
+repeat yearly (29 Feb → 28 Feb in other years; same logic in TS and SQL,
+tested on the same cases). Timed events block time: they clash with tasks
+and count against capacity. Events are never *refused* for clashing — you go
+to the wedding — clashes are reported. Preparation is a task, created ahead
+with `prep`, so it gets the whole task machinery.
+Reminders: a week ahead (important), the evening before, the morning of
+(important, and birthdays), 30 minutes before (timed) — once per occurrence.
+
+### plan_day is a proposal; habits aren't re-timed by it
+Fixed blocks stay; meals within an hour of their usual time; tasks by
+priority with 5-minute buffers; chores (≤ 5 XP) batched after the work; the
+biggest gap after the work is free time. Today's undated tasks join only
+while capacity allows. Accepting writes times through `updateTask` (clash and
+capacity re-checked). A recurring habit's time is *not* written: each new
+day copies the latest row, so planning one day would silently re-time the
+habit forever.

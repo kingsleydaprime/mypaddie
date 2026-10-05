@@ -30,7 +30,13 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
   cook_meal uses ingredients up, meal history; Pantry page off Money.
 - [ ] Workout screen in the app (today's exercises, log sets with taps).
 - [ ] Pantry editing in the app (it's chat-only for now).
-- [ ] `plan_day` (deferred from Day 2), built on time blocks + pantry.
+- [x] `plan_day` / `accept_day_plan`: fixed blocks, meals, tasks by priority,
+  batched chores, free time; respects capacity.
+- [x] **Events**: meetings, birthdays, weddings… important × close; yearly
+  repeats; reminder ladder; block time for clashes and capacity; prep tasks.
+- [x] **Who I'm becoming**: in every get_today; `update_identity`; on Paddie tab.
+- [ ] Events in the app (list + add), and a "Plan my day" button on Today.
+- [ ] "Close" (7 days) and meal times as settings.
 
 ## Known gaps
 - Dead push subscriptions aren't pruned yet: `/api/push` reports them as

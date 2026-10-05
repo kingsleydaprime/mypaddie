@@ -1,10 +1,12 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
+import { registerEventTools } from "@/features/events/events.tools";
 import { registerIdentityTools } from "@/features/identity/identity.tools";
 import { registerItemTools } from "@/features/items/items.tools";
 import { registerLearningTools } from "@/features/learning/learning.tools";
 import { registerMemoryTools } from "@/features/memory/memory.tools";
 import { registerModeTools } from "@/features/mode/mode.tools";
 import { registerPantryTools } from "@/features/pantry/pantry.tools";
+import { registerPlanningTools } from "@/features/planning/planning.tools";
 import { registerMoneyTools } from "@/features/money/money.tools";
 import { registerSlipTools } from "@/features/slips/slips.tools";
 import { registerStatsTools } from "@/features/stats/stats.tools";
@@ -29,12 +31,16 @@ const handler = createMcpHandler(
     registerIdentityTools(server);
     registerWorkoutTools(server);
     registerPantryTools(server);
+    registerEventTools(server);
+    registerPlanningTools(server);
   },
   {
-    serverInfo: { name: "mypaddie", version: "0.6.0" },
+    serverInfo: { name: "mypaddie", version: "0.8.0" },
     instructions:
       "MyPaddie is Kingsley's private life coach. Call get_today first in every chat. Every tool result includes " +
-      "`mode` (curious, strict, soft, strictest, softest) with the facts behind it — set your tone from it.",
+      "`mode` (curious, strict, soft, strictest, softest) with the facts behind it — set your tone from it. get_today also returns `becoming`, his " +
+      "'Who I'm becoming' profile: praise choices that fit it, push back on ones that don't, and never debate " +
+      "whether it's the right one. He can ask you to edit it (update_identity).",
   },
 );
 
