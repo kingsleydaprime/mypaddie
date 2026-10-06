@@ -56,6 +56,64 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [x] Dead push subscriptions pruned by the nudge job.
 - [x] Habits counted on every day they occur (capacity, clashes, planning).
 
+## Next: MyPaddie for everyone (planned 2026-10-06)
+
+Anyone signs up, connects their AI, and gets their own Paddie, hosted at
+**mypaddie.spectroniqlimited.com**. The data layer is already per user
+(`user_id` + RLS on every table, composite `(id, user_id)` foreign keys,
+per-user settings and nudges, the AI signs in as the user), so most of the
+work is around it. Each phase reverses a "one user" call in DECISIONS.md,
+which gets a new entry when it changes.
+
+### Phase 1: sign-up and onboarding
+- [ ] Turn sign-ups on. Google sign-in and/or magic links, with a real email
+  provider (e.g. Resend) as custom SMTP. Supabase's built-in sender is
+  rate-limited to a few emails an hour, the reason magic links were rejected.
+- [ ] First-run onboarding: display name, time zone, currency, quiet hours,
+  "Who I'm becoming". Seed nothing personal.
+- [ ] **Per-user time zone.** Days are Africa/Lagos everywhere today:
+  `src/shared/config.ts` and seven SQL migrations (nudges, events,
+  applications, reminders, schedule). Move it into each user's settings and
+  pass it through the engine and `collect_nudges`.
+- [ ] **Per-user currency.** Money is whole naira (`bigint`) and the UI prints
+  ₦. Keep whole units, store a currency code per user, and format from it.
+- [ ] Remove "Kingsley / his" from the MCP server instructions
+  (`src/app/api/mcp/route.ts`) and tool descriptions. `get_today` returns the
+  user's display name and the AI uses that.
+- [ ] Domain: point mypaddie.spectroniqlimited.com at Vercel; update the
+  Supabase site URL, redirect URLs and OAuth authorization path.
+
+### Phase 2: connect your AI without a hand-registered client
+- [ ] Today one OAuth client per AI app is registered by hand, and dynamic
+  client registration (DCR) is off so strangers can't register clients.
+  With open sign-ups that reason goes away: a registered client still can't
+  read anything without a user signing in and clicking Allow. Turn DCR on,
+  or use Claude's published client identity (CIMD) if Supabase supports it
+  by then, so users only paste `https://mypaddie.spectroniqlimited.com/api/mcp`.
+- [ ] Settings → "Connect your AI": the URL to copy, steps for Claude and
+  ChatGPT, the list of connected apps with a revoke button.
+
+### Phase 3: safety before strangers
+- [ ] Two-user pgTAP suites: user B can't read, change or reference user A's
+  rows in every table, RPC and the nudge job.
+- [ ] Rate limits on `/api/mcp`, sign-up and calendar sync; size limits on
+  free-text fields.
+- [ ] Revisit "XP writes from the client are fine" (DECISIONS, Day 2): still
+  harmless while nothing is compared between users; must change before any
+  leaderboard or sharing.
+- [ ] Delete my account (the cascades already exist) and export my data
+  (`export_all` exists; add a button).
+- [ ] Privacy policy and terms: this is money and life data.
+- (Already done: the calendar import only fetches `calendar.google.com`
+  iCal URLs, with no redirects, a timeout and a size cap.)
+
+### Phase 4: hosting for real users
+- [ ] Paid plans: Vercel Hobby is non-commercial; Supabase Free pauses idle
+  projects.
+- [ ] Load-test the every-minute nudge job with a few thousand fake users;
+  index what `collect_nudges` filters on.
+- [ ] Error monitoring and an uptime check on `/api/mcp` and `/api/push`.
+
 ## Ideas for later
 - Separate money accounts (OPay, bank, cash).
 - Two-way calendar sync (needs Google OAuth + verification).

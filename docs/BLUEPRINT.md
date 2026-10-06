@@ -1,12 +1,14 @@
 # Paddie Blueprint
 
-Oct 5, 2026 · @Kingsley Ihemelandu Chukwudi
+Oct 5, 2026 · updated Oct 6, 2026 to match what's built · @Kingsley Ihemelandu Chukwudi
 
 > **Public version.** The system design is complete; personal details (real figures, habits, wishes, the identity profile) have been replaced with generic examples. The real ones live in the app's own database, not in this repo.
 
+> **Status (Oct 6, 2026).** The four-day build is done: rules engine, MCP connector (61 tools), phone app, push notifications, and the extras that came after (learning, workouts, pantry, events, applications, updates, Google Calendar import). The reasoning behind each choice is in [DECISIONS.md](../DECISIONS.md); what's next, including a multi-user version, is in [ROADMAP.md](ROADMAP.md).
+
 ## Vision and principles
 
-Paddie is a private system that runs your life as a game, knows when to be strict or soft, and keeps you honest about your time, habits and money. It is built for one user: you.
+Paddie is a private system that runs your life as a game, knows when to be strict or soft, and keeps you honest about your time, habits and money. It is built for one user: you. (A version anyone can sign up for is planned; see the roadmap.)
 
 **Core principle: reduce decision fatigue, don't create another life to manage.** Paddie's default screen and voice say "Here are the 3 things that matter right now. Do one." It never opens with a stats briefing. The numbers (pillar XP, weights, trends) are all there for when you go looking, but they are never pushed at you.
 
@@ -18,11 +20,11 @@ Paddie is a private system that runs your life as a game, knows when to be stric
 - **Honest over agreeable.** It is allowed to say no, including "don't buy this".
 - **Your data stays yours.** It lives in your own database, is exportable, and works with any AI that connects to it.
 
-Paddie is not a public product (Arete stays separate), not a plain to-do list, and not a moral coach.
+Paddie is not a plain to-do list and not a moral coach. Arete stays separate.
 
 ## The Gamified Life engine
 
-Everything you do or want is sorted into one of five tiers, and every task feeds one or more of ten pillars with XP.
+Everything you do or want is sorted into one of five tiers, and every task feeds one or more of eleven pillars with XP.
 
 ### Five tiers
 
@@ -34,21 +36,29 @@ Everything you do or want is sorted into one of five tiers, and every task feeds
 | Wishes | Things you'd love but aren't working toward yet: learn to drive, learn to draw, travel somewhere new | Side quests with zero guilt. A wish becomes a goal once it gets a deadline and a first action | Bonus XP when it happens, no penalty when it doesn't |
 | Dreams | Very big, scary goals | Broken down into goals and kept in view | Milestone XP |
 
-### Ten pillars
+### Eleven pillars
 
-Spiritual, Mental, Physical, Financial, Emotional, Social, Character, Skills, Creativity, Relationships.
+Spiritual, Mental, Physical, Financial, Emotional, Social, Character, Skills, Creativity, Relationships, Academic.
+
+Academic (coursework, studying for school) was added after the first build and is separate from Skills (DSA, LeetCode, craft). It sits last because pillar order breaks ties when XP is split.
 
 ### Weighted XP
 
 One task can feed several pillars. Each task carries pillar weights that add up to 100%, so a 100 XP task is split instead of counted once per pillar. Example: exercise might be Physical 50%, Mental 30%, Emotional 20%. Weights are editable, and paddie suggests them when you add a task.
 
+XP is whole numbers, split by largest remainder, so the parts always add up to the total. Levels: reaching level *n* takes 100·(n−1)² XP (100 → level 2, 400 → 3, 900 → 4).
+
 ### Gains and deductions
 
 - Any honest attempt earns XP, win or lose. That is the core of the Gamified Life.
-- Late still counts. Doing a missed need late earns reduced XP, so recovering fast beats dwelling.
-- Points are deducted only for ignoring a need, not for trying and failing.
-- Logging a dumb purchase honestly still earns XP, so you never hide spending from paddie.
+- Late still counts. Doing a missed need late earns reduced XP (50%), so recovering fast beats dwelling. A time block (a task with a duration) is on time all day; a deadline is late after its time.
+- Points are deducted only for ignoring a need (50% of its XP, once its local day has ended), not for trying and failing. An accepted slip protects it.
+- Logging a dumb purchase honestly still earns XP (+2 Financial for any transaction), so you never hide spending from paddie.
 - Wishes never deduct.
+- Bonuses: goal completion 2×, dream milestone 3×, a wish happening +50.
+- Learning sessions earn 1 XP per 5 minutes to the skill's pillar.
+
+Every gain and deduction is an append-only ledger entry, and the same completion can never pay twice.
 
 ## Daily flow
 
@@ -64,9 +74,21 @@ Paddie runs your day in a loop: brief you, check in, escalate on the non-negotia
 8. **Fun counts.** When your quests are done, paddie pushes you to go enjoy yourself. Rest is part of the game.
 9. **Evening review.** A short wrap: what you did, XP earned, what carries over.
 
+### How it's built
+
+- **Nudges** are decided in Postgres every minute (`pg_cron`) and respect your quiet hours (default 22:00–07:00). Non-negotiables get up to 4 escalating nudges an hour apart; ordinary tasks get one "did you do it?". Three or more at once are bundled into one notification.
+- **Reminder ladder** for timed one-off tasks: the evening before, 09:00 on the day, then 30 and 10 minutes before. Habits get only the 10-minute reminder. A task can carry its own reminder note.
+- **Must-do later.** A task can become non-negotiable from a set time (`must_from`), e.g. "reply to X" turning urgent tomorrow.
+- **Time blocks and capacity.** Tasks can have a time and duration. A day has a capacity (default 6h, with date-range periods such as exam weeks); a task that would overflow it is refused. Clashes are reported and can be overridden on purpose.
+- **Plan my day** (`plan_day`) proposes a timeline: fixed blocks, meals near their usual time, tasks by priority, chores batched after the work, free time in the biggest gap. Nothing changes until you accept it.
+- **Meals** come from the pantry: stock with units and low levels, a shopping list, meal ideas from what's in stock, and cooking that uses ingredients up.
+- **Schedule settings** (quiet hours, brief time, reminder times, meals) are per user and validated as a whole, so a reminder can't be set inside quiet hours.
+
 ### Phone-free windows
 
 The rule is no phone for the first 2 hours of the day and the last hour. A web app cannot block your phone, it can only nudge you. Real blocking needs Android's built-in Focus mode or Bedtime mode (or a native app later). Paddie's job is accountability: it asks whether you held the window and logs it. The morning brief arrives at the end of the first window, not before it.
+
+Not built yet: quiet hours keep nudges out of the night, but there's no "did you hold the window?" check.
 
 ## Money system
 
@@ -81,12 +103,16 @@ Your needs figure and income are both rough estimates at the start, so the first
 - Logging takes one tap: amount, category, done. Backfilling at the end of the day is allowed.
 - At day 30 paddie shows your real needs, real wants, the gap or surplus, and the top three places money leaked.
 
+Stages are counted in fixed 30-day periods from the first logged transaction, and the stage comes from the last complete period, so a monthly salary can't flip it from day to day. "Not sure" counts as a need (overestimating needs is the safer mistake).
+
 ### Stage 2: Deficit mode (needs exceed income)
 
 - Income fills needs in priority order until it runs out. Savings and wants get nothing, and paddie says so plainly.
 - It shows the gap as one number, e.g. needs 200k, income 160k, gap 40k.
 - The gap becomes a goal with two levers: raise income or lower needs. Each lever turns into quests.
 - Each need carries two figures, **floor** (the cheapest honest way to meet it) and **comfortable** (what you spend now), so hidden wants inside "needs" become visible.
+
+Every need gets its floor before any need gets comfort.
 
 ### Stage 3: Surplus mode (income covers needs)
 
@@ -97,6 +123,12 @@ When income covers needs, every new income entry proposes this waterfall, and yo
 3. The remainder is split by default into 50% savings and investments, 30% wants, 20% flexible (needs that come up unexpectedly, and family support).
 
 The percentages are editable settings, not rules. Open question: is the 20% bucket for family support, for surprise needs, or both?
+
+The emergency buffer target defaults to one month of needs. Buckets are envelopes (budget labels): income reaches them only when you accept a split, and spending draws down its envelope.
+
+### Balance
+
+Separate from the buckets, the balance is real money: an opening balance plus everything in minus everything out. "Set balance" records an adjustment so it can always be matched to your real account. Mistakes are voided, not deleted: a voided entry stays on the record, stops counting everywhere, and its XP is reversed. Amounts are whole naira.
 
 ### The don't-buy-this check
 
@@ -109,6 +141,8 @@ When you say "I want to buy X", paddie checks four things and answers yes, wait 
 
 Non-essential purchases get a 24-hour wait by default.
 
+The first rule that matches wins: need in disguise → yes; deficit → no; needs not covered → no; over the wants bucket → no; serves a goal → yes; asked again 24h after a "wait" → yes; otherwise wait. The AI judges "need in disguise" and "serves a goal"; the engine judges the money. A bad call that goes ahead anyway is flagged when you log it, never penalised. Checks keep a history and can be marked not interested, interested again, or bought.
+
 ## Modes and the slip protocol
 
 When you slip, paddie is firm first, curious second, then gets you moving again. It never gives you an excuse and never lets you stay down.
@@ -118,6 +152,8 @@ When you slip, paddie is firm first, curious second, then gets you moving again.
 1. **Name it plainly.** "You skipped your morning reading. Noted." No drama, no guilt pile.
 2. **Ask why as a data question.** "What happened? One line." A reason is logged so patterns show up. An excuse is a reason used to skip the next step, and paddie doesn't accept that part.
 3. **Ask for the smallest next action.** "Two minutes. Open it now." Doing it late still earns XP.
+
+Paddie judges whether a reason is accepted, with a backstop: the third time the same reason is given for the same habit within 7 days, it's an excuse regardless.
 
 ### How paddie picks a mode
 
@@ -130,6 +166,8 @@ When you slip, paddie is firm first, curious second, then gets you moving again.
 | You say "go easy on me" | Softest | Lower bar for the day |
 
 The mode is computed by the rules engine from your recent data (skipped needs, repeated slips, logged mood) and returned with every tool result, so the AI adjusts its tone from facts rather than guessing. Your override always wins.
+
+Precedence: override > low-HP day (a check-in with energy 2/5 or lower) > strict (a repeated slip, or 3+ ignored needs in 3 days) > curious. "Go easy on me" ends at midnight; "no mercy" lasts until switched off. The mode comes back with its reasons.
 
 ### Learning your challenges
 
@@ -152,7 +190,7 @@ Examples of the voice:
 
 ### Draft persona instructions
 
-Paste this into a Claude Project's instructions (or ChatGPT custom instructions) and refine it as you go.
+Paste this into a Claude Project's instructions (or ChatGPT custom instructions) and refine it as you go. The MCP server also sends short instructions of its own (call get_today first, follow the mode, coach toward the profile), so this is about voice.
 
 ```
 You are Paddie, Kingsley's personal coach and friend. Treat him as a person first, never as a job title.
@@ -184,6 +222,8 @@ The "Who I'm becoming" profile is the part of the system you write yourself, and
 - You can keep several versions and switch, e.g. "this month I'm working on X".
 - Paddie praises choices that fit it, pushes back on ones that don't, and does not debate whether the profile is the right one.
 
+As built: `get_today` returns the active profile, so every chat sees it. You can edit it in place, save a new version or switch versions in Settings, and any connected AI can do the same when you ask (`update_identity`, `save_identity`, `activate_identity`).
+
 ### What paddie does with it
 
 - **Goals.** Reminds you of your goals and feeds you quotes that fit your mood.
@@ -199,29 +239,47 @@ The "Who I'm becoming" profile is the part of the system you write yourself, and
 - [ ] How he treats money, relationships, friends and his own time
 - [ ] Who he is at his best, and the version you're leaving behind
 
+## Beyond the original plan
+
+These were added after the four-day plan, each because a real day needed it.
+
+- **Learning log.** Skills (each feeding one pillar, optionally tied to a goal) and sessions with topic, minutes, count, confidence and notes. Streaks, and spaced repetition by confidence (1 → review in 1 day, 2 → 2, 3 → 4, 4 → 7, 5 → 14). A task linked to a skill logs a session when completed.
+- **Workouts.** A plan's training days become weekly tasks, so reminders, capacity and XP apply. Today's workout shows the target and last time's numbers; personal bests are tracked.
+- **Pantry and meals.** See daily flow.
+- **Events.** Meetings, birthdays, weddings: important × close (≤ 7 days) decides how loudly paddie brings them up. Birthdays repeat yearly. Timed events block time. Preparation becomes a task.
+- **Applications.** Deadlines kept in their own time zone, a target date (default 3 days early), requirements that become tasks, a pipeline, and their own reminder ladder.
+- **Updates owed.** Regular updates to people (recipient, channel, topic, format, cadence); `draft_update` writes from what you actually did since the last one, never padded.
+- **Google Calendar import.** Read-only, through the calendar's private iCal link (no Google sign-in needed). Synced when Today loads; your own flags survive a re-sync.
+
 ## Architecture
 
 Paddie is a rules engine and database with two ways in: an AI connector for chat, and a phone app for logging and nudges.
 
-&#91;embedded content: architecture · 2 clients, 1 engine, 1 database\]
+```
+Claude / ChatGPT / Gemini ──OAuth 2.1 + PKCE──┐
+                                               ├─► Next.js on Vercel ──► rules engine (pure TS) ──► Supabase Postgres (RLS)
+Phone PWA ─────────cookie session──────────────┘        ▲                                              │
+                                                        └──── /api/push ◄── pg_cron (every minute) ─────┘
+```
 
 The AI chat calls the MCP server and the phone app calls the app API, but both go through the same rules engine, so XP, modes and money stages never disagree.
 
 - **Storage:** Supabase Postgres, with login and row-level security so only you can read your rows.
-- **Hosting:** the MCP server must be publicly reachable, e.g. on Cloudflare Workers or Vercel, because Claude connects from Anthropic's cloud.
-- **Security:** OAuth or a secret token, never authless. Only the data each chat needs is returned to the AI.
-- **Portability:** the same MCP server should also work with ChatGPT or another AI that supports MCP.
+- **Hosting:** one Next.js app on Vercel serves the MCP server (`/api/mcp`), the phone app (`/app`) and a public landing page (`/`).
+- **Security:** the AI signs in *as you* through Supabase Auth's OAuth 2.1 server (PKCE, a hand-registered client per AI app). No admin key exists anywhere in the app: every query runs under row-level security. The push route has no database access; the database decides who to nudge and calls it with a shared secret.
+- **Portability:** the same MCP server works with any AI that supports MCP connectors.
+- **Rules are pure functions:** plain data in, plain data out, no clock (`now` is always passed in). Tested with ~370 unit tests plus pgTAP suites for the database.
 
 ## Data schema
 
-The database has about twelve tables, all in Postgres (Supabase), and every row belongs to you through row-level security.
+The database has 29 tables, all in Postgres (Supabase), and every row belongs to you through row-level security.
 
 | Table | Key fields | Purpose |
 | --- | --- | --- |
 | items | id, tier (need/want/goal/wish/dream), title, target, deadline, status | Everything you do or want, sorted by tier |
 | tasks | id, item\_id, due\_at, recurrence, is\_non\_negotiable, status, done\_at | Daily and scheduled work, including chores and meals |
 | task\_pillars | task\_id, pillar, weight | Splits a task's XP across pillars, weights sum to 100 |
-| pillars | name, xp, level, hp | Your ten stats and their current state |
+| pillars | name, xp, level, hp | Your eleven stats and their current state |
 | xp\_log | id, task\_id, pillar, amount, reason, at | Every XP gain or deduction |
 | slips | id, task\_id, why, tone\_used, at | Logged reasons that feed pattern detection |
 | transactions | id, amount, direction, category, tag (need/want/unsure), floor\_or\_comfortable, at | Every dime in and out |
@@ -231,52 +289,73 @@ The database has about twelve tables, all in Postgres (Supabase), and every row 
 | identity\_profiles | id, name, text, is\_active | The "Who I'm becoming" versions |
 | settings | key, value | Split percentages, quiet hours, phone-free windows, mode overrides |
 
+Added since the first schema:
+
+| Table | Purpose |
+| --- | --- |
+| checkins | Daily energy (1–5), which drives soft mode |
+| skills, learning\_sessions | The learning log |
+| workout\_plans, workout\_days, workout\_exercises, workout\_logs, workout\_entries | Training plans and what was actually lifted |
+| pantry\_items, meals | Stock and meal history |
+| events | Events, including ones imported from Google Calendar |
+| applications, application\_requirements | Applications and their checklists |
+| updates, update\_log | Updates owed and when each was sent |
+| push\_subscriptions | Devices that receive nudges |
+| private.nudges | Every nudge sent, so none repeat (not reachable from the API) |
+
+Tasks also gained a title, base XP, duration, `must_from`, a reminder note and an optional skill link; items gained priority and floor/comfortable amounts; transactions gained void and split markers. The rules that matter are enforced by the database itself: composite `(id, user_id)` foreign keys so a row can't point at someone else's, a commit-time check that weights sum to 100, and a read-only XP ledger.
+
 A single `export_all` function dumps every table to JSON so your data is never trapped.
 
 ## MCP tool list
 
-The connector exposes about a dozen tools. Each one returns the current mode, so the AI always knows how strict to be.
+The connector exposes 61 tools. Each one returns the current mode, so the AI always knows how strict to be.
 
-| Tool | What it does |
+| Area | Tools |
 | --- | --- |
-| get\_today | Today's quests, non-negotiables, what's overdue, money status, current mode |
-| complete\_task | Marks a task done, awards weighted XP, handles late completion |
-| add\_item | Adds a need, want, goal, wish or dream, with suggested pillar weights |
-| list\_items | Lists items by tier and status |
-| log\_slip | Records a skipped task and the reason you gave |
-| log\_transaction | Records money in or out with category and need/want tag |
-| get\_money\_status | Returns the current stage (audit, deficit, surplus), buckets and gap |
-| propose\_split | Proposes how a new income entry is divided, for you to accept or change |
-| check\_purchase | Runs the don't-buy-this check and returns yes, wait 24 hours, or no |
-| get\_stats | Returns the ten pillars, levels and recent XP |
-| save\_memory / recall\_memory | Stores and retrieves facts and patterns about you |
-| get\_identity | Returns the active "Who I'm becoming" profile |
-| plan\_day | Proposes a schedule from tasks, meals, chores and fun, for you to accept or change |
+| Today | get\_today: the top 3, non-negotiables, overdue, money status, mode, review topics, the "Who I'm becoming" profile |
+| Tasks | add\_task, update\_task, complete\_task (weighted XP, late handling), delete\_task (mistakes only) |
+| Capacity | get\_capacity, set\_capacity |
+| Planning | plan\_day, accept\_day\_plan |
+| Items | add\_item (with suggested pillar weights), list\_items |
+| Slips and mode | log\_slip, set\_mode, log\_checkin |
+| Money | log\_transaction, list\_transactions, edit\_transaction, void\_transaction, set\_balance, get\_money\_status, propose\_split, accept\_split, check\_purchase, update\_purchase\_check |
+| Stats | get\_stats |
+| Memory | save\_memory, recall\_memory |
+| Identity | get\_identity, save\_identity, update\_identity, activate\_identity |
+| Learning | log\_learning, get\_learning, update\_skill |
+| Workouts | set\_workout\_plan, get\_workout, log\_workout, get\_training |
+| Pantry | get\_pantry, update\_pantry, cook\_meal |
+| Events | add\_event, update\_event, list\_events |
+| Applications | add\_application, list\_applications, update\_application, update\_requirement |
+| Updates | add\_update, list\_updates, change\_update, draft\_update, mark\_update\_sent |
+| Calendar | connect\_calendar, sync\_calendar, disconnect\_calendar |
+| Settings | get\_settings, update\_settings |
 
-Authentication is OAuth or a secret token. Do not run it authless, because it returns your money and personal data.
+Authentication is OAuth 2.1 with PKCE. It never runs authless, because it returns your money and personal data.
 
 ## Mobile UI
 
-The app is designed phone-first as an installable web app (PWA) on Android, with a bottom tab bar, big thumb-friendly buttons and one-tap logging. Desktop simply centres the same layout.
+The app is designed phone-first as an installable web app (PWA) on Android, with a bottom tab bar, big thumb-friendly buttons and one-tap logging. Desktop simply centres the same layout. Gold is the single accent colour; green and red appear only where they mean something (money in / done, money out / overdue).
 
 | Tab | What's on it |
 | --- | --- |
-| Today | The 3 things that matter right now, with a button to do one. Everything else (full list, meals, chores) is one tap away |
-| Quests | Needs, goals, wishes and dreams, with tier filters and an add button |
-| Money | Current stage, buckets, the gap in deficit mode, quick-log button, purchase check history |
-| Stats | The ten pillars as a live dashboard, XP trend, slips and patterns. The numbers live here, behind a tap, and are never pushed at you on Today |
-| Paddie | A shortcut that opens the Claude or ChatGPT app, since chat lives there in the connector plan |
+| Quests | Needs, wants, goals, wishes and dreams, with tier filters and an add button. Applications and Updates live here |
+| Money | Balance card, current stage, buckets, the gap in deficit mode, quick log, history with void and edit, purchase checks. Pantry lives here |
+| Home (centre) | The 3 things that matter right now, with a button to do one. Everything else is one tap away, plus Plan my day, Events and today's workout |
+| Stats | The eleven pillars and levels, learning and training. The numbers live here, behind a tap, and are never pushed at you on Home |
+| Settings | "Who I'm becoming", nudges on/off, schedule, Google Calendar, links to open Claude or ChatGPT, sign out |
 
-Notifications are scheduled pushes from the rules engine (non-negotiable nudges, check-ins, the morning brief), so they work even when no AI chat is open.
+Notifications are scheduled pushes decided by the database (non-negotiable nudges, check-ins, reminders, the morning brief), so they work even when no AI chat is open.
 
 ## Build plan and open questions
 
-The plan is four days, with the rules engine first and the PWA last. Use the remaining Pro days to have Claude generate the code.
+The plan was four days, with the rules engine first and the PWA last. All four are done.
 
-1. **Day 1: engine.** Supabase project, schema, row-level security, and the rules engine for XP, deductions and strict/soft mode.
-2. **Day 2: connector.** MCP server with the tool list above, deployed on a public host with OAuth or a secret token. Add it in Claude's connector settings on the web, then test it from your phone. Start with two tools to confirm the connector beta works, then add the rest.
-3. **Day 3: PWA.** Bottom-tab mobile UI, one-tap logging, and scheduled push notifications for non-negotiables, check-ins and the morning brief.
-4. **Day 4: seed and tune.** Load your brain dump into memories and items, write your "Who I'm becoming" profile, paste the persona instructions into a Claude Project, and test a full day on your phone.
+1. **Day 1: engine.** ✅ Supabase project, schema, row-level security, and the rules engine for XP, deductions and strict/soft mode.
+2. **Day 2: connector.** ✅ MCP server with the tool list above, deployed on a public host with OAuth. Added in Claude's connector settings.
+3. **Day 3: PWA.** ✅ Bottom-tab mobile UI, one-tap logging, and scheduled push notifications for non-negotiables, check-ins and the morning brief.
+4. **Day 4: seed and tune.** In progress. The test data was cleared on Oct 6, 2026 so real use starts from zero. Load your brain dump into memories and items, write your "Who I'm becoming" profile, paste the persona instructions into a Claude Project, and test a full day on your phone.
 
 The Free plan allows one custom connector, so this keeps working after Pro ends.
 
@@ -288,3 +367,4 @@ The Free plan allows one custom connector, so this keeps working after Pro ends.
 - [ ] Does ChatGPT's connector support suit you as a backup brain? Not yet checked.
 - [ ] Write your "Who I'm becoming" profile.
 - [ ] Reuse any of Arete's engine later? Decide after paddie has run on your life for a few weeks.
+- [ ] A "did you hold the phone-free window?" check-in (not built).
