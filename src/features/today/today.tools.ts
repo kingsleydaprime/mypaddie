@@ -17,7 +17,8 @@ import { roomOn } from "@/features/tasks/capacity";
 import { catchUp, loadCapacity, loadDayTasks, loadTasksAroundToday } from "@/features/tasks/tasks.repo";
 import { currentConfig } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
-import { currentProfile } from "@/shared/user-context";
+import { hasFeature } from "@/features/plans/plans";
+import { currentPlan, currentProfile } from "@/shared/user-context";
 import { dayKey, formatLocal } from "@/shared/time";
 import { pickFocus, type FocusItem } from "./focus";
 
@@ -118,7 +119,7 @@ export function registerTodayTools(server: McpServer) {
             ...(promises.patterns.length ? { patterns: promises.patterns } : {}),
           },
           // The week's load. Only raise it when it's tight or overloaded, and before the user takes on anything new.
-          week: { verdict: week.verdict, percent: Math.round(week.ratio * 100), ...(week.verdict !== "room" ? { dropCandidates: week.dropCandidates.slice(0, 3).map((d) => d.title) } : {}) },
+          ...(hasFeature(currentPlan().plan, "loadAdvice") ? { week: { verdict: week.verdict, percent: Math.round(week.ratio * 100), ...(week.verdict !== "room" ? { dropCandidates: week.dropCandidates.slice(0, 3).map((d) => d.title) } : {}) } } : {}),
           // Who they're becoming — coach toward it all chat. Null: offer to help them write one.
           becoming: identity ? { name: identity.name, text: identity.text } : null,
         });

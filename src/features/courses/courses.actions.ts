@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { planErrorMessage } from "@/features/plans/action-error";
 import { requireDb } from "@/shared/supabase/session";
 import { ASSESSMENT_KINDS, parseTopics, type AssessmentKind } from "./courses";
 import { acceptStudy, addCourse, changeAssessment, updateCourse, type StudyBooking } from "./courses.repo";
@@ -16,19 +17,24 @@ export async function addCourseAction(_prev: CourseFormState, form: FormData): P
   const units = text(form, "units") ? Number(text(form, "units")) : null;
   if (units !== null && (!Number.isInteger(units) || units < 0 || units > 30)) return { error: "Units is a whole number up to 30" };
   const db = await requireDb("/app/courses");
-  const result = await addCourse(
-    db,
-    {
-      code: text(form, "code") || null,
-      title,
-      lecturer: text(form, "lecturer") || null,
-      semester: text(form, "semester") || null,
-      units,
-      targetGrade: text(form, "targetGrade") || null,
-      topics: parseTopics(text(form, "topics")),
-    },
-    new Date(),
-  );
+  let result;
+  try {
+    result = await addCourse(
+      db,
+      {
+        code: text(form, "code") || null,
+        title,
+        lecturer: text(form, "lecturer") || null,
+        semester: text(form, "semester") || null,
+        units,
+        targetGrade: text(form, "targetGrade") || null,
+        topics: parseTopics(text(form, "topics")),
+      },
+      new Date(),
+    );
+  } catch (e) {
+    return { error: planErrorMessage(e) };
+  }
   if (result.result === "exists") return { error: `You already have ${result.course}` };
   revalidatePath("/app/courses");
   redirect(`/app/courses/${result.id}`);
@@ -99,7 +105,10 @@ export async function scoreAction(courseId: string, title: string, form: FormDat
 
 export async function acceptStudyAction(courseId: string | null, sessions: StudyBooking[]) {
   const db = await requireDb(courseId ? `/app/courses/${courseId}` : "/app/courses");
-  const result = await acceptStudy(db, sessions, new Date());
+  const result = await acceptStudy(db, sessions, new Date()).catch((e) => {
+    planErrorMessage(e);
+    return { booked: 0 };
+  });
   revalidatePath("/app");
   revalidatePath("/app/courses");
   if (courseId) revalidatePath(`/app/courses/${courseId}`);

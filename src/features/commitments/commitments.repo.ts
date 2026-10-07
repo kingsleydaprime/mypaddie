@@ -1,4 +1,5 @@
 import { capacityFor, DEFAULT_DURATION } from "@/features/tasks/capacity";
+import { requireRoom } from "@/features/plans/guard";
 import { parseRecurrence } from "@/features/tasks/recurrence";
 import { createTask, loadCapacity, loadDayTasks, updateTask, type CreateResult } from "@/features/tasks/tasks.repo";
 import type { PillarWeight } from "@/features/xp/split";
@@ -117,6 +118,7 @@ export interface NewCommitment {
 }
 
 export async function addCommitment(db: Db, input: NewCommitment, now: Date) {
+  await requireRoom(db, "commitments");
   const { data, error } = await db
     .from("commitments")
     .insert({

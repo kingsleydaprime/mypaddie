@@ -10,10 +10,13 @@ import { loadConnectedApps } from "@/features/connect/connect.repo";
 import { ConnectPanel } from "@/features/connect/ui/connect-panel";
 import { loadInvites } from "@/features/invites/invites.repo";
 import { InvitePanel } from "@/features/invites/ui/invite-panel";
+import { YourData } from "@/features/account/ui/your-data";
 import { ProfileForm } from "@/features/profile/ui/profile-form";
 import { siteOrigin } from "@/shared/site";
 import { requireDb } from "@/shared/supabase/session";
-import { currentProfile } from "@/shared/user-context";
+import Link from "next/link";
+import { PLAN_INFO } from "@/features/plans/plans";
+import { currentPlan, currentProfile } from "@/shared/user-context";
 
 export default async function SettingsPage() {
   const db = await requireDb("/app/settings");
@@ -33,6 +36,10 @@ export default async function SettingsPage() {
         <p className="mt-1 text-sm text-muted">{[profile.displayName, profile.timeZone, profile.currency, profile.voice === "naija" ? "Naija banter" : "plain English"].filter(Boolean).join(" · ")}</p>
         <div className="mt-3"><ProfileForm profile={profile} /></div>
       </details>
+      <Link href="/app/billing" className="flex items-center justify-between rounded-2xl border border-line bg-surface p-4">
+        <span><span className="font-bold">Plan</span> <span className="text-sm text-muted">· {PLAN_INFO[currentPlan().plan].name}</span></span>
+        <span className="text-sm text-gold">Change ›</span>
+      </Link>
       <ProfileEditor versions={versions} />
       <NudgeToggle />
       <SettingsForm schedule={schedule} />
@@ -40,6 +47,8 @@ export default async function SettingsPage() {
       {(invites.left > 0 || invites.invites.length > 0) && <InvitePanel invites={invites.invites} left={invites.left} />}
 
       <ConnectPanel mcpUrl={`${await siteOrigin()}/api/mcp`} apps={apps} />
+
+      <YourData />
 
       <form action={signOut}>
         <button className="w-full rounded-xl border border-line px-4 py-3 text-muted">Sign out</button>

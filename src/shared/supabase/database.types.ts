@@ -502,6 +502,19 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"user_plans": {
+                  Row: {
+                    "chosen_at": string,"period": string,"plan": string,"student": boolean,"trial_ends_at": string | null,"user_id": string
+                  }
+                  Insert: {
+                    "chosen_at"?: string,"period"?: string,"plan": string,"student"?: boolean,"trial_ends_at"?: string | null,"user_id"?: string
+                  }
+                  Update: {
+                    "chosen_at"?: string,"period"?: string,"plan"?: string,"student"?: boolean,"trial_ends_at"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"workout_days": {
                   Row: {
                     "duration_minutes": number,"id": string,"name": string,"plan_id": string,"position": number,"series_id": string | null,"start_time": string | null,"user_id": string,"weekdays": string
@@ -646,6 +659,9 @@ isOneToOne: false
 "award_xp":
 { Args: { "p_entries": Json }; Returns: number
                            },
+"choose_plan":
+{ Args: { "p_period"?: string,"p_plan": string,"p_student"?: boolean }; Returns: string
+                           },
 "claim_invite":
 { Args: { "p_code": string,"p_email": string }; Returns: string
                            },
@@ -660,6 +676,9 @@ isOneToOne: false
               "code": string,"invites_left": number
             }[]
                            },
+"delete_my_account":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
 "export_all":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -668,6 +687,12 @@ isOneToOne: false
                            },
 "invites_left":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"my_plan":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"rate_hit":
+{ Args: { "p_bucket": string,"p_limit": number,"p_window_seconds": number }; Returns: boolean
                            },
 "record_learning":
 { Args: { "p_at": string,"p_confidence": number,"p_count": number,"p_minutes": number,"p_notes": string,"p_skill_id": string,"p_topic": string,"p_unit": string,"p_xp": Json }; Returns: string
@@ -692,6 +717,9 @@ isOneToOne: false
                            },
 "set_task_weights":
 { Args: { "p_task_id": string,"p_weights": Json }; Returns: undefined
+                           },
+"signup_settings":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "spawn_occurrence":
 { Args: { "p_due_at": string,"p_occurs_on": string,"p_series_id": string }; Returns: string

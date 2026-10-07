@@ -1,4 +1,6 @@
 import { loadBudget } from "@/features/money/money.repo";
+import { PlanLimitError } from "@/features/plans/plans";
+import { requireRoom } from "@/features/plans/guard";
 import { loadMode } from "@/features/mode/mode.repo";
 import { completeTask, createTask, type CompleteResult } from "@/features/tasks/tasks.repo";
 import { escapeLike } from "@/shared/supabase/like";
@@ -60,6 +62,7 @@ export interface FunInput {
 }
 
 export async function addFun(db: Db, input: FunInput) {
+  await requireRoom(db, "funActivities");
   const { data, error } = await db
     .from("fun_activities")
     .insert({
@@ -116,10 +119,18 @@ export async function logFun(
   let fun = await findFun(db, input.activity);
   let added = false;
   if (!fun) {
-    const created = await addFun(db, { title: input.activity, minutes: input.minutes ?? null, company: input.withPeople === undefined ? "either" : input.withPeople ? "together" : "solo" });
-    if (created.result !== "added") throw new Error("could not add the activity");
-    fun = created.activity;
-    added = true;
+    // Past the plan's list size, the fun still counts — it just isn't added to the list.
+    const created = await addFun(db, { title: input.activity, minutes: input.minutes ?? null, company: input.withPeople === undefined ? "either" : input.withPeople ? "together" : "solo" })
+      .catch((e) => (e instanceof PlanLimitError ? null : Promise.reject(e)));
+    if (created && created.result === "added") {
+      fun = created.activity;
+      added = true;
+    }
+  }
+  if (!fun) {
+    const task = await createTask(db, { title: `Fun: ${input.activity.trim()}`, itemId: null, baseXp: FUN_BASE_XP, dueDate: null, dueTime: null, recurrence: null, nonNegotiable: false, weights: funWeights(input.withPeople ?? false), durationMinutes: input.minutes ?? null }, now);
+    if (task.result !== "created") throw new Error("could not record the fun");
+    return { activity: input.activity.trim(), added: false, completed: await completeTask(db, task.task.id, now) };
   }
   const withPeople = input.withPeople ?? fun.company === "together";
   const task = await createTask(

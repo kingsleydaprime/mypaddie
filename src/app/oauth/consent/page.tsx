@@ -1,4 +1,7 @@
 import { redirect } from "next/navigation";
+import { enterUser } from "@/shared/user-context";
+import type { Db } from "@/shared/supabase/token-client";
+import { aiAppRoom } from "@/features/connect/ai-app-limit";
 import { serverClient } from "@/shared/supabase/server";
 import { consentRules, describeDestination } from "@/features/connect/connect";
 import { decide } from "./actions";
@@ -21,12 +24,14 @@ export default async function ConsentPage({ searchParams }: PageProps<"/oauth/co
     redirect(`/login?next=${encodeURIComponent(here)}`);
   }
 
+  await enterUser(supabase as Db);
   const { data, error } = await supabase.auth.oauth.getAuthorizationDetails(authorization_id);
   if (error || !data) return <Message text="This request has expired or is invalid. Start again from your AI app." />;
   if (!("authorization_id" in data)) redirect(data.redirect_url); // already allowed before: straight back
 
   const dest = describeDestination(data.redirect_uri);
-  const rules = consentRules(dest);
+  const room = await aiAppRoom(supabase as Db, data.client.id);
+  const rules = room.ok ? consentRules(dest) : { canApprove: false, mustConfirm: false };
   const app = dest.kind === "known" ? dest.app : data.client.name;
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-5 px-4 py-8">
@@ -51,7 +56,12 @@ export default async function ConsentPage({ searchParams }: PageProps<"/oauth/co
           </p>
         </div>
       )}
-      {!rules.canApprove && (
+      {!room.ok && (
+        <p className="rounded-xl border border-line bg-surface px-4 py-3 text-sm" role="alert">
+          {room.message} <a href="/app/billing" className="text-gold underline">Plans</a>
+        </p>
+      )}
+      {room.ok && !rules.canApprove && (
         <p className="rounded-xl border border-red/40 bg-red/10 px-4 py-3 text-sm" role="alert">
           This request can&apos;t be allowed: it would send your access to an unsafe address ({"host" in dest ? dest.host : "invalid"}).
         </p>

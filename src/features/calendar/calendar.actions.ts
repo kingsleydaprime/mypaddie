@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { planErrorMessage } from "@/features/plans/action-error";
 import { requireDb } from "@/shared/supabase/session";
 import { connectCalendar, disconnectCalendar, syncCalendar } from "./calendar.repo";
 
@@ -22,7 +23,12 @@ function said(r: Awaited<ReturnType<typeof syncCalendar>> | { result: "rejected"
 
 export async function connectCalendarAction(_prev: CalendarState, form: FormData): Promise<CalendarState> {
   const db = await requireDb("/app/settings");
-  const r = await connectCalendar(db, String(form.get("url") ?? ""), new Date());
+  let r;
+  try {
+    r = await connectCalendar(db, String(form.get("url") ?? ""), new Date());
+  } catch (e) {
+    return { error: planErrorMessage(e) } as CalendarState;
+  }
   revalidatePath("/app/settings");
   revalidatePath("/app");
   return said(r);

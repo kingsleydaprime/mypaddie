@@ -5,7 +5,7 @@ import { signUpAction, type SignUpState } from "./actions";
 
 const field = "rounded-xl border border-line bg-surface px-4 py-3.5 text-base placeholder:text-muted";
 
-export function SignUpForm({ invite }: { invite: string }) {
+export function SignUpForm({ invite, inviteRequired }: { invite: string; inviteRequired: boolean }) {
   const [state, action, pending] = useActionState<SignUpState, FormData>(signUpAction, null);
   const [withPassword, setWithPassword] = useState(false);
 
@@ -21,8 +21,8 @@ export function SignUpForm({ invite }: { invite: string }) {
   }
   return (
     <form action={action} className="flex flex-col gap-3">
-      <input name="invite" required defaultValue={invite} autoCapitalize="characters" autoComplete="off" spellCheck={false}
-        placeholder="Invite code" aria-label="Invite code" className={`${field} font-mono tracking-widest uppercase`} />
+      {(inviteRequired || invite) && <input name="invite" required={inviteRequired} defaultValue={invite} autoCapitalize="characters" autoComplete="off" spellCheck={false}
+        placeholder="Invite code" aria-label="Invite code" className={`${field} font-mono tracking-widest uppercase`} />}
       <input name="email" type="email" required autoComplete="email" placeholder="Your email" aria-label="Your email" className={field} />
       {state && "error" in state && <p className="text-sm text-red" role="alert">{state.error}</p>}
       <button name="method" value="google" disabled={pending} className="flex items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-3.5 font-semibold disabled:opacity-60">
@@ -39,7 +39,7 @@ export function SignUpForm({ invite }: { invite: string }) {
       ) : (
         <button type="button" onClick={() => setWithPassword(true)} className="text-sm text-muted underline">I&apos;d rather use a password</button>
       )}
-      <p className="text-xs text-muted">With Google, pick the account for the email above — that&apos;s the one your invite is for.</p>
+      {inviteRequired && <p className="text-xs text-muted">With Google, pick the account for the email above — that&apos;s the one your invite is for.</p>}
     </form>
   );
 }

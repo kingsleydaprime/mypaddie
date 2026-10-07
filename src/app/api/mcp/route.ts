@@ -70,10 +70,22 @@ const handler = createMcpHandler(
   },
 );
 
+/** Per user: generous for a chat, a wall for a runaway loop. */
+const RATE = { limit: 300, windowSeconds: 600 };
+
 // Every tool call runs as the signed-in user: their time zone, currency and voice.
 const asUser = async (req: Request) => {
   const token = (req as Request & { auth?: AuthInfo }).auth?.token;
-  return token ? withUser(clientForToken(token), () => Promise.resolve(handler(req))) : handler(req);
+  if (!token) return handler(req);
+  const db = clientForToken(token);
+  const { data: allowed } = await db.rpc("rate_hit", { p_bucket: "mcp", p_limit: RATE.limit, p_window_seconds: RATE.windowSeconds });
+  if (allowed === false) {
+    return Response.json(
+      { jsonrpc: "2.0", id: null, error: { code: -32000, message: "Too many MyPaddie requests in the last few minutes. Wait a little, then try again." } },
+      { status: 429, headers: { "Retry-After": String(RATE.windowSeconds) } },
+    );
+  }
+  return withUser(db, () => Promise.resolve(handler(req)));
 };
 
 // No token, a bad token, or an expired one → 401 pointing Claude at the login flow.

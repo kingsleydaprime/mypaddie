@@ -1,4 +1,5 @@
 import { addEvent } from "@/features/events/add-event";
+import { requireFeature, requireRoom } from "@/features/plans/guard";
 import { findOrCreateSkill, loadLearning } from "@/features/learning/learning.repo";
 import { dayEndsAt } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
@@ -145,6 +146,7 @@ export interface NewCourse {
  * its syllabus and its assessments. Pasting an outline lands here in one call.
  */
 export async function addCourse(db: Db, input: NewCourse, now: Date) {
+  await requireRoom(db, "courses");
   const label = courseLabel({ code: input.code ?? null, title: input.title });
   const { skill } = await findOrCreateSkill(db, label, "academic");
   const { data: course, error } = await db
@@ -367,6 +369,7 @@ export async function changeAssessment(db: Db, ref: string, changes: AssessmentC
  * into each day's free capacity. Nothing is booked until accepted.
  */
 export async function proposeStudy(db: Db, now: Date, opts: { course?: string; days?: number; sessionMinutes?: number; maxPerDay?: number } = {}) {
+  requireFeature("studyPlans");
   const courses = (await loadCourses(db, now, { course: opts.course })).filter((c) => c.status === "active");
   const today = dayKey(now, tz());
   const days = opts.days ?? 7;
@@ -400,6 +403,7 @@ export type StudyBooking = Pick<StudySession, "courseId" | "topic" | "day" | "mi
 
 /** Books accepted study sessions as tasks: linked to the course's skill and topic, so doing one records the practice. */
 export async function acceptStudy(db: Db, sessions: StudyBooking[], now: Date) {
+  requireFeature("studyPlans");
   const courses = await loadCourses(db, now, { includeFinished: true });
   const results = [];
   for (const s of sessions) {

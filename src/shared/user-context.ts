@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { cache } from "react";
 import { configFor, DEFAULT_PROFILE, type Profile } from "@/features/profile/profile";
 import { loadProfile } from "@/features/profile/profile.repo";
+import { DEFAULT_PLAN_STATE, loadPlan, type PlanState } from "@/features/plans/plans.repo";
 import { DEFAULT_CONFIG, setConfigResolver, type EngineConfig } from "./config";
 import type { Db } from "./supabase/token-client";
 
@@ -18,6 +19,7 @@ import type { Db } from "./supabase/token-client";
 export interface UserContext {
   profile: Profile;
   config: EngineConfig;
+  plan: PlanState;
 }
 
 const als = new AsyncLocalStorage<UserContext>();
@@ -49,7 +51,12 @@ setConfigResolver(
   },
 );
 
-export const contextFor = (profile: Profile): UserContext => ({ profile, config: configFor(profile) });
+export const contextFor = (profile: Profile, plan: PlanState = DEFAULT_PLAN_STATE): UserContext => ({ profile, config: configFor(profile), plan });
+
+const load = async (db: Db) => {
+  const [profile, plan] = await Promise.all([loadProfile(db), loadPlan(db)]);
+  return contextFor(profile, plan);
+};
 
 /** Runs `fn` with a given context — tests and scripts that already have a profile. */
 export function runAs<T>(ctx: UserContext, fn: () => T): T {
@@ -58,12 +65,12 @@ export function runAs<T>(ctx: UserContext, fn: () => T): T {
 
 /** Runs `fn` as this user (tool calls, scripts). */
 export async function withUser<T>(db: Db, fn: () => Promise<T>): Promise<T> {
-  return als.run(contextFor(await loadProfile(db)), fn);
+  return als.run(await load(db), fn);
 }
 
 /** For pages and actions: the rest of this request runs as this user. */
 export async function enterUser(db: Db): Promise<UserContext> {
-  const ctx = contextFor(await loadProfile(db));
+  const ctx = await load(db);
   als.enterWith(ctx);
   try {
     renderCell().ctx = ctx;
@@ -75,4 +82,9 @@ export async function enterUser(db: Db): Promise<UserContext> {
 
 export function currentProfile(): Profile {
   return current()?.profile ?? DEFAULT_PROFILE;
+}
+
+/** The current user's plan (tests and scripts: the default, Free). */
+export function currentPlan(): PlanState {
+  return current()?.plan ?? DEFAULT_PLAN_STATE;
 }

@@ -786,3 +786,61 @@ authorization server metadata → register → authorize with PKCE → our conse
 page → Allow → code → token → `get_today` as that user; then Settings lists
 it, disconnecting kills the refresh token, and a look-alike "Claude" gets the
 warning, can't be allowed without the tick, and leaves with access_denied.
+
+## 2026-10-11 — Invites switch, plans, and phase 3 (safety)
+
+### Switches live in the database
+`private.app_config`: `invites_required` (off for now — Kingsley shares the
+link with a few people), `default_plan` (`free`), `payments_enabled` (off).
+One SQL line flips each; no redeploy. The invite hook and pages read the
+switch, so turning invites back on restores the whole flow, codes and all.
+
+### Plans without payments
+Free / Plus / Pro, defined in one file (`src/features/plans/plans.ts`):
+limits (AI apps 1/3/∞, habits, courses, commitments, applications, fun list)
+and features (study plans, weekly load advice, Calendar import; Pro adds
+Paddie's own chat when it exists). Prices in USD and NGN, yearly = 10 months,
+students half. Everyone starts on Free and switches in Settings → Plan with
+one tap while nothing is charged; once `payments_enabled` is on, only Free can
+be chosen there and paid plans come from a payment (Paystack, later).
+Kingsley first wanted Pro as the default, then chose Free.
+
+### Limits are checked where things are created, on the server
+`requireRoom` / `requireFeature` throw a `PlanLimitError` whose message says
+what, how many, and where to upgrade — shown as is by the AI and by the app's
+forms. What's never capped: Today, one-off tasks, XP, money, nudges, export,
+deleting your account. Logging fun past the list cap still counts (it just
+isn't added to the list). The AI-app limit is checked on the consent page and
+again on approval; reconnecting an app you already allowed doesn't count.
+
+### Isolation is tested across the whole schema
+`isolation.test.sql` doesn't list tables: it checks every public table has
+RLS, anon has no table grants, every policy uses `auth.uid()`, anon can run
+only `claim_invite` and `signup_settings`, `private` is closed, every
+SECURITY DEFINER function pins `search_path`, and a second user sees zero of
+the first user's rows in every readable table (and that the check walked 30+
+tables, and that the first user does see their own). A new table that forgets
+RLS fails it without anyone writing a test for it.
+
+### Deleting your account without an admin key
+`delete_my_account()` deletes the caller's `auth.users` row — only
+`auth.uid()`, never a parameter — and every ON DELETE CASCADE takes their data
+(and AI sessions and grants) with it. Tested: nothing with their id is left in
+any table, nobody else's data is touched. The app asks for the phrase "delete
+my account", signs out, and goes home.
+
+### Export is one file
+`/app/export` downloads `export_all()` (every table of theirs, as them, under
+RLS) as JSON.
+
+### Rate limit on the AI endpoint
+300 tool calls per user per 10 minutes, counted in Postgres
+(`rate_hit`, fixed windows, old rows cleared as it goes) — generous for chat,
+a wall for a runaway loop. Over it: HTTP 429 with a plain message. Sign-up,
+email and sign-in limits are Supabase Auth's own.
+
+### Privacy policy and terms: plain drafts
+Written to match what the app actually does (processors, no master key, the
+rights you can exercise from Settings), naming the NDPA complaint route.
+Drafts — to be reviewed before strangers sign up. Contact address in
+`src/shared/legal/legal.ts`.

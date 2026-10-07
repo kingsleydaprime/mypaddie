@@ -3,7 +3,9 @@
 import { redirect } from "next/navigation";
 import { CLAIM_MESSAGES, isEmail, normalizeCode, passwordProblem } from "@/features/auth/auth";
 import { siteOrigin } from "@/shared/site";
+import { invitesRequired } from "@/features/auth/signup-settings";
 import { serverClient } from "@/shared/supabase/server";
+import type { Db } from "@/shared/supabase/token-client";
 
 export type SignUpState = null | { error: string } | { checkEmail: string; why: "link" | "confirm" };
 
@@ -17,17 +19,21 @@ export async function signUpAction(_prev: SignUpState, form: FormData): Promise<
   const code = normalizeCode(String(form.get("invite") ?? ""));
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const method = String(form.get("method") ?? "");
-  if (code.length !== 8) return { error: "Enter your 8-character invite code." };
   if (!isEmail(email)) return { error: "Enter your email." };
-
   const supabase = await serverClient();
-  const { data: claim, error: claimError } = await supabase.rpc("claim_invite", { p_code: code, p_email: email });
-  if (claimError) return { error: "Couldn't check the invite. Try again." };
-  if (claim !== "ok") return { error: CLAIM_MESSAGES[claim] ?? "That invite can't be used." };
+  const needInvite = await invitesRequired(supabase as Db);
+  if (needInvite && code.length !== 8) return { error: "Enter your 8-character invite code." };
+
+  // With invites off, a code is optional; if one is given it's still checked and used.
+  if (code.length > 0) {
+    const { data: claim, error: claimError } = await supabase.rpc("claim_invite", { p_code: code, p_email: email });
+    if (claimError) return { error: "Couldn't check the invite. Try again." };
+    if (claim !== "ok") return { error: CLAIM_MESSAGES[claim] ?? "That invite can't be used." };
+  }
 
   const origin = await siteOrigin();
   const confirm = `${origin}/auth/confirm?next=${encodeURIComponent("/app")}`;
-  const meta = { invite_code: code };
+  const meta = code ? { invite_code: code } : {};
 
   if (method === "google") {
     const { data, error } = await supabase.auth.signInWithOAuth({

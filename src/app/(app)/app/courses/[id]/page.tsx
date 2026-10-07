@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { currentPlan } from "@/shared/user-context";
+import { hasFeature } from "@/features/plans/plans";
+import { UpgradeNote } from "@/features/plans/ui/upgrade-note";
 import { notFound } from "next/navigation";
 import type { TopicStatus } from "@/features/courses/courses";
 import { assessmentDoneAction, courseStatusAction, removeTopicAction, scoreAction } from "@/features/courses/courses.actions";
@@ -20,7 +23,8 @@ export default async function CoursePage({ params }: PageProps<"/app/courses/[id
   const now = new Date();
   const course = (await loadCourses(db, now, { course: id }))[0];
   if (!course) notFound();
-  const plan = course.status === "active" ? await proposeStudy(db, now, { course: id }) : null;
+  const canPlan = hasFeature(currentPlan().plan, "studyPlans");
+  const plan = course.status === "active" && canPlan ? await proposeStudy(db, now, { course: id }) : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -60,6 +64,8 @@ export default async function CoursePage({ params }: PageProps<"/app/courses/[id
           )}
         </section>
       )}
+
+      {course.status === "active" && !canPlan && <UpgradeNote feature="studyPlans" />}
 
       <section className="flex flex-col gap-2">
         <h2 className="font-bold">

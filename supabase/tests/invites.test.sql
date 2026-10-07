@@ -10,6 +10,8 @@ create function pg_temp.gate(email text, code text default null) returns text la
   )))->'error'->>'message', 'ok')
 $$;
 select plan(20);
+-- These tests are about the gate itself, so it's switched on (the app default is off for now).
+update private.app_config set value = 'true' where key = 'invites_required';
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'host@example.com');
 insert into private.invite_allowances (user_id, allowance) values ('11111111-1111-1111-1111-111111111111', 2);

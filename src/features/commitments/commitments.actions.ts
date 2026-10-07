@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { planErrorMessage } from "@/features/plans/action-error";
 import { requireDb } from "@/shared/supabase/session";
 import { COMMITMENT_KINDS, COMMITMENT_PRIORITIES, type CommitmentKind, type CommitmentPriority, type CommitmentStatus } from "./commitments";
 import { addCommitment, updateCommitment } from "./commitments.repo";
@@ -26,18 +27,24 @@ export async function addCommitmentAction(_prev: CommitmentFormState, form: Form
   if (days.length && (!sessionTitle || !(minutes >= 5 && minutes <= 720))) return { error: "A regular session needs a name and a length (5–720 min)" };
 
   const db = await requireDb("/app/commitments");
-  const { sessions } = await addCommitment(
-    db,
-    {
-      kind,
-      title,
-      org: get("org") || null,
-      priority: COMMITMENT_PRIORITIES.includes(priority) ? priority : "important",
-      extraMinutesPerWeek: Math.round(extra * 60),
-      sessions: days.length ? [{ title: sessionTitle, recurrence: `FREQ=WEEKLY;BYDAY=${days.join(",")}`, time: get("sessionTime") || null, minutes }] : [],
-    },
-    new Date(),
-  );
+  let made;
+  try {
+    made = await addCommitment(
+      db,
+      {
+        kind,
+        title,
+        org: get("org") || null,
+        priority: COMMITMENT_PRIORITIES.includes(priority) ? priority : "important",
+        extraMinutesPerWeek: Math.round(extra * 60),
+        sessions: days.length ? [{ title: sessionTitle, recurrence: `FREQ=WEEKLY;BYDAY=${days.join(",")}`, time: get("sessionTime") || null, minutes }] : [],
+      },
+      new Date(),
+    );
+  } catch (e) {
+    return { error: planErrorMessage(e) };
+  }
+  const { sessions } = made;
   revalidatePath("/app/commitments");
   revalidatePath("/app");
   const refused = sessions.find((s) => s.result !== "created");

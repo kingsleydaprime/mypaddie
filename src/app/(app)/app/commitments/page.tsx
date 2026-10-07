@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { currentPlan } from "@/shared/user-context";
+import { hasFeature } from "@/features/plans/plans";
+import { UpgradeNote } from "@/features/plans/ui/upgrade-note";
 import { KIND_LABEL, type CommitmentPriority, type LoadVerdict } from "@/features/commitments/commitments";
 import { setCommitmentAction } from "@/features/commitments/commitments.actions";
 import { loadCommitments, loadWeekLoad } from "@/features/commitments/commitments.repo";
@@ -21,6 +24,7 @@ export default async function CommitmentsPage() {
   const live = list.filter((c) => c.status !== "ended");
   const ended = list.filter((c) => c.status === "ended");
   const pct = Math.round(load.ratio * 100);
+  const advice = hasFeature(currentPlan().plan, "loadAdvice");
 
   return (
     <div className="flex flex-col gap-5">
@@ -29,7 +33,8 @@ export default async function CommitmentsPage() {
         <h1 className="text-2xl font-bold">Commitments</h1>
       </header>
 
-      <section className="rounded-2xl border border-line bg-surface p-4">
+      {!advice && <UpgradeNote feature="loadAdvice" />}
+      {advice && <section className="rounded-2xl border border-line bg-surface p-4">
         <p className={`font-semibold ${VERDICT[load.verdict].tone}`}>{VERDICT[load.verdict].label}</p>
         <p className="text-sm text-muted">Next 7 days: {hours(load.total)} of {hours(load.capacity)} ({pct}%)</p>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(pct, 100)} aria-label={`${pct}% of the week's capacity`}>
@@ -40,7 +45,7 @@ export default async function CommitmentsPage() {
             To get back to room, consider pausing: {load.dropCandidates.slice(0, load.dropCandidates.findIndex((d) => d.enough) + 1 || undefined).map((d) => `${d.title} (${hours(d.minutes)})`).join(", ")}.
           </p>
         )}
-      </section>
+      </section>}
 
       <AddCommitmentForm />
 

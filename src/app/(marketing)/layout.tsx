@@ -14,8 +14,12 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
       <main className="flex-1">{children}</main>
       <footer className="mx-auto w-full max-w-5xl px-5 py-10 text-sm text-muted">
         <div className="flex flex-col justify-between gap-3 border-t border-line pt-6 sm:flex-row">
-          <span>MyPaddie — a private life coach, built for one.</span>
-          <a href="https://github.com/kingsleydaprime/mypaddie" target="_blank" rel="noopener noreferrer" className="hover:text-text">How it&apos;s built ↗</a>
+          <span>MyPaddie — a private life coach for your days, habits and money.</span>
+          <span className="flex gap-4">
+            <Link href="/privacy" className="hover:text-text">Privacy</Link>
+            <Link href="/terms" className="hover:text-text">Terms</Link>
+            <a href="https://github.com/kingsleydaprime/mypaddie" target="_blank" rel="noopener noreferrer" className="hover:text-text">How it&apos;s built ↗</a>
+          </span>
         </div>
       </footer>
     </div>

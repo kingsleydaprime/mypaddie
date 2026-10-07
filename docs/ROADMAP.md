@@ -114,18 +114,22 @@ which gets a new entry when it changes.
 - [x] Settings → Connect your AI: the address, steps, connected apps, disconnect.
 
 ### Phase 3: safety before strangers
-- [ ] Two-user pgTAP suites: user B can't read, change or reference user A's
-  rows in every table, RPC and the nudge job.
-- [ ] Rate limits on `/api/mcp`, sign-up and calendar sync; size limits on
-  free-text fields.
-- [ ] Revisit "XP writes from the client are fine" (DECISIONS, Day 2): still
-  harmless while nothing is compared between users; must change before any
-  leaderboard or sharing.
-- [ ] Delete my account (the cascades already exist) and export my data
-  (`export_all` exists; add a button).
-- [ ] Privacy policy and terms: this is money and life data.
-- (Already done: the calendar import only fetches `calendar.google.com`
-  iCal URLs, with no redirects, a timeout and a size cap.)
+- [x] Schema-wide isolation tests: RLS everywhere, nothing for anon, every
+  policy on `auth.uid()`, a second user sees nothing in 30+ tables (2026-10-11).
+- [x] Rate limit on `/api/mcp`: 300 calls / user / 10 min (Postgres-counted).
+- [x] Export my data (`/app/export`) and delete my account (cascade, tested).
+- [x] Privacy policy and terms (drafts — get them reviewed).
+- [ ] Revisit "XP writes from the client are fine" before any leaderboard or sharing.
+- (Already done: the calendar import only fetches `calendar.google.com` iCal URLs.)
+
+### Plans (2026-10-11, no payments yet)
+- [x] Free / Plus / Pro with limits and features; Settings → Plan, one-tap
+  switch; Free is the default.
+- [x] Switches in `private.app_config`: invites_required (off),
+  default_plan (free), payments_enabled (off).
+- [ ] Paystack checkout and webhooks; then `payments_enabled = true`.
+- [ ] 14-day Plus trial for new sign-ups once payments are on.
+- [ ] Student verification (school email) for half price.
 
 ### Phase 4: hosting for real users
 - [ ] Paid plans: Vercel Hobby is non-commercial; Supabase Free pauses idle

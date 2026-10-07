@@ -47,7 +47,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </details>
       </details>
 
-      <p className="text-sm text-muted">Got an invite? <Link href="/signup" className="text-gold underline">Create your account</Link></p>
+      <p className="text-sm text-muted">New here? <Link href="/signup" className="text-gold underline">Create your account</Link></p>
       <Link href="/" className="text-sm text-muted">← Back to home</Link>
     </main>
   );

@@ -1,4 +1,5 @@
 import type { Json } from "@/shared/supabase/database.types";
+import { requireFeature } from "@/features/plans/guard";
 import type { Db } from "@/shared/supabase/token-client";
 import { isAllowedCalendarUrl, maskCalendarUrl, parseIcs } from "./ics";
 
@@ -96,6 +97,7 @@ export async function syncCalendar(db: Db, now: Date, opts: { force?: boolean } 
 }
 
 export async function connectCalendar(db: Db, url: string, now: Date) {
+  requireFeature("calendarImport");
   const clean = url.trim();
   if (!isAllowedCalendarUrl(clean)) {
     return { result: "rejected" as const, error: "Use the 'Secret address in iCal format' from Google Calendar settings (it starts https://calendar.google.com/calendar/ical/ and ends .ics)." };

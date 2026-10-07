@@ -1,4 +1,5 @@
 import { completeTask, createTask, deleteTask, updateTask, type CreateResult } from "@/features/tasks/tasks.repo";
+import { requireRoom } from "@/features/plans/guard";
 import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, zonedInstant } from "@/shared/time";
@@ -71,6 +72,7 @@ export interface NewApplication {
 }
 
 export async function addApplication(db: Db, input: NewApplication, now: Date) {
+  await requireRoom(db, "applications");
   const deadlineAt = input.deadline ? deadlineInstant(input.deadline.date, input.deadline.time, input.deadline.timeZone) : null;
   const { data: app, error } = await db
     .from("applications")

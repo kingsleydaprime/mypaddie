@@ -1,4 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/server";
+import { requireFeature } from "@/features/plans/guard";
+import { hasFeature } from "@/features/plans/plans";
+import { currentPlan } from "@/shared/user-context";
+
+const advice = () => hasFeature(currentPlan().plan, "loadAdvice");
 import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
 import { PILLARS } from "@/shared/domain";
@@ -51,6 +56,7 @@ export function registerCommitmentTools(server: McpServer) {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
+        requireFeature("loadAdvice");
         const load = await loadWeekLoad(db, now, adding_hours_per_week === undefined ? undefined : Math.round(adding_hours_per_week * 60));
         return ok(await withMode(db, now, { load: loadView(load) }));
       } catch (error) {
@@ -102,7 +108,7 @@ export function registerCommitmentTools(server: McpServer) {
           },
           now,
         );
-        return ok(await withMode(db, now, { id: commitment.id, commitment: commitmentLabel(commitment), sessions, load: loadView(await loadWeekLoad(db, now)) }));
+        return ok(await withMode(db, now, { id: commitment.id, commitment: commitmentLabel(commitment), sessions, ...(advice() ? { load: loadView(await loadWeekLoad(db, now)) } : {}) }));
       } catch (error) {
         return toolError(`add_commitment failed: ${(error as Error).message}`);
       }
@@ -122,13 +128,14 @@ export function registerCommitmentTools(server: McpServer) {
         const db = dbFrom(ctx);
         const now = new Date();
         const [list, load] = await Promise.all([loadCommitments(db, { includeEnded: include_ended }), loadWeekLoad(db, now)]);
+        const showLoad = advice();
         return ok(
           await withMode(db, now, {
             commitments: list.map((c) => ({
               id: c.id, kind: c.kind, title: c.title, org: c.org, priority: c.priority, status: c.status, startsOn: c.starts_on, endsOn: c.ends_on,
               hoursPerWeek: hours(load.byCommitment.find((b) => b.id === c.id)?.minutes ?? c.extra_minutes_per_week), notes: c.notes,
             })),
-            load: loadView(load),
+            ...(showLoad ? { load: loadView(load) } : {}),
           }),
         );
       } catch (error) {
@@ -187,7 +194,7 @@ export function registerCommitmentTools(server: McpServer) {
             sessions.push(made?.result === "created" ? { session: s.title, result: "created" } : { session: s.title, ...(made ?? { result: "not_found" }) });
           }
         }
-        return ok(await withMode(db, now, { ...result, ...(sessions.length ? { sessions } : {}), load: loadView(await loadWeekLoad(db, now)) }));
+        return ok(await withMode(db, now, { ...result, ...(sessions.length ? { sessions } : {}), ...(advice() ? { load: loadView(await loadWeekLoad(db, now)) } : {}) }));
       } catch (error) {
         return toolError(`update_commitment failed: ${(error as Error).message}`);
       }

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { planErrorMessage } from "@/features/plans/action-error";
 import { requireDb } from "@/shared/supabase/session";
 import { FUN_COMPANY, FUN_ENERGY, type FunCompany, type FunEnergy } from "./fun";
 import { addFun, logFun, updateFun, type FunInput } from "./fun.repo";
@@ -37,7 +38,8 @@ export async function addFunAction(_prev: FunFormState, form: FormData): Promise
   const input = readForm(form);
   if ("error" in input) return input;
   const db = await requireDb("/app/fun");
-  const result = await addFun(db, input);
+  const result = await addFun(db, input).catch((e) => ({ result: "limit" as const, message: planErrorMessage(e) }));
+  if (result.result === "limit") return { error: result.message };
   if (result.result === "exists") return { error: `"${input.title}" is already on your list` };
   refresh();
   return { ok: true };

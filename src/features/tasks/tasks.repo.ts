@@ -1,4 +1,5 @@
 import { validateWeights, type PillarWeight } from "@/features/xp/split";
+import { requireRoom } from "@/features/plans/guard";
 import { completionXp, ignoredNeedDeduction, isLate, lateAfter, type SlipForXp, type TaskForXp } from "@/features/xp/xp";
 import { currentConfig, type EngineConfig } from "@/shared/config";
 import type { Tier } from "@/shared/domain";
@@ -396,7 +397,10 @@ export type CreateResult = { result: "created"; task: { id: string; title: strin
  */
 export async function createTask(db: Db, task: NewTask, now: Date, config = currentConfig()): Promise<CreateResult> {
   validateWeights(task.weights);
-  if (task.recurrence) parseRecurrence(task.recurrence);
+  if (task.recurrence) {
+    parseRecurrence(task.recurrence);
+    await requireRoom(db, "habits");
+  }
 
   const hasDay = task.dueDate !== null || task.dueTime !== null || task.recurrence !== null;
   const day = task.dueDate ?? dayKey(now, config.timeZone);
