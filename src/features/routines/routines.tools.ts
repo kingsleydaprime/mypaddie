@@ -3,7 +3,7 @@ import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
 import { PILLARS } from "@/shared/domain";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
-import { createRoutine, loadRoutines, stopRoutine } from "./routines.repo";
+import { createRoutine, loadRoutines, stopRoutine, updateRoutine } from "./routines.repo";
 
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
@@ -44,7 +44,7 @@ export function registerRoutineTools(server: McpServer) {
     "list_routines",
     {
       title: "Routines",
-      description: "Their routines and steps. To change a step, use update_task on that step; to rebuild, stop_routine then create_routine.",
+      description: "Their routines and steps. To add, remove, reorder or retime steps or rename it, use update_routine; to change one step's details (title, length, pillars), update_task on that step.",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
@@ -72,6 +72,47 @@ export function registerRoutineTools(server: McpServer) {
         return ok(await withMode(db, now, { ...(await stopRoutine(db, routine, now)) }));
       } catch (error) {
         return toolError(`stop_routine failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "update_routine",
+    {
+      title: "Update routine",
+      description:
+        "Change a routine (by title) without losing its history: rename it, remove steps (by title; their habits stop), " +
+        "add steps (at the end, or wherever `order` puts them), reorder (`order` must name every remaining step once), " +
+        "or move the start `time` (null = any time that day). Steps keep running back to back from the start. A " +
+        "'refused' result says which step was unknown, duplicated or missing from the order.",
+      inputSchema: z.object({
+        routine: z.string().trim().min(1),
+        title: z.string().trim().min(1).max(100).optional(),
+        remove: z.array(z.string().trim().min(1)).optional(),
+        add: z.array(z.object({
+          title: z.string().trim().min(1).max(200),
+          minutes: z.number().int().min(1).max(240).optional(),
+          weights: z.array(z.object({ pillar: z.enum(PILLARS), weight: z.number().int().min(1).max(100) })).optional(),
+        })).max(20).optional(),
+        order: z.array(z.string().trim().min(1)).optional(),
+        time: time.nullable().optional(),
+      }),
+    },
+    async (args: {
+      routine: string;
+      title?: string;
+      remove?: string[];
+      add?: { title: string; minutes?: number; weights?: { pillar: (typeof PILLARS)[number]; weight: number }[] }[];
+      order?: string[];
+      time?: string | null;
+    }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        const now = new Date();
+        const { routine, ...edit } = args;
+        return ok(await withMode(db, now, { ...(await updateRoutine(db, routine, edit, now)) }));
+      } catch (error) {
+        return toolError(`update_routine failed: ${(error as Error).message}`);
       }
     },
   );

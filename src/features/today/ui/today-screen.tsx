@@ -149,7 +149,7 @@ export async function TodayScreen({ db }: { db: Db }) {
         </details>
       )}
 
-      {focus.doneToday > 0 && <p className="text-center text-sm text-muted">{focus.doneToday} done today.</p>}
+      {focus.doneToday > 0 && <Link href="/app/done" className="text-center text-sm text-muted underline-offset-4 hover:underline">{focus.doneToday} done today · undo a mistake</Link>}
 
       <nav className="grid grid-cols-3 gap-2">
         <Link href="/app/plan" className="rounded-xl border border-line px-2 py-3 text-center text-sm font-medium">Plan my day</Link>

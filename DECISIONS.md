@@ -1078,3 +1078,34 @@ instead of failing the constraint.
 
 Fixed on the way: the add-quest form failed for needs and goals, because
 fields hidden for a tier aren't in the form data and the schema required them.
+
+### Undo reverses, never deletes
+A mis-tapped complete_task, log_fun, log_workout or learning session can be
+undone. The XP ledger stays a record: the original rows get `reversed_at`
+and one negative `undo` row per pillar is written, so the pillar trigger
+(insert-only) nets them to zero and history shows both. The "pay once"
+unique index now ignores reversed rows, so a task undone and later really
+done pays again. Only earnings (`completion`, `late_completion`, `learning`)
+can be reversed — never a deduction or a bonus — and a reversed mark can't be
+lifted (RLS `with check`). Clients get a column-level `update (reversed_at)`
+grant; that's no new risk, since they can already insert XP rows.
+
+The undo also rolls back what completing set off: the workout log, the fun
+count and last-done date, a kept promise, an application requirement, practice
+time logged from the task. A planned task goes back to pending; one that only
+existed to record something after the fact (undated, not a habit, created and
+done within 2 minutes — log_fun, an off-plan workout) is cancelled, so no
+phantom pending task is left. A learning session is deleted after its XP is
+reversed, so streaks, hours and review dates read as if it never happened.
+
+The tool is two-step: without an id it lists the last 48 hours and changes
+nothing, so the AI confirms the right one by name before undoing. In the app,
+"N done today" on Today opens Done recently, with Undo on each.
+
+### Routines are edited in place
+`update_routine` renames, removes, adds, reorders and retimes steps without
+rebuilding: each step stays its own habit, so its history and streak survive.
+The plan (which steps, what order, what time) is a pure function; the order
+must name every remaining step once, and removing every step is refused (stop
+the routine instead). Times are re-laid back to back from the start, through
+`update_task` on each step's next open day, which carries forward.

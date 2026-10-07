@@ -868,13 +868,13 @@ isOneToOne: false
                   ]
                 },"xp_log": {
                   Row: {
-                    "amount": number,"at": string,"id": string,"item_id": string | null,"learning_session_id": string | null,"note": string | null,"pillar": Database["public"]['Enums']["pillar"],"reason": Database["public"]['Enums']["xp_reason"],"task_id": string | null,"user_id": string
+                    "amount": number,"at": string,"id": string,"item_id": string | null,"learning_session_id": string | null,"note": string | null,"pillar": Database["public"]['Enums']["pillar"],"reason": Database["public"]['Enums']["xp_reason"],"reversed_at": string | null,"task_id": string | null,"user_id": string
                   }
                   Insert: {
-                    "amount": number,"at"?: string,"id"?: string,"item_id"?: string | null,"learning_session_id"?: string | null,"note"?: string | null,"pillar": Database["public"]['Enums']["pillar"],"reason": Database["public"]['Enums']["xp_reason"],"task_id"?: string | null,"user_id"?: string
+                    "amount": number,"at"?: string,"id"?: string,"item_id"?: string | null,"learning_session_id"?: string | null,"note"?: string | null,"pillar": Database["public"]['Enums']["pillar"],"reason": Database["public"]['Enums']["xp_reason"],"reversed_at"?: string | null,"task_id"?: string | null,"user_id"?: string
                   }
                   Update: {
-                    "amount"?: number,"at"?: string,"id"?: string,"item_id"?: string | null,"learning_session_id"?: string | null,"note"?: string | null,"pillar"?: Database["public"]['Enums']["pillar"],"reason"?: Database["public"]['Enums']["xp_reason"],"task_id"?: string | null,"user_id"?: string
+                    "amount"?: number,"at"?: string,"id"?: string,"item_id"?: string | null,"learning_session_id"?: string | null,"note"?: string | null,"pillar"?: Database["public"]['Enums']["pillar"],"reason"?: Database["public"]['Enums']["xp_reason"],"reversed_at"?: string | null,"task_id"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -968,6 +968,9 @@ isOneToOne: false
 "record_workout":
 { Args: { "p_at": string,"p_day_id": string,"p_duration": number,"p_entries": Json,"p_feel": number,"p_notes": string,"p_task_id": string }; Returns: string
                            },
+"reverse_xp":
+{ Args: { "p_ids": (string)[],"p_note": string }; Returns: number
+                           },
 "save_identity":
 { Args: { "p_activate": boolean,"p_name": string,"p_text": string }; Returns: string
                            },
@@ -986,12 +989,18 @@ isOneToOne: false
 "touch_activity":
 { Args: { "p_via": string }; Returns: undefined
                            },
+"undo_learning":
+{ Args: { "p_session_id": string }; Returns: Json
+                           },
+"undo_task":
+{ Args: { "p_cancel": boolean,"p_task_id": string }; Returns: Json
+                           },
 "void_transaction":
 { Args: { "p_id": string,"p_reason": string,"p_xp_reversal": Json }; Returns: string
                            }
           }
           Enums: {
-            "bucket_name": "needs"|"buffer"|"savings"|"wants"|"flexible","item_status": "active"|"done"|"paused"|"dropped","mode": "curious"|"strict"|"soft"|"strictest"|"softest","money_direction": "in"|"out","money_tag": "need"|"want"|"unsure","pillar": "spiritual"|"mental"|"physical"|"financial"|"emotional"|"social"|"character"|"skills"|"creativity"|"relationships"|"academic","purchase_verdict": "yes"|"wait_24h"|"no","spend_level": "floor"|"comfortable","task_status": "pending"|"done"|"skipped"|"cancelled","tier": "need"|"want"|"goal"|"wish"|"dream","xp_reason": "completion"|"late_completion"|"ignored_need"|"goal_completion"|"wish_fulfilled"|"dream_milestone"|"transaction_logged"|"learning"|"broken_promise"
+            "bucket_name": "needs"|"buffer"|"savings"|"wants"|"flexible","item_status": "active"|"done"|"paused"|"dropped","mode": "curious"|"strict"|"soft"|"strictest"|"softest","money_direction": "in"|"out","money_tag": "need"|"want"|"unsure","pillar": "spiritual"|"mental"|"physical"|"financial"|"emotional"|"social"|"character"|"skills"|"creativity"|"relationships"|"academic","purchase_verdict": "yes"|"wait_24h"|"no","spend_level": "floor"|"comfortable","task_status": "pending"|"done"|"skipped"|"cancelled","tier": "need"|"want"|"goal"|"wish"|"dream","xp_reason": "completion"|"late_completion"|"ignored_need"|"goal_completion"|"wish_fulfilled"|"dream_milestone"|"transaction_logged"|"learning"|"broken_promise"|"undo"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1107,7 +1116,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "bucket_name": ["needs", "buffer", "savings", "wants", "flexible"],"item_status": ["active", "done", "paused", "dropped"],"mode": ["curious", "strict", "soft", "strictest", "softest"],"money_direction": ["in", "out"],"money_tag": ["need", "want", "unsure"],"pillar": ["spiritual", "mental", "physical", "financial", "emotional", "social", "character", "skills", "creativity", "relationships", "academic"],"purchase_verdict": ["yes", "wait_24h", "no"],"spend_level": ["floor", "comfortable"],"task_status": ["pending", "done", "skipped", "cancelled"],"tier": ["need", "want", "goal", "wish", "dream"],"xp_reason": ["completion", "late_completion", "ignored_need", "goal_completion", "wish_fulfilled", "dream_milestone", "transaction_logged", "learning", "broken_promise"]
+            "bucket_name": ["needs", "buffer", "savings", "wants", "flexible"],"item_status": ["active", "done", "paused", "dropped"],"mode": ["curious", "strict", "soft", "strictest", "softest"],"money_direction": ["in", "out"],"money_tag": ["need", "want", "unsure"],"pillar": ["spiritual", "mental", "physical", "financial", "emotional", "social", "character", "skills", "creativity", "relationships", "academic"],"purchase_verdict": ["yes", "wait_24h", "no"],"spend_level": ["floor", "comfortable"],"task_status": ["pending", "done", "skipped", "cancelled"],"tier": ["need", "want", "goal", "wish", "dream"],"xp_reason": ["completion", "late_completion", "ignored_need", "goal_completion", "wish_fulfilled", "dream_milestone", "transaction_logged", "learning", "broken_promise", "undo"]
           }
         }
 } as const

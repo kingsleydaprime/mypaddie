@@ -3,6 +3,9 @@ import { createTask, updateTask, type CreateResult } from "@/features/tasks/task
 import type { PillarWeight } from "@/features/xp/split";
 import { parseRecurrence } from "@/features/tasks/recurrence";
 import type { Db } from "@/shared/supabase/token-client";
+import { currentConfig } from "@/shared/config";
+import { dayKey, localTimeOf } from "@/shared/time";
+import { planRoutineEdit, stepTimes, type NewStep } from "./routines";
 
 export interface StepInput {
   title: string;
@@ -87,4 +90,130 @@ export async function stopRoutine(db: Db, ref: string, now: Date) {
   }
   await db.from("routines").delete().eq("id", r.id);
   return { result: "stopped" as const, title: r.title };
+}
+
+interface LiveStep {
+  seriesId: string;
+  /** The next open day of this step's habit; editing it carries forward. Null if none is open. */
+  nextId: string | null;
+  title: string;
+  minutes: number;
+  dueAt: string | null;
+  recurrence: string | null;
+  nonNegotiable: boolean;
+  step: number;
+}
+
+async function loadSteps(db: Db, routineId: string, now: Date): Promise<LiveStep[]> {
+  const today = dayKey(now, currentConfig().timeZone);
+  const { data, error } = await db
+    .from("tasks")
+    .select("id, series_id, title, duration_minutes, due_at, recurrence, is_non_negotiable, routine_step, status, occurs_on")
+    .eq("routine_id", routineId)
+    .not("series_id", "is", null)
+    .order("occurs_on", { ascending: true });
+  if (error) throw new Error(`loading the routine's steps: ${error.message}`);
+  const bySeries = new Map<string, LiveStep>();
+  for (const t of data) {
+    const open = t.status === "pending" && (t.occurs_on ?? "") >= today;
+    // Rows come oldest first: keep the latest details until the first open day, then stop there.
+    if (bySeries.get(t.series_id!)?.nextId) continue;
+    bySeries.set(t.series_id!, {
+      seriesId: t.series_id!,
+      nextId: open ? t.id : null,
+      title: t.title,
+      minutes: t.duration_minutes ?? 10,
+      dueAt: t.due_at,
+      recurrence: t.recurrence,
+      nonNegotiable: t.is_non_negotiable,
+      step: t.routine_step ?? 0,
+    });
+  }
+  return [...bySeries.values()].sort((a, b) => a.step - b.step);
+}
+
+/** The routine's start time today, or null when its steps are "any time that day". */
+function startTime(steps: LiveStep[]): string | null {
+  const first = steps[0]?.dueAt;
+  if (!first) return null;
+  const t = localTimeOf(new Date(first), currentConfig().timeZone);
+  return t === "23:59" ? null : t;
+}
+
+/**
+ * Edit a routine in place: rename, drop steps, add steps, reorder, move the
+ * start time. Steps stay their own habits (history and streaks intact); only
+ * their order and times change. Removing a step stops its habit.
+ */
+export async function updateRoutine(
+  db: Db,
+  ref: string,
+  edit: { title?: string; remove?: string[]; add?: (NewStep & { weights?: PillarWeight[] })[]; order?: string[]; time?: string | null },
+  now: Date,
+) {
+  const r = (await loadRoutines(db)).find((x) => x.id === ref || x.title.toLowerCase() === ref.trim().toLowerCase());
+  if (!r) return { result: "not_found" as const };
+  const steps = await loadSteps(db, r.id, now);
+  const plan = planRoutineEdit(steps, edit);
+  if (!plan.ok) return { result: "refused" as const, ...plan };
+
+  if (edit.title && edit.title.trim() !== r.title) {
+    const { error } = await db.from("routines").update({ title: edit.title.trim() }).eq("id", r.id);
+    if (error?.code === "23505") return { result: "title_taken" as const, title: edit.title.trim() };
+    if (error) throw new Error(`renaming the routine: ${error.message}`);
+  }
+
+  for (const title of plan.removed) {
+    const s = steps.find((x) => x.title === title)!;
+    if (s.nextId) await updateTask(db, s.nextId, {}, "stop", now);
+    else await db.from("tasks").update({ recurrence: null, series_id: null, occurs_on: null }).eq("series_id", s.seriesId);
+  }
+
+  const structural = plan.removed.length > 0 || (edit.add?.length ?? 0) > 0 || edit.order !== undefined;
+  const start = edit.time !== undefined ? edit.time : startTime(steps);
+  const retime = edit.time !== undefined || (structural && start !== null);
+  const times = stepTimes(start, plan.steps.map((s) => s.minutes));
+  const template = steps[0]!;
+  const notes: string[] = [];
+
+  for (const [i, p] of plan.steps.entries()) {
+    if (p.kind === "add") {
+      const extra = edit.add!.find((a) => a.title.trim().toLowerCase() === p.title.toLowerCase());
+      await createTask(
+        db,
+        {
+          title: p.title,
+          itemId: null,
+          baseXp: 5,
+          dueDate: null,
+          dueTime: times[i] ?? null,
+          recurrence: template.recurrence ?? "FREQ=DAILY",
+          nonNegotiable: template.nonNegotiable,
+          weights: extra?.weights ?? DEFAULT_WEIGHTS,
+          durationMinutes: p.minutes,
+          routine: { id: r.id, step: i + 1 },
+          forceClash: true,
+        },
+        now,
+      );
+      continue;
+    }
+    const s = steps.find((x) => x.title === p.title)!;
+    if (s.step !== i + 1) {
+      const { error } = await db.from("tasks").update({ routine_step: i + 1 }).eq("series_id", s.seriesId);
+      if (error) throw new Error(`reordering the routine: ${error.message}`);
+    }
+    if (retime) {
+      if (s.nextId) await updateTask(db, s.nextId, { dueTime: times[i] ?? null, forceClash: true }, "edit", now);
+      else notes.push(`${s.title}: no open day to move; it keeps its time until the next one appears`);
+    }
+  }
+
+  return {
+    result: "updated" as const,
+    title: edit.title?.trim() || r.title,
+    steps: plan.steps.map((s, i) => ({ title: s.title, at: times[i] ?? "any time", minutes: s.minutes, new: s.kind === "add" })),
+    removed: plan.removed,
+    ...(notes.length > 0 ? { notes } : {}),
+  };
 }

@@ -33,6 +33,7 @@ import { registerCapacityTools } from "@/features/tasks/capacity.tools";
 import { registerTaskTools } from "@/features/tasks/tasks.tools";
 import { registerTodayTools } from "@/features/today/today.tools";
 import { registerUpdateTools } from "@/features/updates/updates.tools";
+import { registerUndoTools } from "@/features/undo/undo.tools";
 import { registerWorkoutTools } from "@/features/workouts/workouts.tools";
 import type { AuthInfo } from "@modelcontextprotocol/server";
 import { verifyToken } from "@/shared/mcp/auth";
@@ -46,6 +47,7 @@ const handler = createMcpHandler(
     tools.area("Today", () => registerTodayTools(server));
     tools.area("Tasks and habits", () => registerTaskTools(server));
     tools.area("Tasks and habits", () => registerCapacityTools(server));
+    tools.area("Undo mistakes", () => registerUndoTools(server));
     tools.area("Goals and needs", () => registerItemTools(server));
     tools.area("Learning", () => registerLearningTools(server));
     tools.area("Coaching", () => registerSlipTools(server));

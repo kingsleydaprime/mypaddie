@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TaskForm } from "@/features/tasks/ui/task-form";
+import { UndoButton } from "@/features/undo/ui/undo-button";
 import { currentConfig } from "@/shared/config";
 import { requireDb } from "@/shared/supabase/session";
 import { dayKey, localTimeOf } from "@/shared/time";
@@ -27,7 +28,10 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
         <h1 className="truncate text-2xl font-bold">Edit task</h1>
       </header>
       {t.status === "done" ? (
-        <p className="rounded-2xl border border-line bg-surface p-4 text-muted">Done — and done tasks stay as they are.</p>
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4">
+          <p className="text-muted">Done. Tapped it by mistake?</p>
+          <UndoButton kind="task" id={t.id} title={t.title} />
+        </div>
       ) : (
         <TaskForm
           task={{

@@ -106,7 +106,7 @@ In build order. Each slice ships tools + app + tests before the next starts.
 - [x] **Items: edit, complete, pause, drop, delete.** Change title, target,
   deadline, priority, amounts or tier; done pays the blueprint's bonuses
   (goal 2×, wish +50) that the engine has but nothing called.
-- [ ] **Undo** a mis-tapped complete_task, log_fun, log_workout or learning
+- [x] **Undo** a mis-tapped complete_task, log_fun, log_workout or learning
   session; XP reversed in the ledger, not deleted. Edit routines.
 - [ ] **Money guardrails**: per-category spending caps (check_purchase uses
   them), recurring bills (data, subscriptions) that become tasks and
