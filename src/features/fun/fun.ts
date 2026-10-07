@@ -1,5 +1,5 @@
 import type { PillarWeight } from "@/features/xp/split";
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import type { Mode } from "@/shared/domain";
 import { dayKey } from "@/shared/time";
 
@@ -13,7 +13,7 @@ export interface FunActivity {
   id: string;
   title: string;
   notes: string | null;
-  /** Whole naira; 0 = free. */
+  /** Whole units of his currency; 0 = free. */
   cost: number;
   minutes: number | null;
   energy: FunEnergy;
@@ -35,7 +35,7 @@ export function funWeights(withPeople: boolean): PillarWeight[] {
 }
 
 /** Local calendar days from `at` to `now` (23:30 last night = 1 day ago). Null stays null. */
-export function daysAgo(at: Date | null, now: Date, config: EngineConfig = DEFAULT_CONFIG): number | null {
+export function daysAgo(at: Date | null, now: Date, config: EngineConfig = currentConfig()): number | null {
   if (!at) return null;
   const tz = config.timeZone;
   return Math.round((Date.parse(`${dayKey(now, tz)}T00:00:00Z`) - Date.parse(`${dayKey(at, tz)}T00:00:00Z`)) / 86_400_000);
@@ -46,7 +46,7 @@ export function daysAgo(at: Date | null, now: Date, config: EngineConfig = DEFAU
  * used counts from when the first activity was added, so a brand-new list
  * doesn't read as "forever without fun". Null when there's no list.
  */
-export function daysSinceFun(activities: readonly FunActivity[], now: Date, config: EngineConfig = DEFAULT_CONFIG): number | null {
+export function daysSinceFun(activities: readonly FunActivity[], now: Date, config: EngineConfig = currentConfig()): number | null {
   if (activities.length === 0) return null;
   const done = activities.map((a) => a.lastDoneAt).filter((d): d is Date => d !== null);
   const since = done.length
@@ -98,7 +98,7 @@ export function whyNot(a: FunActivity, ctx: FunContext): FunSkip | null {
  * money and the mood, the ones done least recently first (variety), cheaper
  * first on a tie. On a soft day, low-energy ones lead.
  */
-export function suggestFun(activities: readonly FunActivity[], ctx: FunContext, limit = 3, config: EngineConfig = DEFAULT_CONFIG): FunSuggestion[] {
+export function suggestFun(activities: readonly FunActivity[], ctx: FunContext, limit = 3, config: EngineConfig = currentConfig()): FunSuggestion[] {
   const soft = ctx.mode === "soft" || ctx.mode === "softest";
   const energyRank: Record<FunEnergy, number> = { low: 0, medium: 1, high: 2 };
   return activities

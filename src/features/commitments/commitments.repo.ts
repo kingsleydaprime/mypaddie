@@ -2,7 +2,7 @@ import { capacityFor, DEFAULT_DURATION } from "@/features/tasks/capacity";
 import { parseRecurrence } from "@/features/tasks/recurrence";
 import { createTask, loadCapacity, loadDayTasks, updateTask, type CreateResult } from "@/features/tasks/tasks.repo";
 import type { PillarWeight } from "@/features/xp/split";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, zonedInstant } from "@/shared/time";
 import {
@@ -14,7 +14,8 @@ import {
   type CommitmentStatus,
 } from "./commitments";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 const COLUMNS = "id, kind, title, org, priority, status, starts_on, ends_on, extra_minutes_per_week, notes, created_at";
 
 export interface Commitment {
@@ -170,7 +171,7 @@ export async function updateCommitment(db: Db, ref: string, changes: CommitmentC
       ...(changes.status ? { status: changes.status } : {}),
       ...(changes.startsOn !== undefined ? { starts_on: changes.startsOn } : {}),
       ...(changes.endsOn !== undefined ? { ends_on: changes.endsOn } : {}),
-      ...(changes.status === "ended" && changes.endsOn === undefined && !c.ends_on ? { ends_on: dayKey(now, tz) } : {}),
+      ...(changes.status === "ended" && changes.endsOn === undefined && !c.ends_on ? { ends_on: dayKey(now, tz()) } : {}),
       ...(changes.extraMinutesPerWeek !== undefined ? { extra_minutes_per_week: changes.extraMinutesPerWeek } : {}),
       ...(changes.notes !== undefined ? { notes: changes.notes?.trim() || null } : {}),
     })
@@ -198,7 +199,7 @@ export async function updateCommitment(db: Db, ref: string, changes: CommitmentC
  * something he's thinking of taking on.
  */
 export async function loadWeekLoad(db: Db, now: Date, adding?: number) {
-  const today = dayKey(now, tz);
+  const today = dayKey(now, tz());
   const days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
   const [capacity, commitments, dayTasks] = await Promise.all([
     loadCapacity(db),
@@ -212,8 +213,8 @@ export async function loadWeekLoad(db: Db, now: Date, adding?: number) {
 
   const active = commitments.filter((c) => c.status === "active");
   const ids = active.map((c) => c.id);
-  const from = zonedInstant(today, "00:00", tz).toISOString();
-  const to = zonedInstant(addDays(today, 7), "00:00", tz).toISOString();
+  const from = zonedInstant(today, "00:00", tz()).toISOString();
+  const to = zonedInstant(addDays(today, 7), "00:00", tz()).toISOString();
   const [habits, oneOffs, events] = ids.length
     ? await Promise.all([
         db.from("tasks").select("commitment_id, series_id, recurrence, duration_minutes, occurs_on").in("commitment_id", ids).not("series_id", "is", null).order("occurs_on", { ascending: false }),

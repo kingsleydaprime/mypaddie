@@ -1,5 +1,5 @@
 import type { XpEntry } from "@/features/xp/xp";
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import type { Pillar } from "@/shared/domain";
 import { addDays, dayKey, withinLastDays } from "@/shared/time";
 
@@ -54,7 +54,7 @@ export interface SkillSummary {
 export function summarizeSkill(
   sessions: readonly SessionForSummary[],
   now: Date,
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): SkillSummary {
   const tz = config.timeZone;
   const today = dayKey(now, tz);

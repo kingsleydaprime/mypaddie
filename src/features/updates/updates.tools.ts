@@ -2,13 +2,14 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
 import { updateTask } from "@/features/tasks/tasks.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { formatLocal } from "@/shared/time";
 import { CHANNELS, type Channel } from "./updates";
 import { addUpdate, draftMaterial, listUpdates, markUpdateSent, setUpdateActive } from "./updates.repo";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 
 export function registerUpdateTools(server: McpServer) {
   server.registerTool(
@@ -60,7 +61,7 @@ export function registerUpdateTools(server: McpServer) {
               return {
                 id: u.id, recipient: u.recipient, channel: u.channel, about: u.about, format: u.format, active: u.active,
                 cadence: t?.recurrence ?? "one-off",
-                lastSent: u.last_sent_at ? formatLocal(new Date(u.last_sent_at), tz) : "never",
+                lastSent: u.last_sent_at ? formatLocal(new Date(u.last_sent_at), tz()) : "never",
               };
             }),
           }),
@@ -96,9 +97,9 @@ export function registerUpdateTools(server: McpServer) {
             channel: material.update.channel,
             about: material.update.about,
             format: material.update.format,
-            since: formatLocal(new Date(material.since), tz),
+            since: formatLocal(new Date(material.since), tz()),
             digest: material.digest,
-            lastSent: material.lastSent ? { at: formatLocal(new Date(material.lastSent.sent_at), tz), content: material.lastSent.content } : null,
+            lastSent: material.lastSent ? { at: formatLocal(new Date(material.lastSent.sent_at), tz()), content: material.lastSent.content } : null,
           }),
         );
       } catch (error) {

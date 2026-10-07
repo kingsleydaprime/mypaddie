@@ -1,5 +1,5 @@
 import type { PillarWeight } from "@/features/xp/split";
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import { addDays, weekdayOf, withinLastDays } from "@/shared/time";
 
 const CODES = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"] as const;
@@ -100,7 +100,7 @@ export interface TrainingSummary {
 export function summarizeTraining(
   workouts: readonly { at: Date; entries: readonly PerformedEntry[] }[],
   now: Date,
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): TrainingSummary {
   const tz = config.timeZone;
   const history: HistoryEntry[] = workouts.flatMap((w) => w.entries.map((e) => ({ ...e, at: w.at })));

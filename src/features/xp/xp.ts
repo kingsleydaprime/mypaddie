@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import type { Pillar, Tier } from "@/shared/domain";
 import { dayKey, startOfNextDay } from "@/shared/time";
 import { splitXp, type PillarWeight } from "./split";
@@ -64,7 +64,7 @@ export function isLate(task: Pick<TaskForXp, "dueAt">, doneAt: Date): boolean {
  * meeting — the due time is when it *starts*, so finishing it any time that
  * day is on time; it's only late once its day is over.
  */
-export function lateAfter(dueAt: Date | null, durationMinutes: number | null, config: EngineConfig = DEFAULT_CONFIG): Date | null {
+export function lateAfter(dueAt: Date | null, durationMinutes: number | null, config: EngineConfig = currentConfig()): Date | null {
   if (dueAt === null) return null;
   if (durationMinutes === null) return dueAt;
   return new Date(startOfNextDay(dueAt, config.timeZone).getTime() - 1);
@@ -78,7 +78,7 @@ export function lateAfter(dueAt: Date | null, durationMinutes: number | null, co
 export function completionXp(
   task: TaskForXp,
   doneAt: Date,
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): XpEntry[] {
   if (isLate(task, doneAt)) {
     return entries(scale(task.baseXp, config.xp.lateMultiplier), task.weights, "late_completion");
@@ -96,7 +96,7 @@ export function isIgnoredNeed(
   task: TaskForXp,
   slips: readonly SlipForXp[],
   now: Date,
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): boolean {
   if (task.tier !== "need" || task.dueAt === null) return false;
   if (task.status === "done" || task.status === "cancelled" || task.doneAt !== null) return false;
@@ -110,7 +110,7 @@ export function ignoredNeedDeduction(
   task: TaskForXp,
   slips: readonly SlipForXp[],
   now: Date,
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): XpEntry[] {
   if (!isIgnoredNeed(task, slips, now, config)) return [];
   return entries(-scale(task.baseXp, config.xp.ignoredNeedPenalty), task.weights, "ignored_need");
@@ -120,7 +120,7 @@ export function ignoredNeedDeduction(
 export function goalCompletionBonus(
   baseXp: number,
   weights: readonly PillarWeight[],
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): XpEntry[] {
   return entries(scale(baseXp, config.xp.goalCompletionMultiplier), weights, "goal_completion");
 }
@@ -128,7 +128,7 @@ export function goalCompletionBonus(
 /** Flat bonus when a wish happens. There is no counterpart penalty, by design. */
 export function wishFulfilledBonus(
   weights: readonly PillarWeight[],
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): XpEntry[] {
   return entries(config.xp.wishBonus, weights, "wish_fulfilled");
 }
@@ -136,7 +136,7 @@ export function wishFulfilledBonus(
 export function dreamMilestoneBonus(
   baseXp: number,
   weights: readonly PillarWeight[],
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): XpEntry[] {
   return entries(scale(baseXp, config.xp.dreamMilestoneMultiplier), weights, "dream_milestone");
 }
@@ -145,6 +145,6 @@ export function dreamMilestoneBonus(
  * Logging any transaction earns XP, including an honest dumb purchase, so
  * spending is never hidden. The amount and tag deliberately play no part.
  */
-export function transactionLoggedXp(config: EngineConfig = DEFAULT_CONFIG): XpEntry[] {
+export function transactionLoggedXp(config: EngineConfig = currentConfig()): XpEntry[] {
   return [{ pillar: "financial", amount: config.xp.transactionLogXp, reason: "transaction_logged" }];
 }

@@ -633,3 +633,45 @@ Capacity refuses new work on a full day, but a promise already exists. If its
 day is full the task goes on undated (still a must-do from the day before)
 and the full day is reported — a reason to renegotiate or drop something, not
 to lose track of the promise.
+
+## 2026-10-08 — Multi-user, part 1: each user's own time zone and currency
+
+### The rules read the signed-in user's config, set once per request
+Every rule used to default to `DEFAULT_CONFIG` (Lagos, naira). Now defaults
+are `currentConfig()`: the request loads the user's profile once (settings key
+`profile`: name, time zone, currency, voice) and everything below it reads
+that. Two carriers, because Next renders server components outside the
+caller's async flow: AsyncLocalStorage (MCP route, server actions) and a
+per-render React `cache` cell (server components). `requireDb()` and the MCP
+route set it; nothing else has to remember to pass a config.
+Considered: threading `config` through every call (~40 files, and nothing
+would stop a call site forgetting — the defaults would quietly be Lagos).
+The resolver is *registered* by the server module so the rule files, which
+browser forms import too, stay free of Node-only code.
+
+### A forgotten path fails loudly, except in production
+If a server path runs a rule without loading the user, `currentConfig()`
+throws in development (so it shows up the first time the page is opened),
+logs once and uses the defaults in production, and returns the defaults in
+tests. Verified by loading every app page and calling the MCP tools as a
+New York user on a dev server: all on New York time, money in pounds.
+
+### No zone = Lagos; a broken zone = UTC
+An account with no profile yet (Kingsley's, today) keeps Lagos, so nothing
+shifts under it. A saved zone that isn't valid falls back to UTC — the middle
+of the world's zones — at Kingsley's call. Saving an invalid zone is refused
+anyway; the fallback is a safety net in both TypeScript and SQL.
+
+### The scheduler works per user, too
+`private.user_clock(now)` gives each user's zone, local time, local date and
+schedule in one place. `collect_nudges`, the application and fun collectors
+and `spawn_today` use it instead of one global Lagos clock, so briefs,
+reminders, quiet hours and new habit rows all follow each user's day;
+`nudges.day` is the user's date. pgTAP walks a Lagos, a New York and a
+broken-zone user through the same morning.
+
+### Money is whole units of the user's currency
+Amounts stay integers; only display changes. `formatMoney` uses the user's
+currency (narrow symbol: ₦, £, $, GH₵…); browser forms are handed it by their
+page, since there's no request context in the browser. Parsing strips any
+symbol, not just ₦.

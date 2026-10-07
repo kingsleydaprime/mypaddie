@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { loadMode, withMode } from "@/features/mode/mode.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { judgeSlip, type SlipReason } from "./slips";
 
@@ -28,7 +28,7 @@ export function registerSlipTools(server: McpServer) {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const config = DEFAULT_CONFIG;
+        const config = currentConfig();
 
         const { data: task, error: taskError } = await db.from("tasks").select("id, title, item_id").eq("id", args.task_id).maybeSingle();
         if (taskError) return toolError(`log_slip failed: ${taskError.message}`);

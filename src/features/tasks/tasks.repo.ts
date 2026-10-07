@@ -1,6 +1,6 @@
 import { validateWeights, type PillarWeight } from "@/features/xp/split";
 import { completionXp, ignoredNeedDeduction, isLate, lateAfter, type SlipForXp, type TaskForXp } from "@/features/xp/xp";
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import type { Tier } from "@/shared/domain";
 import type { Database, Json } from "@/shared/supabase/database.types";
 import { eventBlocksOn } from "@/features/events/events.repo";
@@ -79,7 +79,7 @@ function startOfToday(now: Date, config: EngineConfig): Date {
 }
 
 /** Tasks due from yesterday through the end of today, plus undated open ones. */
-export async function loadTasksAroundToday(db: Db, now: Date, config = DEFAULT_CONFIG): Promise<LoadedTask[]> {
+export async function loadTasksAroundToday(db: Db, now: Date, config = currentConfig()): Promise<LoadedTask[]> {
   const today = dayKey(now, config.timeZone);
   const from = zonedInstant(addDays(today, -1), "00:00", config.timeZone).toISOString();
   const to = zonedInstant(addDays(today, 1), "00:00", config.timeZone).toISOString();
@@ -96,7 +96,7 @@ export async function loadTasksAroundToday(db: Db, now: Date, config = DEFAULT_C
 export async function loadOpenPastNeeds(
   db: Db,
   now: Date,
-  config = DEFAULT_CONFIG,
+  config = currentConfig(),
 ): Promise<{ tasks: LoadedTask[]; slips: SlipForXp[] }> {
   const todayStart = startOfToday(now, config);
   const since = new Date(todayStart.getTime() - LOOKBACK_DAYS * 86_400_000);
@@ -136,7 +136,7 @@ export interface CatchUpResult {
  * without being done or excused. Safe to run any number of times, even
  * concurrently — the database refuses duplicates.
  */
-export async function catchUp(db: Db, now: Date, config = DEFAULT_CONFIG): Promise<CatchUpResult> {
+export async function catchUp(db: Db, now: Date, config = currentConfig()): Promise<CatchUpResult> {
   // 1. Recurring rows: latest row of each series is the template.
   const since = addDays(dayKey(now, config.timeZone), -SERIES_LOOKBACK_DAYS);
   const { data: rows, error } = await db
@@ -192,7 +192,7 @@ export type CompleteResult =
  * `confidence` (1–5) rates a study task's topic afterwards; it sets when the
  * topic comes back for review.
  */
-export async function completeTask(db: Db, taskId: string, now: Date, config = DEFAULT_CONFIG, opts: { confidence?: number | null } = {}): Promise<CompleteResult> {
+export async function completeTask(db: Db, taskId: string, now: Date, config = currentConfig(), opts: { confidence?: number | null } = {}): Promise<CompleteResult> {
   const { data, error } = await db.from("tasks").select(TASK_COLUMNS).eq("id", taskId).returns<TaskRow[]>().maybeSingle();
   if (error) fail("loading the task", error);
   if (!data) return { result: "not_found", title: null };
@@ -279,7 +279,7 @@ export async function saveCapacity(db: Db, setting: CapacitySetting) {
 }
 
 /** Tasks and timed events on one local day, for capacity and clash checks. */
-export async function loadDayTasks(db: Db, day: string, config = DEFAULT_CONFIG): Promise<DayTask[]> {
+export async function loadDayTasks(db: Db, day: string, config = currentConfig()): Promise<DayTask[]> {
   const from = zonedInstant(day, "00:00", config.timeZone).toISOString();
   const to = zonedInstant(addDays(day, 1), "00:00", config.timeZone).toISOString();
   const { data, error } = await db
@@ -394,7 +394,7 @@ export type CreateResult = { result: "created"; task: { id: string; title: strin
  * weights insert still fails, the task row is removed again so there's never
  * a task that can't pay XP. A habit is checked against its first day only.
  */
-export async function createTask(db: Db, task: NewTask, now: Date, config = DEFAULT_CONFIG): Promise<CreateResult> {
+export async function createTask(db: Db, task: NewTask, now: Date, config = currentConfig()): Promise<CreateResult> {
   validateWeights(task.weights);
   if (task.recurrence) parseRecurrence(task.recurrence);
 
@@ -498,7 +498,7 @@ export async function updateTask(
   changes: TaskChanges,
   action: "edit" | "cancel" | "stop",
   now: Date = new Date(),
-  config = DEFAULT_CONFIG,
+  config = currentConfig(),
 ): Promise<UpdateResult> {
   const { data: task, error } = await db
     .from("tasks")

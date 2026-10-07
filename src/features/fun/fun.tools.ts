@@ -19,7 +19,7 @@ const view = (a: FunActivity) => ({
 
 const fields = {
   notes: z.string().trim().max(500).optional(),
-  cost: z.number().int().min(0).optional().describe("Rough cost in naira; 0 = free"),
+  cost: z.number().int().min(0).optional().describe("Rough cost in his currency; 0 = free"),
   minutes: z.number().int().min(5).max(1440).optional().describe("Roughly how long it takes"),
   energy: z.enum(FUN_ENERGY).optional().describe("How much it takes out of him"),
   company: z.enum(FUN_COMPANY).optional().describe("solo, together (with people), or either"),

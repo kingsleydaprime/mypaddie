@@ -1,5 +1,5 @@
 import { completeTask, createTask, deleteTask, updateTask, type CreateResult } from "@/features/tasks/tasks.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, zonedInstant } from "@/shared/time";
 import {
@@ -13,7 +13,8 @@ import {
   type ApplicationStatus,
 } from "./applications";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 const COLUMNS = "id, title, org, kind, link, description, status, deadline_at, deadline_tz, target_days_before, results_expected, submitted_at, notes, application_requirements(id, title, done, task_id, position)";
 
 export interface RequirementInput {
@@ -28,14 +29,14 @@ async function requirementTask(
   req: RequirementInput,
   now: Date,
 ): Promise<CreateResult> {
-  const today = dayKey(now, tz);
+  const today = dayKey(now, tz());
   let due: string | null = null;
   let mustFrom: Date | null = null;
   if (app.deadline_at) {
     const target = targetDay(new Date(app.deadline_at), app.target_days_before);
     due = target < today ? today : target;
     const mustDay = addDays(target, -MUST_DO_DAYS_BEFORE_TARGET);
-    mustFrom = zonedInstant(mustDay < today ? today : mustDay, "09:00", tz);
+    mustFrom = zonedInstant(mustDay < today ? today : mustDay, "09:00", tz());
   }
   return createTask(
     db,
@@ -182,12 +183,12 @@ export async function updateApplication(
   // A new deadline or target moves the open requirement tasks with it.
   if ((deadlineAt !== undefined || changes.targetDaysBefore !== undefined) && app.deadline_at && isOpen(app.status as ApplicationStatus)) {
     const target = targetDay(new Date(app.deadline_at), app.target_days_before);
-    const today = dayKey(now, tz);
+    const today = dayKey(now, tz());
     const mustDay = addDays(target, -MUST_DO_DAYS_BEFORE_TARGET);
     const { data: open } = await db.from("application_requirements").select("task_id").eq("application_id", id).eq("done", false);
     for (const r of open ?? []) {
       if (r.task_id) {
-        await updateTask(db, r.task_id, { dueDate: target < today ? today : target, mustFrom: zonedInstant(mustDay < today ? today : mustDay, "09:00", tz) }, "edit", now);
+        await updateTask(db, r.task_id, { dueDate: target < today ? today : target, mustFrom: zonedInstant(mustDay < today ? today : mustDay, "09:00", tz()) }, "edit", now);
       }
     }
   }

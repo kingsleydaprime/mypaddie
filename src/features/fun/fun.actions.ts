@@ -13,7 +13,7 @@ function readForm(form: FormData): FunInput | { error: string } {
   if (!title) return { error: "Name it" };
   if (title.length > 100) return { error: "Keep the name under 100 characters" };
   const cost = get("cost") ? Number(get("cost")) : 0;
-  if (!Number.isInteger(cost) || cost < 0) return { error: "Cost is a whole number of naira (0 = free)" };
+  if (!Number.isInteger(cost) || cost < 0) return { error: "Cost is a whole number (0 = free)" };
   const minutes = get("minutes") ? Number(get("minutes")) : null;
   if (minutes !== null && (!Number.isInteger(minutes) || minutes < 5 || minutes > 1440)) return { error: "Time is 5 to 1440 minutes" };
   const energy = get("energy") as FunEnergy;

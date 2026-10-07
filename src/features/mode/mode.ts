@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import type { Mode } from "@/shared/domain";
 import { dayKey, startOfNextDay, withinLastDays } from "@/shared/time";
 
@@ -58,7 +58,7 @@ export interface ModeResult {
  *   3. a repeated slip or a pile of ignored needs → strict
  *   4. otherwise → curious
  */
-export function computeMode(input: ModeInput, config: EngineConfig = DEFAULT_CONFIG): ModeResult {
+export function computeMode(input: ModeInput, config: EngineConfig = currentConfig()): ModeResult {
   const { now } = input;
   const tz = config.timeZone;
 
@@ -118,6 +118,6 @@ export function noMercyOverride(): ModeOverride {
 }
 
 /** "Go easy on me": softest for the rest of today only. */
-export function goEasyOverride(now: Date, config: EngineConfig = DEFAULT_CONFIG): ModeOverride {
+export function goEasyOverride(now: Date, config: EngineConfig = currentConfig()): ModeOverride {
   return { mode: "softest", expiresAt: startOfNextDay(now, config.timeZone) };
 }

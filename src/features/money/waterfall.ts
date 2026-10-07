@@ -44,7 +44,7 @@ export function validateSplit(split: SplitPercentages): void {
  *   1. outstanding needs are paid first,
  *   2. the emergency buffer is filled before any investing,
  *   3. whatever is left is split by percentage (50/30/20 by default).
- * Every naira is accounted for: the five lines always sum to `income`.
+ * Every unit is accounted for: the five lines always sum to `income`.
  */
 export function proposeWaterfall(input: WaterfallInput): WaterfallProposal {
   const split = input.split ?? DEFAULT_SPLIT;
@@ -63,8 +63,8 @@ export function proposeWaterfall(input: WaterfallInput): WaterfallProposal {
   const buffer = Math.min(remaining, bufferRoom);
   remaining -= buffer;
 
-  // Largest remainder again, so rounding never loses or invents a naira.
-  // Leftover naira go to savings first, then flexible, then wants.
+  // Largest remainder again, so rounding never loses or invents a unit.
+  // Leftover units go to savings first, then flexible, then wants.
   const keys = ["savings", "flexible", "wants"] as const;
   const shares = keys.map((k) => {
     const exact = (remaining * split[k]) / 100;

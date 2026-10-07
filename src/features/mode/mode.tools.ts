@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import type { Json } from "@/shared/supabase/database.types";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { dayKey } from "@/shared/time";
@@ -51,7 +51,7 @@ export function registerModeTools(server: McpServer) {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const day = dayKey(now, DEFAULT_CONFIG.timeZone);
+        const day = dayKey(now, currentConfig().timeZone);
         const { error } = await db.from("checkins").upsert({ day, energy, note: note ?? null }, { onConflict: "user_id,day" });
         if (error) return toolError(`log_checkin failed: ${error.message}`);
         return ok(await withMode(db, now, { day, energy }));

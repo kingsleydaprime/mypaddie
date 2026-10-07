@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { TIERS, type Tier } from "@/shared/domain";
-import { formatNaira } from "@/shared/format";
+import { formatMoney } from "@/shared/format";
 import type { Db } from "@/shared/supabase/token-client";
 import { listItems, type ItemRow } from "../items.repo";
 import { TIER_INFO } from "../tiers";
@@ -23,8 +23,8 @@ function ItemCard({ item }: { item: ItemRow }) {
     item.deadline && `by ${new Date(`${item.deadline}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`,
     item.tier === "need" && item.comfortable_amount !== null &&
       (item.floor_amount !== null && item.floor_amount !== item.comfortable_amount
-        ? `${formatNaira(item.floor_amount)}–${formatNaira(item.comfortable_amount)}/mo`
-        : `${formatNaira(item.comfortable_amount)}/mo`),
+        ? `${formatMoney(item.floor_amount)}–${formatMoney(item.comfortable_amount)}/mo`
+        : `${formatMoney(item.comfortable_amount)}/mo`),
   ].filter(Boolean);
   return (
     <li className="rounded-2xl border border-line bg-surface px-4 py-3">

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { APPLICATION_STATUSES } from "@/features/applications/applications";
 import { addRequirementAction, setStatusAction, toggleRequirementAction } from "@/features/applications/applications.actions";
 import { loadApplications } from "@/features/applications/applications.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import { requireDb } from "@/shared/supabase/session";
 import { formatLocal } from "@/shared/time";
 
@@ -28,8 +28,8 @@ export default async function ApplicationPage({ params }: PageProps<"/app/applic
       <section className="rounded-2xl border border-line bg-surface p-4">
         {deadline ? (
           <>
-            <p className="font-semibold">Closes {formatLocal(deadline, DEFAULT_CONFIG.timeZone)} <span className="text-muted">your time</span></p>
-            {app.deadline_tz && app.deadline_tz !== DEFAULT_CONFIG.timeZone && (
+            <p className="font-semibold">Closes {formatLocal(deadline, currentConfig().timeZone)} <span className="text-muted">your time</span></p>
+            {app.deadline_tz && app.deadline_tz !== currentConfig().timeZone && (
               <p className="text-sm text-muted">Published as {formatLocal(deadline, app.deadline_tz)} {app.deadline_tz}</p>
             )}
             <p className="mt-1 text-sm">Your target: <span className="font-semibold text-gold">{app.summary.targetDay}</span> ({app.target_days_before} days early)</p>

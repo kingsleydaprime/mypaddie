@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { parseAmount } from "@/shared/format";
 import { z } from "zod";
 import { requireDb } from "@/shared/supabase/session";
 import { acceptSplit, logTransaction } from "./money.repo";
@@ -10,8 +11,8 @@ import type { WaterfallProposal } from "./waterfall";
 const schema = z.object({
   amount: z
     .string()
-    .transform((v) => Number(v.replace(/[,₦\s]/g, "")))
-    .pipe(z.number({ message: "Enter an amount" }).int("Whole naira only").positive("Enter an amount")),
+    .transform((v) => parseAmount(v))
+    .pipe(z.number({ message: "Enter an amount" }).int("Whole amounts only").positive("Enter an amount")),
   direction: z.enum(["in", "out"]),
   tag: z.enum(["need", "want", "unsure"]).optional(),
   category: z.string().trim().min(1, "What was it for?"),

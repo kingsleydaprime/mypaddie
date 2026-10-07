@@ -3,14 +3,15 @@ import { z } from "zod";
 import { findCommitment } from "@/features/commitments/commitments.repo";
 import { withMode } from "@/features/mode/mode.repo";
 import { loadSchedule } from "@/features/settings/settings.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { dayKey, formatLocal, zonedInstant } from "@/shared/time";
 import { EVENT_KINDS, upcoming, type EventKind } from "./events";
 import { addEvent } from "./add-event";
 import { changeEvent, loadUpcomingEvents } from "./events.repo";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
 const fields = {
@@ -105,12 +106,12 @@ export function registerEventTools(server: McpServer) {
         if (args.date !== undefined || args.start_time !== undefined || args.end_time !== undefined) {
           const { data: cur } = await db.from("events").select("starts_at, ends_at, all_day").eq("id", args.id).maybeSingle();
           if (!cur) return toolError("update_event: no such event");
-          const date = args.date ?? dayKey(new Date(cur.starts_at), tz);
-          const start = args.start_time === undefined ? (cur.all_day ? null : formatLocal(new Date(cur.starts_at), tz).slice(11)) : args.start_time;
+          const date = args.date ?? dayKey(new Date(cur.starts_at), tz());
+          const start = args.start_time === undefined ? (cur.all_day ? null : formatLocal(new Date(cur.starts_at), tz()).slice(11)) : args.start_time;
           changes.allDay = start === null;
-          changes.startsAt = zonedInstant(date, start ?? "00:00", tz);
-          const end = args.end_time === undefined ? (cur.ends_at ? formatLocal(new Date(cur.ends_at), tz).slice(11) : null) : args.end_time;
-          changes.endsAt = start && end ? zonedInstant(date, end, tz) : null;
+          changes.startsAt = zonedInstant(date, start ?? "00:00", tz());
+          const end = args.end_time === undefined ? (cur.ends_at ? formatLocal(new Date(cur.ends_at), tz()).slice(11) : null) : args.end_time;
+          changes.endsAt = start && end ? zonedInstant(date, end, tz()) : null;
         }
         return ok(await withMode(db, new Date(), { ...(await changeEvent(db, args.id, args.action, changes)) }));
       } catch (error) {
@@ -136,7 +137,7 @@ export function registerEventTools(server: McpServer) {
         const now = new Date();
         const views = upcoming(await loadUpcomingEvents(db), now, days, undefined, (await loadSchedule(db)).eventCloseDays);
         const group = (q: string) =>
-          views.filter((v) => v.quadrant === q).map((v) => ({ id: v.id, title: v.title, kind: v.kind, when: v.allDay ? dayKey(v.at, tz) : formatLocal(v.at, tz), daysAway: v.daysAway }));
+          views.filter((v) => v.quadrant === q).map((v) => ({ id: v.id, title: v.title, kind: v.kind, when: v.allDay ? dayKey(v.at, tz()) : formatLocal(v.at, tz()), daysAway: v.daysAway }));
         return ok(await withMode(db, now, { prepare_now: group("prepare_now"), plan_ahead: group("plan_ahead"), fit_in: group("fit_in"), someday: group("someday") }));
       } catch (error) {
         return toolError(`list_events failed: ${(error as Error).message}`);

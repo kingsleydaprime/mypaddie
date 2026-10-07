@@ -2,7 +2,7 @@ import Link from "next/link";
 import { markSentAction } from "@/features/updates/updates.actions";
 import { listUpdates } from "@/features/updates/updates.repo";
 import { AddUpdateForm } from "@/features/updates/ui/add-update-form";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import { requireDb } from "@/shared/supabase/session";
 import { formatLocal } from "@/shared/time";
 
@@ -29,7 +29,7 @@ export default async function UpdatesPage() {
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{u.recipient}</p>
                 <p className="truncate text-sm text-muted">{u.about} · {u.channel} · {cadence(t?.recurrence ?? null)}</p>
-                <p className="text-xs text-muted">Last sent: {u.last_sent_at ? formatLocal(new Date(u.last_sent_at), DEFAULT_CONFIG.timeZone) : "never"}</p>
+                <p className="text-xs text-muted">Last sent: {u.last_sent_at ? formatLocal(new Date(u.last_sent_at), currentConfig().timeZone) : "never"}</p>
               </div>
               <form action={markSentAction.bind(null, u.id)}>
                 <button className="rounded-xl border border-line px-3 py-2 text-sm font-medium">Sent ✓</button>

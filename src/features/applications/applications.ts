@@ -1,6 +1,6 @@
 import type { PillarWeight } from "@/features/xp/split";
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
-import { addDays, dayKey, daysBetween, zonedInstant } from "@/shared/time";
+import { currentConfig, type EngineConfig } from "@/shared/config";
+import { addDays, dayKey, daysBetween, isValidTimeZone, zonedInstant } from "@/shared/time";
 
 export const APPLICATION_KINDS = ["job", "internship", "scholarship", "fellowship", "grant", "admission", "program", "other"] as const;
 export type ApplicationKind = (typeof APPLICATION_KINDS)[number];
@@ -11,15 +11,7 @@ export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 /** Still being worked on: reminders and requirement tasks apply. */
 export const isOpen = (s: ApplicationStatus) => s === "researching" || s === "preparing";
 
-/** A real IANA zone name? "America/New_Yrok" must be refused, not silently read as UTC. */
-export function isValidTimeZone(tz: string): boolean {
-  try {
-    new Intl.DateTimeFormat("en-GB", { timeZone: tz });
-    return true;
-  } catch {
-    return false;
-  }
-}
+export { isValidTimeZone } from "@/shared/time";
 
 /** The exact moment a deadline published as "date time, zone" happens. DST-aware. */
 export function deadlineInstant(date: string, time: string, timeZone: string): Date {
@@ -28,7 +20,7 @@ export function deadlineInstant(date: string, time: string, timeZone: string): D
 }
 
 /** The day to aim for: N days before the deadline's local (Lagos) day. */
-export function targetDay(deadlineAt: Date, daysBefore: number, config: EngineConfig = DEFAULT_CONFIG): string {
+export function targetDay(deadlineAt: Date, daysBefore: number, config: EngineConfig = currentConfig()): string {
   return addDays(dayKey(deadlineAt, config.timeZone), -daysBefore);
 }
 
@@ -66,7 +58,7 @@ export function summarize(
   app: { status: ApplicationStatus; deadlineAt: Date | null; targetDaysBefore: number },
   requirements: readonly { title: string; done: boolean }[],
   now: Date,
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): ApplicationSummary {
   const tz = config.timeZone;
   const missing = requirements.filter((r) => !r.done).map((r) => r.title);

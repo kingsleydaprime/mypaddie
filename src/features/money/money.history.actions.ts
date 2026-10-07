@@ -1,17 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { formatMoney, parseAmount } from "@/shared/format";
 import { redirect } from "next/navigation";
 import { requireDb } from "@/shared/supabase/session";
 import { editTransaction, setBalance, setPurchaseInterest, voidTransaction } from "./money.repo";
 
 export type FormState = null | { error: string } | { ok: string };
 
-const naira = (v: FormDataEntryValue | null) => Number(String(v ?? "").replace(/[,₦\s]/g, ""));
+const amountOf = (v: FormDataEntryValue | null) => parseAmount(String(v ?? ""));
 
 export async function setBalanceAction(_prev: FormState, form: FormData): Promise<FormState> {
-  const amount = naira(form.get("amount"));
-  if (!Number.isInteger(amount) || amount < 0) return { error: "Whole naira, 0 or more" };
+  const amount = amountOf(form.get("amount"));
+  if (!Number.isInteger(amount) || amount < 0) return { error: "A whole amount, 0 or more" };
   const db = await requireDb("/app/money/history");
   const r = await setBalance(db, amount, new Date());
   revalidatePath("/app/money");
@@ -22,7 +23,7 @@ export async function setBalanceAction(_prev: FormState, form: FormData): Promis
     ok:
       recorded.kind === "opening"
         ? "Opening balance recorded."
-        : `Corrected by ${recorded.direction === "in" ? "+" : "−"}₦${recorded.amount.toLocaleString("en-NG")}. Anything you forgot to log?`,
+        : `Corrected by ${recorded.direction === "in" ? "+" : "−"}${formatMoney(recorded.amount)}. Anything you forgot to log?`,
   };
 }
 

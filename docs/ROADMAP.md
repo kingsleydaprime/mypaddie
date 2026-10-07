@@ -92,12 +92,10 @@ which gets a new entry when it changes.
   rate-limited to a few emails an hour, the reason magic links were rejected.
 - [ ] First-run onboarding: display name, time zone, currency, quiet hours,
   "Who I'm becoming". Seed nothing personal.
-- [ ] **Per-user time zone.** Days are Africa/Lagos everywhere today:
-  `src/shared/config.ts` and seven SQL migrations (nudges, events,
-  applications, reminders, schedule). Move it into each user's settings and
-  pass it through the engine and `collect_nudges`.
-- [ ] **Per-user currency.** Money is whole naira (`bigint`) and the UI prints
-  ₦. Keep whole units, store a currency code per user, and format from it.
+- [x] **Per-user time zone** (2026-10-08): profile setting; every rule reads
+  the signed-in user's zone; the nudge job and habit rows run per user.
+  Invalid zone → UTC; no zone → Lagos.
+- [x] **Per-user currency** (2026-10-08): whole units, shown in their currency.
 - [ ] Remove "Kingsley / his" from the MCP server instructions
   (`src/app/api/mcp/route.ts`) and tool descriptions. `get_today` returns the
   user's display name and the AI uses that.

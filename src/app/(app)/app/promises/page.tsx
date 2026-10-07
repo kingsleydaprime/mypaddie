@@ -2,11 +2,12 @@ import Link from "next/link";
 import { keepPromiseAction, releasePromiseAction, renegotiateAction } from "@/features/promises/promises.actions";
 import { applyBrokenPromises, loadPromisePicture } from "@/features/promises/promises.repo";
 import { AddPromiseForm } from "@/features/promises/ui/add-promise-form";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import { requireDb } from "@/shared/supabase/session";
 import { formatLocal } from "@/shared/time";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 const when = (days: number | null) => (days === null ? "no deadline" : days === 0 ? "due today" : days === 1 ? "due tomorrow" : `due in ${days} days`);
 const STATUS = { kept: "kept", released: "released", broken: "broken", open: "open" } as const;
 
@@ -37,7 +38,7 @@ export default async function PromisesPage() {
             <li key={p.id} className="rounded-2xl border border-line bg-surface px-4 py-3">
               <p className="font-semibold">{p.what}</p>
               <p className={`text-sm ${p.daysLeft !== null && p.daysLeft <= 1 ? "text-gold" : "text-muted"}`}>
-                to {p.person} · {when(p.daysLeft)}{p.dueAt ? ` (${formatLocal(p.dueAt, tz)})` : ""}{p.renegotiations ? ` · moved ${p.renegotiations}×` : ""}
+                to {p.person} · {when(p.daysLeft)}{p.dueAt ? ` (${formatLocal(p.dueAt, tz())})` : ""}{p.renegotiations ? ` · moved ${p.renegotiations}×` : ""}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <form action={keepPromiseAction.bind(null, p.id)}>

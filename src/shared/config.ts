@@ -6,6 +6,8 @@
 export interface EngineConfig {
   /** IANA zone that decides where a "day" starts and ends. */
   timeZone: string;
+  /** ISO 4217 code money is shown in. Amounts are whole units of it. */
+  currency: string;
   xp: {
     /** Share of base XP paid when a task is done after its due time. */
     lateMultiplier: number;
@@ -46,6 +48,7 @@ export interface EngineConfig {
 
 export const DEFAULT_CONFIG: EngineConfig = {
   timeZone: "Africa/Lagos",
+  currency: "NGN",
   xp: {
     lateMultiplier: 0.5,
     ignoredNeedPenalty: 0.5,
@@ -70,3 +73,25 @@ export const DEFAULT_CONFIG: EngineConfig = {
     periodDays: 30,
   },
 };
+
+// ─── The signed-in user's config ────────────────────────────────────────────
+// Each user has their own time zone and currency. On the server, the request
+// sets them up once (src/shared/user-context.ts registers the resolver); every
+// rule that isn't handed a config explicitly reads the current user's.
+// Registered rather than imported so this file stays free of Node-only code:
+// client components import the rule modules too.
+
+let resolver: (() => EngineConfig | undefined) | null = null;
+let missing: (() => EngineConfig) | null = null;
+
+export function setConfigResolver(resolve: () => EngineConfig | undefined, onMissing: () => EngineConfig) {
+  resolver = resolve;
+  missing = onMissing;
+}
+
+/** The current user's config; the defaults in tests and in the browser. */
+export function currentConfig(): EngineConfig {
+  const found = resolver?.();
+  if (found) return found;
+  return missing ? missing() : DEFAULT_CONFIG;
+}

@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import { withinLastDays } from "@/shared/time";
 
 export interface SlipReason {
@@ -45,7 +45,7 @@ export function judgeSlip(
   slip: SlipReason,
   paddieAccepts: boolean,
   previous: readonly SlipReason[],
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): SlipVerdict {
   if (!paddieAccepts) return { accepted: false, by: "paddie" };
 

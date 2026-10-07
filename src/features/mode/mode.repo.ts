@@ -1,6 +1,6 @@
 import { loadOpenPastNeeds } from "@/features/tasks/tasks.repo";
 import { isIgnoredNeed } from "@/features/xp/xp";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { dayKey, withinLastDays } from "@/shared/time";
 import { computeMode, type ModeOverride, type ModeResult } from "./mode";
@@ -16,7 +16,7 @@ function parseOverride(value: unknown): ModeOverride | null {
 }
 
 /** Loads the facts the mode depends on and computes it. Every tool result carries this. */
-export async function loadMode(db: Db, now: Date, config = DEFAULT_CONFIG): Promise<ModeResult> {
+export async function loadMode(db: Db, now: Date, config = currentConfig()): Promise<ModeResult> {
   const since = new Date(now.getTime() - (config.mode.repeatSlipWindowDays + 1) * 86_400_000).toISOString();
 
   const [slipsRes, checkinRes, overrideRes, pastNeeds] = await Promise.all([

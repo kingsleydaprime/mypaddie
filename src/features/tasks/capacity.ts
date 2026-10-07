@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import { dayKey, zonedInstant } from "@/shared/time";
 
 /** Minutes assumed for a task with no duration — for capacity and for clashes. */
@@ -52,7 +52,7 @@ export function roomOn(
   tasksOnDay: readonly DayTask[],
   setting: CapacitySetting,
   now: Date,
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
   /** When the active day ends ("HH:MM") — the start of his quiet hours. */
   dayEndsAt: string = DAY_ENDS_AT,
 ): DayRoom {

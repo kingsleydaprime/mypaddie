@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { proposeDay } from "@/features/planning/planning.repo";
 import { AcceptPlan } from "@/features/planning/ui/accept-plan";
-import { DEFAULT_CONFIG } from "@/shared/config";
-import { formatNaira } from "@/shared/format";
+import { currentConfig } from "@/shared/config";
+import { formatMoney } from "@/shared/format";
 import { requireDb } from "@/shared/supabase/session";
 import { dayKey, localTimeOf } from "@/shared/time";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 const STYLE: Record<string, string> = {
   event: "border-l-gold",
   fixed_task: "border-l-gold",
@@ -19,9 +20,9 @@ const STYLE: Record<string, string> = {
 export default async function PlanPage() {
   const db = await requireDb("/app/plan");
   const now = new Date();
-  const day = dayKey(now, tz);
+  const day = dayKey(now, tz());
   const plan = await proposeDay(db, day, now);
-  const writable = plan.assignments.filter((a) => !a.suggestionOnly).map((a) => ({ taskId: a.taskId, time: localTimeOf(a.start, tz) }));
+  const writable = plan.assignments.filter((a) => !a.suggestionOnly).map((a) => ({ taskId: a.taskId, time: localTimeOf(a.start, tz()) }));
 
   return (
     <div className="flex flex-col gap-5">
@@ -32,10 +33,10 @@ export default async function PlanPage() {
       <ol className="flex flex-col gap-2">
         {plan.slots.map((s, i) => (
           <li key={i} className={`rounded-xl border border-line border-l-4 bg-surface px-4 py-2.5 ${STYLE[s.kind] ?? ""}`}>
-            <span className="text-sm text-muted">{localTimeOf(s.start, tz)}–{localTimeOf(s.end, tz)}</span>
+            <span className="text-sm text-muted">{localTimeOf(s.start, tz())}–{localTimeOf(s.end, tz())}</span>
             <p className={`font-medium ${s.kind === "free" ? "text-gold" : ""}`}>{s.title}</p>
             {s.kind === "free" && plan.funIdea && (
-              <Link href="/app/fun" className="text-sm text-muted">Idea: {plan.funIdea.title}{plan.funIdea.cost > 0 ? ` (${formatNaira(plan.funIdea.cost)})` : " (free)"} ›</Link>
+              <Link href="/app/fun" className="text-sm text-muted">Idea: {plan.funIdea.title}{plan.funIdea.cost > 0 ? ` (${formatMoney(plan.funIdea.cost)})` : " (free)"} ›</Link>
             )}
           </li>
         ))}

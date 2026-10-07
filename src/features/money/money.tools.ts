@@ -20,7 +20,7 @@ import {
 } from "./money.repo";
 import { judgePurchase } from "./purchase";
 
-const naira = z.number().int().positive().describe("Whole naira");
+const amount = z.number().int().positive().describe("Whole units of his currency");
 
 function budgetSummary(b: BudgetContext) {
   const s = b.stage;
@@ -46,7 +46,7 @@ export function registerMoneyTools(server: McpServer) {
         "plainly and briefly (firm about the action, funny about the situation), then move on. For income, the " +
         "reply includes a proposed split — present it and ask him to accept, tweak, or reject (accept_split).",
       inputSchema: z.object({
-        amount: naira,
+        amount,
         direction: z.enum(["in", "out"]),
         category: z.string().trim().min(1),
         tag: z.enum(["need", "want", "unsure"]).optional().describe("Required for out, ignored for in"),
@@ -192,7 +192,7 @@ export function registerMoneyTools(server: McpServer) {
         "not agreeable. Asking again about the same item after 24 hours can turn a wait into a yes.",
       inputSchema: z.object({
         item: z.string().trim().min(1),
-        price: naira,
+        price: amount,
         need_in_disguise: z.boolean(),
         serves_goal: z.string().optional().describe("Title of the goal it serves, if any"),
       }),
@@ -246,10 +246,10 @@ export function registerMoneyTools(server: McpServer) {
     {
       title: "Set balance",
       description:
-        "Make his balance match what's really in his account(s): 'I have ₦85,000'. The first time this records " +
+        "Make his balance match what's really in his account(s): 'I have 85,000'. The first time this records " +
         "his opening balance; later it records a correction for the difference (bank charges, a forgotten spend) " +
         "— mention the difference so he can think about what wasn't logged. Never counts as income or spending.",
-      inputSchema: z.object({ amount: z.number().int().nonnegative().describe("Whole naira actually in his account(s) now") }),
+      inputSchema: z.object({ amount: z.number().int().nonnegative().describe("Whole units actually in his account(s) now") }),
     },
     async ({ amount }: { amount: number }, ctx: ToolContext) => {
       try {

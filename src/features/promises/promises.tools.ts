@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { formatLocal } from "@/shared/time";
 import {
@@ -15,7 +15,8 @@ import {
   type LoadedPromise,
 } from "./promises.repo";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const due = z.object({ date: z.iso.date(), time: time.optional().describe("Omit = by the end of that day") });
 
@@ -23,11 +24,11 @@ const view = (p: LoadedPromise & { daysLeft?: number | null }) => ({
   id: p.id,
   person: p.person,
   what: p.what,
-  due: p.dueAt ? formatLocal(p.dueAt, tz) : null,
+  due: p.dueAt ? formatLocal(p.dueAt, tz()) : null,
   ...(p.daysLeft !== undefined ? { daysLeft: p.daysLeft } : {}),
   status: p.status,
   renegotiations: p.renegotiations,
-  ...(p.keptAt ? { kept: formatLocal(p.keptAt, tz) } : {}),
+  ...(p.keptAt ? { kept: formatLocal(p.keptAt, tz()) } : {}),
   ...(p.notes ? { notes: p.notes } : {}),
 });
 

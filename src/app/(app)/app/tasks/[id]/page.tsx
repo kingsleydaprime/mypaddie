@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TaskForm } from "@/features/tasks/ui/task-form";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import { requireDb } from "@/shared/supabase/session";
 import { dayKey, localTimeOf } from "@/shared/time";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 
 export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">) {
   const { id } = await params;
@@ -18,7 +19,7 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
   if (!t) notFound();
 
   const due = t.due_at ? new Date(t.due_at) : null;
-  const time = due ? localTimeOf(due, tz) : "";
+  const time = due ? localTimeOf(due, tz()) : "";
   return (
     <div className="flex flex-col gap-5">
       <header className="flex items-center gap-3">
@@ -32,7 +33,7 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
           task={{
             id: t.id,
             title: t.title,
-            date: due ? dayKey(due, tz) : "",
+            date: due ? dayKey(due, tz()) : "",
             // 23:59 is how "any time that day" is stored.
             time: time === "23:59" ? "" : time,
             duration: t.duration_minutes,

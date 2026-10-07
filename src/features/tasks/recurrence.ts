@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import { addDays, dayKey, localTimeOf, weekdayOf, zonedInstant } from "@/shared/time";
 
 /**
@@ -81,7 +81,7 @@ export function planOccurrences(
   series: readonly SeriesForSpawn[],
   now: Date,
   backfillDays = 7,
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): OccurrenceToSpawn[] {
   const tz = config.timeZone;
   const today = dayKey(now, tz);
@@ -116,7 +116,7 @@ export interface SeriesTemplate {
  * day full of habits looks empty. Days already created are real rows, so only
  * days after the latest row are projected.
  */
-export function projectedOccurrences(series: readonly SeriesTemplate[], day: string, config: EngineConfig = DEFAULT_CONFIG) {
+export function projectedOccurrences(series: readonly SeriesTemplate[], day: string, config: EngineConfig = currentConfig()) {
   return series.flatMap((s) => {
     if (day <= s.lastOccursOn || !occursOn(parseRecurrence(s.rule), day)) return [];
     return [

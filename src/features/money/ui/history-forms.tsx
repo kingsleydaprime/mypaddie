@@ -1,20 +1,21 @@
 "use client";
 
 import { useActionState } from "react";
+import { currencySymbol } from "@/shared/format";
 import { editTransactionAction, setBalanceAction, voidTransactionAction, type FormState } from "../money.history.actions";
 
 const field = "rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-base";
 const Msg = ({ s }: { s: FormState }) =>
   s ? <p className={`text-sm ${"error" in s ? "text-red" : "text-green"}`} role={"error" in s ? "alert" : "status"}>{"error" in s ? s.error : s.ok}</p> : null;
 
-export function SetBalanceForm() {
+export function SetBalanceForm({ currency }: { currency: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(setBalanceAction, null);
   return (
     <details className="rounded-2xl border border-line bg-surface p-4">
       <summary className="cursor-pointer font-semibold">Balance not right? Set it</summary>
       <p className="mt-2 text-sm text-muted">What&apos;s actually in your account(s) now. The first time, it&apos;s your opening balance; after that, a correction for the difference. Neither counts as income or spending.</p>
       <form action={action} className="mt-3 flex gap-2">
-        <input name="amount" inputMode="numeric" required placeholder="₦ amount" className={`${field} flex-1`} />
+        <input name="amount" inputMode="numeric" required placeholder={`${currencySymbol(currency)} amount`} className={`${field} flex-1`} />
         <button disabled={pending} className="rounded-xl bg-gold px-4 font-semibold text-on-gold disabled:opacity-60">Set</button>
       </form>
       <div className="mt-2"><Msg s={state} /></div>

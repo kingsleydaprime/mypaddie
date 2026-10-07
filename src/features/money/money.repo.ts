@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { computeMoneyStage, type MoneyStage, type TransactionForMoney } from "./stage";
 import type { NeedForDeficit } from "./deficit";
@@ -18,7 +18,7 @@ const toTx = (r: TxRow): TransactionForMoney => ({ ...r, at: new Date(r.at) });
  * last two periods (the complete one that decides, plus the current one),
  * so this never loads your whole history.
  */
-export async function loadMoneyStage(db: Db, now: Date, config = DEFAULT_CONFIG): Promise<MoneyStage> {
+export async function loadMoneyStage(db: Db, now: Date, config = currentConfig()): Promise<MoneyStage> {
   const since = new Date(now.getTime() - (2 * config.money.periodDays + 1) * 86_400_000).toISOString();
   const columns = "amount, direction, tag, category, at";
   const [first, recent] = await Promise.all([
@@ -65,7 +65,7 @@ function parseSplit(value: unknown): SplitPercentages {
 }
 
 /** Everything the money tools reason about, loaded in one go. */
-export async function loadBudget(db: Db, now: Date, config = DEFAULT_CONFIG): Promise<BudgetContext> {
+export async function loadBudget(db: Db, now: Date, config = currentConfig()): Promise<BudgetContext> {
   const monthStart = startOfMonth(now, config.timeZone).toISOString();
   const [stage, buckets, needs, spent, settings] = await Promise.all([
     loadMoneyStage(db, now, config),

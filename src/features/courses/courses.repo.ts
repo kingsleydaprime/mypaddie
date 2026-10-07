@@ -4,7 +4,7 @@ import { dayEndsAt } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { roomOn } from "@/features/tasks/capacity";
 import { completeTask, createTask, deleteTask, loadCapacity, loadDayTasks, updateTask, type CreateResult } from "@/features/tasks/tasks.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, localTimeOf, zonedInstant } from "@/shared/time";
 import {
@@ -21,7 +21,8 @@ import {
   type StudySession,
 } from "./courses";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 const COLUMNS =
   "id, skill_id, code, title, description, semester, lecturer, units, target_grade, status, " +
   "course_topics(id, title, notes, week, position), " +
@@ -65,13 +66,13 @@ export async function loadCourses(db: Db, now: Date, opts: { course?: string; in
   if (data.length === 0) return [];
 
   const learning = await loadLearning(db, now);
-  const today = dayKey(now, tz);
+  const today = dayKey(now, tz());
   return data.map((c) => {
     const practised = learning.find((l) => l.skill.id === c.skill_id)?.summary.topics ?? [];
     const topics = topicProgress(c.course_topics, practised);
     const assessments = [...c.course_assessments]
       .sort((a, b) => (a.due_at ?? "9999").localeCompare(b.due_at ?? "9999"))
-      .map((a) => ({ ...a, day: a.due_at ? dayKey(new Date(a.due_at), tz) : null, time: a.due_at ? localTimeOf(new Date(a.due_at), tz) : null }));
+      .map((a) => ({ ...a, day: a.due_at ? dayKey(new Date(a.due_at), tz()) : null, time: a.due_at ? localTimeOf(new Date(a.due_at), tz()) : null }));
     return {
       id: c.id,
       skillId: c.skill_id,
@@ -193,12 +194,12 @@ async function scheduleAssessment(db: Db, course: { label: string }, a: Assessme
   if (!a.date) return { eventId: null, taskId: null, scheduling: null };
   const title = `${course.label} ${a.title}`;
   if (isSitting(a.kind)) {
-    const end = a.time && a.minutes ? localTimeOf(new Date(zonedInstant(a.date, a.time, tz).getTime() + a.minutes * 60_000), tz) : undefined;
+    const end = a.time && a.minutes ? localTimeOf(new Date(zonedInstant(a.date, a.time, tz()).getTime() + a.minutes * 60_000), tz()) : undefined;
     const made = await addEvent(db, { title, kind: "exam", date: a.date, start_time: a.time, end_time: end, important: true }, now);
     if ("error" in made) return { eventId: null, taskId: null, scheduling: { result: "not_scheduled", reason: made.error } };
     return { eventId: made.event.id, taskId: null, scheduling: { result: "event", clashes: made.clashes } };
   }
-  const today = dayKey(now, tz);
+  const today = dayKey(now, tz());
   const mustDay = addDays(a.date, -MUST_DO_DAYS_BEFORE_DUE);
   const task: CreateResult = await createTask(
     db,
@@ -212,7 +213,7 @@ async function scheduleAssessment(db: Db, course: { label: string }, a: Assessme
       nonNegotiable: false,
       weights: ASSIGNMENT_WEIGHTS,
       durationMinutes: a.minutes ?? 120,
-      mustFrom: zonedInstant(mustDay < today ? today : mustDay, "09:00", tz),
+      mustFrom: zonedInstant(mustDay < today ? today : mustDay, "09:00", tz()),
     },
     now,
   );
@@ -222,7 +223,7 @@ async function scheduleAssessment(db: Db, course: { label: string }, a: Assessme
 }
 
 export async function addAssessment(db: Db, course: { id: string; label: string }, a: AssessmentInput, now: Date) {
-  const dueAt = a.date ? zonedInstant(a.date, a.time ?? "23:59", tz) : null;
+  const dueAt = a.date ? zonedInstant(a.date, a.time ?? "23:59", tz()) : null;
   const linked = await scheduleAssessment(db, course, a, now);
   const { error } = await db.from("course_assessments").insert({
     course_id: course.id,
@@ -339,7 +340,7 @@ export async function changeAssessment(db: Db, ref: string, changes: AssessmentC
   let dueAt: string | null | undefined;
   if (changes.date !== undefined && !a.done) {
     await unschedule(db, a, now);
-    dueAt = changes.date ? zonedInstant(changes.date.date, changes.date.time ?? "23:59", tz).toISOString() : null;
+    dueAt = changes.date ? zonedInstant(changes.date.date, changes.date.time ?? "23:59", tz()).toISOString() : null;
     const made = changes.date
       ? await scheduleAssessment(db, { label: course.label }, { kind: a.kind, title: a.title, date: changes.date.date, time: changes.date.time, minutes: changes.date.minutes }, now)
       : { eventId: null, taskId: null, scheduling: null };
@@ -367,7 +368,7 @@ export async function changeAssessment(db: Db, ref: string, changes: AssessmentC
  */
 export async function proposeStudy(db: Db, now: Date, opts: { course?: string; days?: number; sessionMinutes?: number; maxPerDay?: number } = {}) {
   const courses = (await loadCourses(db, now, { course: opts.course })).filter((c) => c.status === "active");
-  const today = dayKey(now, tz);
+  const today = dayKey(now, tz());
   const days = opts.days ?? 7;
 
   const [capacity, schedule] = await Promise.all([loadCapacity(db), loadSchedule(db)]);

@@ -3,14 +3,15 @@ import { loadFunPicture } from "@/features/fun/fun.repo";
 import { DEFAULT_DURATION, roomOn } from "@/features/tasks/capacity";
 import { projectedOccurrences } from "@/features/tasks/recurrence";
 import { loadCapacity, loadDayTasks, loadSeriesTemplates, updateTask } from "@/features/tasks/tasks.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, localTimeOf, zonedInstant } from "@/shared/time";
 import { dayEndsAt } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { CHORE_MAX_XP, planDay, type FixedBlock, type FlexibleTask } from "./plan";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 /** Stored for "any time that day" — not a real time. */
 const ANY_TIME = "23:59";
 
@@ -33,9 +34,9 @@ type Row = {
  * undated tasks are added too — but only while the day's capacity allows.
  */
 export async function proposeDay(db: Db, day: string, now: Date) {
-  const from = zonedInstant(day, "00:00", tz).toISOString();
-  const to = zonedInstant(addDays(day, 1), "00:00", tz).toISOString();
-  const isToday = day === dayKey(now, tz);
+  const from = zonedInstant(day, "00:00", tz()).toISOString();
+  const to = zonedInstant(addDays(day, 1), "00:00", tz()).toISOString();
+  const isToday = day === dayKey(now, tz());
   const cols = "id, title, due_at, duration_minutes, is_non_negotiable, must_from, base_xp, series_id, occurs_on, items(tier)";
 
   const [onDay, habitsAnyTime, undated, events, schedule, templates] = await Promise.all([
@@ -50,7 +51,7 @@ export async function proposeDay(db: Db, day: string, now: Date) {
   ]);
   for (const r of [onDay, habitsAnyTime, undated] as { error: { message: string } | null }[]) if (r.error) throw new Error(`loading the day: ${r.error.message}`);
 
-  const endOfDay = zonedInstant(day, "23:59", tz).getTime();
+  const endOfDay = zonedInstant(day, "23:59", tz()).getTime();
   type Flex = FlexibleTask & { habit: boolean; undated: boolean };
   const flex = (r: Row, extra: Partial<Flex> = {}): Flex => ({
     id: r.id,
@@ -68,7 +69,7 @@ export async function proposeDay(db: Db, day: string, now: Date) {
   const flexible: Flex[] = [];
   for (const r of onDay.data!) {
     const due = new Date(r.due_at!);
-    if (localTimeOf(due, tz) === ANY_TIME) flexible.push(flex(r));
+    if (localTimeOf(due, tz()) === ANY_TIME) flexible.push(flex(r));
     else fixed.push({ id: r.id, title: r.title, start: due, minutes: r.duration_minutes ?? DEFAULT_DURATION, kind: "task" });
   }
   for (const r of habitsAnyTime.data!) flexible.push(flex(r));

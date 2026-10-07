@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { parseAmount } from "@/shared/format";
 import { z } from "zod";
 import { TIERS } from "@/shared/domain";
 import { requireDb } from "@/shared/supabase/session";
@@ -10,7 +11,7 @@ const optionalText = z.string().trim().transform((v) => v || null);
 const optionalNaira = z
   .string()
   .trim()
-  .transform((v) => (v === "" ? null : Number(v.replace(/[,₦\s]/g, ""))))
+  .transform((v) => (v === "" ? null : parseAmount(v)))
   .pipe(z.number().int().nonnegative().nullable());
 
 const schema = z.object({

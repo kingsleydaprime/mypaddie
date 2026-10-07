@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { formatNaira } from "@/shared/format";
+import { currentConfig } from "@/shared/config";
+import { formatMoney } from "@/shared/format";
 import type { Db } from "@/shared/supabase/token-client";
 import { planDeficit } from "../deficit";
 import { loadBalance, loadBudget, type BucketName } from "../money.repo";
@@ -36,7 +37,7 @@ export async function MoneyScreen({ db, addMoney = false }: { db: Db; addMoney?:
         <Link href="/app/pantry" className="rounded-xl border border-line px-4 py-2 text-sm font-medium">Pantry ›</Link>
       </header>
 
-      <BalanceCard balance={balance} />
+      <BalanceCard balance={balance} currency={currentConfig().currency} />
 
       <section className="rounded-2xl border border-line bg-surface p-5">
         {s.stage === "audit" ? (
@@ -44,30 +45,30 @@ export async function MoneyScreen({ db, addMoney = false }: { db: Db; addMoney?:
             <p className="text-sm font-medium text-gold">{s.day === 0 ? "Audit · starts with your first log" : `Audit · day ${s.day} of 30`}</p>
             <p className="mt-1 text-lg font-semibold">No budgets, no judgement. Just log everything.</p>
             <p className="mt-2 text-sm text-muted">
-              So far: in {formatNaira(s.totals.income)} · needs {formatNaira(s.totals.needs)} · wants {formatNaira(s.totals.wants)}
+              So far: in {formatMoney(s.totals.income)} · needs {formatMoney(s.totals.needs)} · wants {formatMoney(s.totals.wants)}
             </p>
           </>
         ) : s.stage === "deficit" ? (
           <>
             <p className="text-sm font-medium text-red">Deficit</p>
-            <p className="mt-1 text-3xl font-bold">{formatNaira(s.totals.gap)} gap</p>
-            <p className="mt-2 text-sm text-muted">Needs {formatNaira(s.totals.needs)} · income {formatNaira(s.totals.income)}. Two levers: raise income or lower needs.</p>
+            <p className="mt-1 text-3xl font-bold">{formatMoney(s.totals.gap)} gap</p>
+            <p className="mt-2 text-sm text-muted">Needs {formatMoney(s.totals.needs)} · income {formatMoney(s.totals.income)}. Two levers: raise income or lower needs.</p>
             {(() => {
               const plan = planDeficit(s.totals.income, budget.needItems);
               return plan.hiddenWants > 0 ? (
-                <p className="mt-2 text-sm text-muted">{formatNaira(plan.hiddenWants)} of your needs is comfort above the cheapest honest version.</p>
+                <p className="mt-2 text-sm text-muted">{formatMoney(plan.hiddenWants)} of your needs is comfort above the cheapest honest version.</p>
               ) : null;
             })()}
           </>
         ) : (
           <>
             <p className="text-sm font-medium text-green">Surplus</p>
-            <p className="mt-1 text-3xl font-bold">{formatNaira(-s.totals.gap)} left over</p>
-            <p className="mt-2 text-sm text-muted">Needs {formatNaira(s.totals.needs)} · income {formatNaira(s.totals.income)}</p>
+            <p className="mt-1 text-3xl font-bold">{formatMoney(-s.totals.gap)} left over</p>
+            <p className="mt-2 text-sm text-muted">Needs {formatMoney(s.totals.needs)} · income {formatMoney(s.totals.income)}</p>
           </>
         )}
         {s.stage !== "audit" && s.topLeaks.length > 0 && (
-          <p className="mt-3 text-sm text-muted">Top leaks: {s.topLeaks.map((l) => `${l.category} ${formatNaira(l.amount)}`).join(" · ")}</p>
+          <p className="mt-3 text-sm text-muted">Top leaks: {s.topLeaks.map((l) => `${l.category} ${formatMoney(l.amount)}`).join(" · ")}</p>
         )}
       </section>
 
@@ -75,22 +76,22 @@ export async function MoneyScreen({ db, addMoney = false }: { db: Db; addMoney?:
         {BUCKETS.map((b) => (
           <div key={b.name} className={`rounded-2xl border border-line bg-surface p-4 ${b.name === "needs" ? "col-span-2" : ""}`}>
             <p className="text-sm text-muted">{b.label}</p>
-            <p className="mt-1 text-xl font-bold">{formatNaira(budget.buckets[b.name])}</p>
+            <p className="mt-1 text-xl font-bold">{formatMoney(budget.buckets[b.name])}</p>
           </div>
         ))}
       </section>
 
       {budget.monthlyNeeds > 0 && (
         <p className="text-sm text-muted">
-          This month: needs {formatNaira(budget.monthlyNeeds)} · spent {formatNaira(budget.spentOnNeedsThisMonth)} ·{" "}
+          This month: needs {formatMoney(budget.monthlyNeeds)} · spent {formatMoney(budget.spentOnNeedsThisMonth)} ·{" "}
           <span className={budget.needsOutstanding > 0 ? "text-red" : "text-green"}>
-            {budget.needsOutstanding > 0 ? `${formatNaira(budget.needsOutstanding)} still to fund` : "covered"}
+            {budget.needsOutstanding > 0 ? `${formatMoney(budget.needsOutstanding)} still to fund` : "covered"}
           </span>
         </p>
       )}
 
       <div id="quick-log" className="scroll-mt-4">
-        <QuickLog initialDirection={addMoney ? "in" : "out"} />
+        <QuickLog initialDirection={addMoney ? "in" : "out"} currency={currentConfig().currency} />
       </div>
 
       {(recent.data?.length ?? 0) > 0 && (
@@ -108,7 +109,7 @@ export async function MoneyScreen({ db, addMoney = false }: { db: Db; addMoney?:
                   </span>
                   <span className={`shrink-0 font-semibold ${t.direction === "in" ? "text-green" : ""}`}>
                     {t.direction === "in" ? "+" : "−"}
-                    {formatNaira(t.amount)}
+                    {formatMoney(t.amount)}
                   </span>
                 </Link>
               </li>
@@ -126,7 +127,7 @@ export async function MoneyScreen({ db, addMoney = false }: { db: Db; addMoney?:
               return (
                 <li key={c.id} className={`flex items-center justify-between gap-3 px-4 py-3 ${dropped ? "opacity-50" : ""}`}>
                   <span className="min-w-0">
-                    <span className={dropped ? "line-through" : ""}>{c.item}</span> <span className="text-sm text-muted">{formatNaira(c.price)}</span>
+                    <span className={dropped ? "line-through" : ""}>{c.item}</span> <span className="text-sm text-muted">{formatMoney(c.price)}</span>
                     <span className="block text-xs">
                       {dropped ? <span className="text-muted">not interested</span> : c.interest === "bought" ? <span className="text-muted">bought</span> : <span className={VERDICT[c.verdict].cls}>{VERDICT[c.verdict].label}</span>}
                     </span>

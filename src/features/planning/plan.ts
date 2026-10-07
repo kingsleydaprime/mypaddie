@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import { dayKey, zonedInstant } from "@/shared/time";
 
 const MIN = 60_000;
@@ -86,7 +86,7 @@ export function planDay(input: {
   window?: { start: string; end: string };
   config?: EngineConfig;
 }): DayPlan {
-  const config = input.config ?? DEFAULT_CONFIG;
+  const config = input.config ?? currentConfig();
   const tz = config.timeZone;
   const window = input.window ?? { start: "07:00", end: "22:00" };
   const dayStart = zonedInstant(input.day, window.start, tz).getTime();

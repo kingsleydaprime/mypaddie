@@ -8,13 +8,14 @@ import { loadMode } from "@/features/mode/mode.repo";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import type { Mode } from "@/shared/domain";
 import { catchUp, loadTasksAroundToday } from "@/features/tasks/tasks.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { dayKey, localTimeOf } from "@/shared/time";
 import { pickFocus, type FocusItem } from "../focus";
 import { DoneButton } from "./done-button";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 
 /** One line of narration, in Paddie's voice, set by the mode. Never a stat. */
 const NARRATION: Record<Mode, string> = {
@@ -27,8 +28,8 @@ const NARRATION: Record<Mode, string> = {
 
 function due(item: FocusItem, now: Date) {
   if (!item.dueAt) return "any time";
-  const time = localTimeOf(item.dueAt, tz);
-  return dayKey(item.dueAt, tz) === dayKey(now, tz) ? time : `yesterday ${time}`;
+  const time = localTimeOf(item.dueAt, tz());
+  return dayKey(item.dueAt, tz()) === dayKey(now, tz()) ? time : `yesterday ${time}`;
 }
 
 function Row({ item, now, big }: { item: FocusItem; now: Date; big?: boolean }) {
@@ -62,7 +63,7 @@ export async function TodayScreen({ db }: { db: Db }) {
   const todayEvents = soon.filter((e) => e.daysAway === 0);
   const prepare = soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now");
   const focus = pickFocus(tasks, now);
-  const date = new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "long", day: "numeric", month: "long" }).format(now);
+  const date = new Intl.DateTimeFormat("en-GB", { timeZone: tz(), weekday: "long", day: "numeric", month: "long" }).format(now);
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,7 +72,7 @@ export async function TodayScreen({ db }: { db: Db }) {
         <h1 className="mt-1 text-2xl font-bold leading-tight">{NARRATION[mode.mode]}</h1>
         {(todayEvents.length > 0 || prepare.length > 0) && (
           <Link href="/app/events" className="mt-2 block text-sm text-muted">
-            {todayEvents.map((e) => (e.allDay ? e.title : `${e.title} ${localTimeOf(e.at, tz)}`)).join(" · ")}
+            {todayEvents.map((e) => (e.allDay ? e.title : `${e.title} ${localTimeOf(e.at, tz())}`)).join(" · ")}
             {todayEvents.length > 0 && prepare.length > 0 && " · "}
             {prepare.map((e) => (
               <span key={e.id} className="text-gold">

@@ -1,5 +1,5 @@
 import ICAL from "ical.js";
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import { zonedInstant } from "@/shared/time";
 
 /** Only Google Calendar's private iCal links: the server fetches this URL, so it must not be arbitrary (SSRF). */
@@ -39,7 +39,7 @@ function toInstant(t: ICAL.Time, config: EngineConfig): Date {
  * events expanded (EXDATEs skipped, moved occurrences applied), cancelled ones
  * dropped. Time zones come from the feed's own VTIMEZONE blocks.
  */
-export function parseIcs(text: string, from: Date, to: Date, config: EngineConfig = DEFAULT_CONFIG): ImportedOccurrence[] {
+export function parseIcs(text: string, from: Date, to: Date, config: EngineConfig = currentConfig()): ImportedOccurrence[] {
   const root = new ICAL.Component(ICAL.parse(text));
   for (const tz of root.getAllSubcomponents("vtimezone")) ICAL.TimezoneService.register(tz);
 

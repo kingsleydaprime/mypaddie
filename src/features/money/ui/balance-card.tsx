@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { formatNaira } from "@/shared/format";
+import { currencySymbol, formatMoney } from "@/shared/format";
 
 const KEY = "mypaddie.hideBalance";
 
 /** OPay-style balance card. The eye hides the amount; the choice is remembered on this device. */
-export function BalanceCard({ balance }: { balance: number }) {
+export function BalanceCard({ balance, currency }: { balance: number; currency: string }) {
   const [hidden, setHidden] = useState(false);
   useEffect(() => {
     try {
@@ -40,7 +40,7 @@ export function BalanceCard({ balance }: { balance: number }) {
         <Link href="/app/money/history" className="flex items-center gap-1">Transaction History <span aria-hidden>›</span></Link>
       </div>
       <div className="mt-3 flex items-end justify-between gap-3">
-        <p className="text-3xl font-bold tracking-tight" aria-live="polite">{hidden ? "₦ ••••••" : formatNaira(balance)}</p>
+        <p className="text-3xl font-bold tracking-tight" aria-live="polite">{hidden ? `${currencySymbol(currency)} ••••••` : formatMoney(balance, currency)}</p>
         <Link href="/app/money?add=in#quick-log" className="shrink-0 rounded-full bg-on-gold px-4 py-2.5 text-sm font-semibold text-gold">+ Add Money</Link>
       </div>
     </section>

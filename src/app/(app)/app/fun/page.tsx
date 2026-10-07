@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { currentConfig } from "@/shared/config";
 import { didFunAction, removeFunAction, toggleFunAction } from "@/features/fun/fun.actions";
 import { daysAgo } from "@/features/fun/fun";
 import { loadFunPicture } from "@/features/fun/fun.repo";
 import { FunForm } from "@/features/fun/ui/fun-form";
 import { loadSchedule } from "@/features/settings/settings.repo";
-import { formatNaira } from "@/shared/format";
+import { formatMoney } from "@/shared/format";
 import { requireDb } from "@/shared/supabase/session";
 
 const ago = (days: number | null) => (days === null ? "never yet" : days === 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`);
@@ -49,7 +50,7 @@ export default async function FunPage() {
 
       <details className="rounded-2xl border border-line bg-surface p-4" open={fun.activities.length === 0}>
         <summary className="cursor-pointer font-bold">+ Add something you enjoy</summary>
-        <div className="mt-3"><FunForm /></div>
+        <div className="mt-3"><FunForm currency={currentConfig().currency} /></div>
       </details>
 
       {fun.activities.length === 0 && (
@@ -64,7 +65,7 @@ export default async function FunPage() {
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{a.title}</p>
                   <p className="text-sm text-muted">
-                    {a.cost > 0 ? formatNaira(a.cost) : "Free"}
+                    {a.cost > 0 ? formatMoney(a.cost) : "Free"}
                     {a.minutes ? ` · ${a.minutes} min` : ""} · {a.energy} energy · {COMPANY[a.company]}
                   </p>
                   <p className="text-xs text-muted">Last: {ago(daysAgo(a.lastDoneAt, now))}{a.timesDone > 0 ? ` · ${a.timesDone}×` : ""}</p>
@@ -76,7 +77,7 @@ export default async function FunPage() {
               <details className="mt-2">
                 <summary className="cursor-pointer text-sm text-muted">Edit</summary>
                 <div className="mt-3 flex flex-col gap-3">
-                  <FunForm activity={a} />
+                  <FunForm activity={a} currency={currentConfig().currency} />
                   <div className="flex gap-2">
                     <form action={toggleFunAction.bind(null, a.id, false)}>
                       <button className="rounded-xl border border-line px-3 py-2 text-sm">Pause</button>

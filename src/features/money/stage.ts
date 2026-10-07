@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import { assertNaira, type Naira } from "@/shared/domain";
 import { daysBetween } from "@/shared/time";
 
@@ -77,7 +77,7 @@ export function topLeaks(transactions: readonly TransactionForMoney[], limit = 3
 export function computeMoneyStage(
   transactions: readonly TransactionForMoney[],
   now: Date,
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): MoneyStage {
   const tz = config.timeZone;
   const period = config.money.periodDays;

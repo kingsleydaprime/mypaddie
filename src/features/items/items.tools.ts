@@ -5,7 +5,7 @@ import { TIERS } from "@/shared/domain";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { addItem, listItems } from "./items.repo";
 
-const naira = z.number().int().nonnegative();
+const amount = z.number().int().nonnegative();
 
 export function registerItemTools(server: McpServer) {
   server.registerTool(
@@ -15,7 +15,7 @@ export function registerItemTools(server: McpServer) {
       description:
         "Add something Kingsley needs, wants, or is working toward. Tiers: need (non-negotiable, funded first), " +
         "want, goal (has a target and deadline), wish (no deadline yet, zero guilt), dream (big, broken into goals). " +
-        "For needs, give monthly floor (cheapest honest version) and comfortable (current spend) amounts in naira " +
+        "For needs, give monthly floor (cheapest honest version) and comfortable (current spend) amounts in his currency " +
         "if money is involved. To schedule the work for an item, follow up with add_task.",
       inputSchema: z.object({
         tier: z.enum(TIERS),
@@ -23,8 +23,8 @@ export function registerItemTools(server: McpServer) {
         target: z.string().optional().describe("For goals: what done looks like"),
         deadline: z.iso.date().optional().describe("YYYY-MM-DD"),
         priority: z.number().int().optional().describe("Needs only: lower is funded first in deficit. Default 100"),
-        floor_amount: naira.optional(),
-        comfortable_amount: naira.optional(),
+        floor_amount: amount.optional(),
+        comfortable_amount: amount.optional(),
       }),
     },
     async (args: {

@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import type { Tier } from "@/shared/domain";
 import { dayKey } from "@/shared/time";
 
@@ -40,7 +40,7 @@ export function pickFocus(
   tasks: readonly TaskForFocus[],
   now: Date,
   limit = 3,
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): Focus {
   const today = dayKey(now, config.timeZone);
 

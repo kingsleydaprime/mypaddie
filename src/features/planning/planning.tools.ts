@@ -1,13 +1,14 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { dayKey, localTimeOf } from "@/shared/time";
 import { acceptDay, proposeDay } from "./planning.repo";
 
-const tz = DEFAULT_CONFIG.timeZone;
-const hhmm = (d: Date) => localTimeOf(d, tz);
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
+const hhmm = (d: Date) => localTimeOf(d, tz());
 
 export function registerPlanningTools(server: McpServer) {
   server.registerTool(
@@ -27,7 +28,7 @@ export function registerPlanningTools(server: McpServer) {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const plan = await proposeDay(db, date ?? dayKey(now, tz), now);
+        const plan = await proposeDay(db, date ?? dayKey(now, tz()), now);
         return ok(
           await withMode(db, now, {
             date: plan.day,

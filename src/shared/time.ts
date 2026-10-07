@@ -5,6 +5,16 @@
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** A real IANA zone name? "America/New_Yrok" must be refused, not silently read as UTC. */
+export function isValidTimeZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-GB", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const formatters = new Map<string, Intl.DateTimeFormat>();
 
 function formatterFor(timeZone: string): Intl.DateTimeFormat {

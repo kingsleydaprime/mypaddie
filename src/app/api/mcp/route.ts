@@ -22,7 +22,10 @@ import { registerTaskTools } from "@/features/tasks/tasks.tools";
 import { registerTodayTools } from "@/features/today/today.tools";
 import { registerUpdateTools } from "@/features/updates/updates.tools";
 import { registerWorkoutTools } from "@/features/workouts/workouts.tools";
+import type { AuthInfo } from "@modelcontextprotocol/server";
 import { verifyToken } from "@/shared/mcp/auth";
+import { clientForToken } from "@/shared/supabase/token-client";
+import { withUser } from "@/shared/user-context";
 
 const handler = createMcpHandler(
   (server) => {
@@ -60,8 +63,14 @@ const handler = createMcpHandler(
   },
 );
 
+// Every tool call runs as the signed-in user: their time zone, currency and voice.
+const asUser = async (req: Request) => {
+  const token = (req as Request & { auth?: AuthInfo }).auth?.token;
+  return token ? withUser(clientForToken(token), () => Promise.resolve(handler(req))) : handler(req);
+};
+
 // No token, a bad token, or an expired one → 401 pointing Claude at the login flow.
-const authed = withMcpAuth(handler, verifyToken, {
+const authed = withMcpAuth(asUser, verifyToken, {
   required: true,
   resourceMetadataPath: "/.well-known/oauth-protected-resource/api/mcp",
 });

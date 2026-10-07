@@ -1,6 +1,6 @@
 import type { XpEntry } from "@/features/xp/xp";
 import { splitXp, type PillarWeight } from "@/features/xp/split";
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import { dayKey } from "@/shared/time";
 
 /** Keeping your word builds character and the relationship. */
@@ -26,7 +26,7 @@ export interface PromiseLike {
  * pays its (reduced) XP, but the word wasn't kept. Telling them in time and
  * moving the date (renegotiating) changes `dueAt`, so it isn't broken.
  */
-export function isBroken(p: PromiseLike, now: Date, config: EngineConfig = DEFAULT_CONFIG): boolean {
+export function isBroken(p: PromiseLike, now: Date, config: EngineConfig = currentConfig()): boolean {
   if (p.dueAt === null) return false;
   const tz = config.timeZone;
   const dueDay = dayKey(p.dueAt, tz);
@@ -36,14 +36,14 @@ export function isBroken(p: PromiseLike, now: Date, config: EngineConfig = DEFAU
 }
 
 /** The deduction for a broken promise: its full XP by default, split like its reward. */
-export function brokenPromiseDeduction(p: PromiseLike, now: Date, config: EngineConfig = DEFAULT_CONFIG): XpEntry[] {
+export function brokenPromiseDeduction(p: PromiseLike, now: Date, config: EngineConfig = currentConfig()): XpEntry[] {
   if (!isBroken(p, now, config)) return [];
   const amount = Math.max(1, Math.round(PROMISE_BASE_XP * config.xp.brokenPromisePenalty));
   return splitXp(amount, PROMISE_WEIGHTS).map((e) => ({ ...e, amount: -e.amount, reason: "broken_promise" as const }));
 }
 
 /** Moving the date only counts while it's still open and its day hasn't ended. After that, it's broken. */
-export function canRenegotiate(p: PromiseLike, now: Date, config: EngineConfig = DEFAULT_CONFIG): boolean {
+export function canRenegotiate(p: PromiseLike, now: Date, config: EngineConfig = currentConfig()): boolean {
   if (p.status !== "open") return false;
   if (p.dueAt === null) return true;
   return dayKey(p.dueAt, config.timeZone) >= dayKey(now, config.timeZone);
@@ -68,7 +68,7 @@ export function promisePatterns(
   promises: readonly PromiseRecord[],
   now: Date,
   windowDays = 90,
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
 ): PersonPattern[] {
   const since = now.getTime() - windowDays * 86_400_000;
   const byPerson = new Map<string, PersonPattern>();

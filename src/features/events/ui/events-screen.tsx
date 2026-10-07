@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { loadSchedule } from "@/features/settings/settings.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { formatLocal } from "@/shared/time";
 import { cancelEventAction } from "../events.actions";
@@ -8,7 +8,8 @@ import { upcoming, type Quadrant } from "../events";
 import { loadUpcomingEvents } from "../events.repo";
 import { AddEventForm } from "./add-event-form";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 const GROUPS: { q: Quadrant; title: string; blurb: string }[] = [
   { q: "prepare_now", title: "Prepare now", blurb: "Important and close." },
   { q: "plan_ahead", title: "Plan ahead", blurb: "Important, further out. Anything to prepare?" },
@@ -44,7 +45,7 @@ export async function EventsScreen({ db }: { db: Db }) {
                     <div className="min-w-0">
                       <p className="truncate font-medium">{v.title}</p>
                       <p className="text-sm text-muted">
-                        {v.allDay ? formatLocal(v.at, tz).slice(0, 10) : formatLocal(v.at, tz)} · {v.daysAway === 0 ? "today" : `in ${v.daysAway}d`}
+                        {v.allDay ? formatLocal(v.at, tz()).slice(0, 10) : formatLocal(v.at, tz())} · {v.daysAway === 0 ? "today" : `in ${v.daysAway}d`}
                       </p>
                     </div>
                     <form action={cancelEventAction.bind(null, v.id)}>

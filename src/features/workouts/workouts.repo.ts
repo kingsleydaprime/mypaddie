@@ -1,5 +1,5 @@
 import { completeTask, createTask, updateTask, type CompleteResult, type Refusal } from "@/features/tasks/tasks.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import type { Json } from "@/shared/supabase/database.types";
 import type { Db } from "@/shared/supabase/token-client";
 import { dayKey } from "@/shared/time";
@@ -18,7 +18,8 @@ import {
   type WeekdayCode,
 } from "./training";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 
 export interface PlanExerciseInput {
   name: string;
@@ -120,7 +121,7 @@ export async function savePlan(
   if (actErr) throw new Error(`activating the plan: ${actErr.message}`);
 
   const plan = (await loadActivePlan(db))!;
-  const today = dayKey(now, tz);
+  const today = dayKey(now, tz());
   const schedule: DaySchedule[] = [];
   for (const d of plan.days) {
     const weekdays = parseWeekdays(d.weekdays);
@@ -153,7 +154,7 @@ export async function savePlan(
 
 /** The workout planned for a date, with what was done last time on each exercise. */
 export async function workoutFor(db: Db, now: Date, date?: string) {
-  const day = date ?? dayKey(now, tz);
+  const day = date ?? dayKey(now, tz());
   const plan = await loadActivePlan(db);
   if (!plan) return { date: day, plan: null, workouts: [] };
 
@@ -201,7 +202,7 @@ export interface WorkoutLogInput {
  * paid twice).
  */
 export async function logWorkout(db: Db, input: WorkoutLogInput, now: Date) {
-  const today = dayKey(now, tz);
+  const today = dayKey(now, tz());
   const plan = await loadActivePlan(db);
   const candidates = plan?.days ?? [];
   const day = input.day

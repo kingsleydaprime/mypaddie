@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Urgency } from "@/features/applications/applications";
 import { loadApplications } from "@/features/applications/applications.repo";
 import { AddApplicationForm } from "@/features/applications/ui/add-application-form";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import { requireDb } from "@/shared/supabase/session";
 import { formatLocal } from "@/shared/time";
 
@@ -43,7 +43,7 @@ export default async function ApplicationsPage() {
                         <span className="shrink-0 text-xs text-muted">{a.status}</span>
                       </div>
                       <p className="mt-0.5 text-sm text-muted">
-                        {a.deadline_at ? `Closes ${formatLocal(new Date(a.deadline_at), DEFAULT_CONFIG.timeZone)}` : "Rolling"}
+                        {a.deadline_at ? `Closes ${formatLocal(new Date(a.deadline_at), currentConfig().timeZone)}` : "Rolling"}
                         {a.summary.daysToTarget !== null && a.summary.urgency !== "done" && ` · ${a.summary.daysToTarget >= 0 ? `${a.summary.daysToTarget}d to target` : `target was ${-a.summary.daysToTarget}d ago`}`}
                       </p>
                       {total > 0 && (

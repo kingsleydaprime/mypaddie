@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EditTransactionForm, VoidTransactionForm } from "@/features/money/ui/history-forms";
-import { DEFAULT_CONFIG } from "@/shared/config";
-import { formatNaira } from "@/shared/format";
+import { currentConfig } from "@/shared/config";
+import { formatMoney } from "@/shared/format";
 import { requireDb } from "@/shared/supabase/session";
 import { formatLocal } from "@/shared/time";
 
@@ -24,10 +24,10 @@ export default async function TransactionPage({ params }: PageProps<"/app/money/
       </header>
       <section className="rounded-2xl border border-line bg-surface p-4">
         <p className={`text-3xl font-bold ${t.direction === "in" ? "text-green" : ""} ${t.voided_at ? "line-through opacity-60" : ""}`}>
-          {t.direction === "in" ? "+" : "−"}{formatNaira(t.amount)}
+          {t.direction === "in" ? "+" : "−"}{formatMoney(t.amount)}
         </p>
         <p className="mt-1 text-sm text-muted">
-          {formatLocal(new Date(t.at), DEFAULT_CONFIG.timeZone)} · {t.kind === "normal" ? t.tag ?? "income" : t.kind === "opening" ? "opening balance" : "correction"}
+          {formatLocal(new Date(t.at), currentConfig().timeZone)} · {t.kind === "normal" ? t.tag ?? "income" : t.kind === "opening" ? "opening balance" : "correction"}
         </p>
         {t.voided_at && <p className="mt-2 text-sm text-red">Voided{t.void_reason ? `: ${t.void_reason}` : ""}. It stays on the record but doesn&apos;t count.</p>}
       </section>

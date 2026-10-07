@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
+import { currentConfig, type EngineConfig } from "@/shared/config";
 import { dayKey, daysBetween, localTimeOf, zonedInstant } from "@/shared/time";
 
 export const EVENT_KINDS = ["meeting", "social", "birthday", "anniversary", "wedding", "appointment", "deadline", "exam", "other"] as const;
@@ -30,7 +30,7 @@ function isLeap(y: number) {
  * start. Yearly: the same local date this year, or next year once it's passed;
  * 29 Feb falls on the 28th in other years. Mirrors private.event_occurrence.
  */
-export function nextOccurrence(e: Pick<EventLike, "startsAt" | "yearly">, today: string, config: EngineConfig = DEFAULT_CONFIG): Date {
+export function nextOccurrence(e: Pick<EventLike, "startsAt" | "yearly">, today: string, config: EngineConfig = currentConfig()): Date {
   const tz = config.timeZone;
   const startDay = dayKey(e.startsAt, tz);
   if (!e.yearly || startDay >= today) return e.startsAt;
@@ -70,7 +70,7 @@ export function upcoming(
   events: readonly EventLike[],
   now: Date,
   horizonDays: number,
-  config: EngineConfig = DEFAULT_CONFIG,
+  config: EngineConfig = currentConfig(),
   closeDays: number = CLOSE_DAYS,
 ): EventView[] {
   const tz = config.timeZone;
@@ -87,7 +87,7 @@ export function upcoming(
 }
 
 /** The time block an event takes on a given day — for clashes and capacity. All-day events take none. */
-export function blockOn(e: EventLike, day: string, config: EngineConfig = DEFAULT_CONFIG): { start: Date; minutes: number } | null {
+export function blockOn(e: EventLike, day: string, config: EngineConfig = currentConfig()): { start: Date; minutes: number } | null {
   if (e.status !== "upcoming" || e.allDay) return null;
   const at = nextOccurrence(e, day, config);
   if (dayKey(at, config.timeZone) !== day) return null;

@@ -1,13 +1,14 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { formatLocal } from "@/shared/time";
 import { APPLICATION_KINDS, APPLICATION_STATUSES, type ApplicationKind, type ApplicationStatus } from "./applications";
 import { addApplication, changeRequirement, loadApplications, updateApplication, type LoadedApplication } from "./applications.repo";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const deadline = z
   .object({
@@ -26,7 +27,7 @@ const view = (a: LoadedApplication) => ({
   status: a.status,
   link: a.link,
   urgency: a.summary.urgency,
-  closesYourTime: a.deadline_at ? formatLocal(new Date(a.deadline_at), tz) : "rolling",
+  closesYourTime: a.deadline_at ? formatLocal(new Date(a.deadline_at), tz()) : "rolling",
   closesAsPublished: a.deadline_at && a.deadline_tz ? `${formatLocal(new Date(a.deadline_at), a.deadline_tz)} ${a.deadline_tz}` : null,
   targetDay: a.summary.targetDay,
   daysToTarget: a.summary.daysToTarget,

@@ -1,13 +1,14 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { currencySymbol } from "@/shared/format";
 import { TIERS, type Tier } from "@/shared/domain";
 import { addItemAction, type AddItemState } from "../items.actions";
 import { TIER_INFO } from "../tiers";
 
 const field = "rounded-xl border border-line bg-surface px-4 py-3.5 text-base placeholder:text-muted";
 
-export function AddItemForm({ initialTier }: { initialTier: Tier }) {
+export function AddItemForm({ initialTier, currency }: { initialTier: Tier; currency: string }) {
   const [tier, setTier] = useState<Tier>(initialTier);
   const [state, action, pending] = useActionState<AddItemState, FormData>(addItemAction, null);
 
@@ -39,11 +40,11 @@ export function AddItemForm({ initialTier }: { initialTier: Tier }) {
       {tier === "need" && (
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-sm text-muted">
-            Cheapest honest ₦/mo
+            Cheapest honest {currencySymbol(currency)}/mo
             <input name="floor_amount" inputMode="numeric" placeholder="optional" className={field} />
           </label>
           <label className="flex flex-col gap-1 text-sm text-muted">
-            What you spend now ₦/mo
+            What you spend now {currencySymbol(currency)}/mo
             <input name="comfortable_amount" inputMode="numeric" placeholder="optional" className={field} />
           </label>
         </div>

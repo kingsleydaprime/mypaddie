@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { currentConfig } from "@/shared/config";
 import { AddItemForm } from "@/features/items/ui/add-item-form";
 import { TIERS, type Tier } from "@/shared/domain";
 import { requireDb } from "@/shared/supabase/session";
@@ -12,7 +13,7 @@ export default async function NewQuestPage({ searchParams }: PageProps<"/app/que
         <Link href="/app/quests" className="text-muted" aria-label="Back to quests">‹ Back</Link>
         <h1 className="text-2xl font-bold">New quest</h1>
       </header>
-      <AddItemForm initialTier={TIERS.includes(tier as Tier) ? (tier as Tier) : "goal"} />
+      <AddItemForm initialTier={TIERS.includes(tier as Tier) ? (tier as Tier) : "goal"} currency={currentConfig().currency} />
     </div>
   );
 }

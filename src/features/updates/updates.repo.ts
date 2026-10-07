@@ -1,10 +1,11 @@
 import { completeTask, createTask, type CreateResult } from "@/features/tasks/tasks.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { dayKey } from "@/shared/time";
 import { buildDigest, draftSince, UPDATE_TASK_PREFIX, type Channel } from "./updates";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 
 export interface NewUpdate {
   recipient: string;
@@ -30,7 +31,7 @@ export async function addUpdate(db: Db, u: NewUpdate, now: Date): Promise<{ resu
       title: `${UPDATE_TASK_PREFIX}${u.recipient}`,
       itemId: null,
       baseXp: 10,
-      dueDate: u.dueDate ?? (u.recurrence ? dayKey(now, tz) : null),
+      dueDate: u.dueDate ?? (u.recurrence ? dayKey(now, tz()) : null),
       dueTime: u.dueTime ?? null,
       recurrence: u.recurrence ?? null,
       nonNegotiable: false,
@@ -97,7 +98,7 @@ export async function markUpdateSent(db: Db, updateId: string, content: string |
   if (u?.task_id && t) {
     // Regular update: today's occurrence. One-off: the task itself.
     const { data: row } = t.series_id
-      ? await db.from("tasks").select("id").eq("series_id", t.series_id).eq("occurs_on", dayKey(now, tz)).in("status", ["pending", "skipped"]).maybeSingle()
+      ? await db.from("tasks").select("id").eq("series_id", t.series_id).eq("occurs_on", dayKey(now, tz())).in("status", ["pending", "skipped"]).maybeSingle()
       : await db.from("tasks").select("id").eq("id", u.task_id).in("status", ["pending", "skipped"]).maybeSingle();
     if (row) completed = (await completeTask(db, row.id, now)).result === "completed";
   }

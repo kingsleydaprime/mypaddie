@@ -1,5 +1,5 @@
 import { completeTask, createTask, deleteTask, updateTask, type CompleteResult } from "@/features/tasks/tasks.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import type { Json } from "@/shared/supabase/database.types";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, zonedInstant } from "@/shared/time";
@@ -14,7 +14,8 @@ import {
   type PromiseStatus,
 } from "./promises";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 const COLUMNS = "id, person, what, made_at, due_at, status, kept_at, released_at, renegotiations, task_id, notes";
 /** How far back broken promises are looked for (like ignored needs). */
 const LOOKBACK_DAYS = 14;
@@ -43,8 +44,8 @@ const taskTitle = (person: string, what: string) => `Promise to ${person.trim()}
 /** A promise is a must-do from the morning before it's due. */
 const mustFromFor = (dueDay: string, now: Date) => {
   const day = addDays(dueDay, -1);
-  const today = dayKey(now, tz);
-  return zonedInstant(day < today ? today : day, "09:00", tz);
+  const today = dayKey(now, tz());
+  return zonedInstant(day < today ? today : day, "09:00", tz());
 };
 
 export interface NewPromise {
@@ -62,7 +63,7 @@ export interface NewPromise {
  * renegotiate or drop something, not to forget it.
  */
 export async function addPromise(db: Db, input: NewPromise, now: Date) {
-  const dueAt = input.due ? zonedInstant(input.due.date, input.due.time ?? "23:59", tz) : null;
+  const dueAt = input.due ? zonedInstant(input.due.date, input.due.time ?? "23:59", tz()) : null;
   const base = { title: taskTitle(input.person, input.what), itemId: null, baseXp: PROMISE_BASE_XP, recurrence: null, nonNegotiable: false, weights: PROMISE_WEIGHTS };
   let task = input.due
     ? await createTask(db, { ...base, dueDate: input.due.date, dueTime: input.due.time ?? null, mustFrom: mustFromFor(input.due.date, now) }, now)
@@ -133,12 +134,12 @@ export async function renegotiatePromise(db: Db, id: string, due: { date: string
   const p = await findPromise(db, id);
   if (!p) return { result: "not_found" as const };
   if (!canRenegotiate(p, now)) return { result: "too_late" as const, status: p.status };
-  if (due.date < dayKey(now, tz)) return { result: "date_in_past" as const };
+  if (due.date < dayKey(now, tz())) return { result: "date_in_past" as const };
   if (p.taskId) {
     const moved = await updateTask(db, p.taskId, { dueDate: due.date, dueTime: due.time ?? null, mustFrom: mustFromFor(due.date, now) }, "edit", now);
     if (moved.result !== "updated") return { result: "task_not_moved" as const, detail: moved };
   }
-  const dueAt = zonedInstant(due.date, due.time ?? "23:59", tz);
+  const dueAt = zonedInstant(due.date, due.time ?? "23:59", tz());
   await db.from("promises").update({ due_at: dueAt.toISOString(), renegotiations: p.renegotiations + 1 }).eq("id", p.id);
   return { result: "renegotiated" as const, due: dueAt.toISOString(), times: p.renegotiations + 1 };
 }
@@ -171,7 +172,7 @@ export async function removePromise(db: Db, id: string) {
  * catch-up.
  */
 export async function applyBrokenPromises(db: Db, now: Date): Promise<number> {
-  const todayStart = zonedInstant(dayKey(now, tz), "00:00", tz);
+  const todayStart = zonedInstant(dayKey(now, tz()), "00:00", tz());
   const since = new Date(todayStart.getTime() - LOOKBACK_DAYS * 86_400_000);
   const { data, error } = await db
     .from("promises")
@@ -194,12 +195,12 @@ export async function applyBrokenPromises(db: Db, now: Date): Promise<number> {
 /** Open promises (soonest first), recent history, and people he keeps letting down. */
 export async function loadPromisePicture(db: Db, now: Date) {
   const all = await loadPromises(db, { includeSettled: true });
-  const today = dayKey(now, tz);
+  const today = dayKey(now, tz());
   const open = all.filter((p) => p.status === "open");
   return {
     open: open.map((p) => ({
       ...p,
-      daysLeft: p.dueAt ? Math.round((Date.parse(`${dayKey(p.dueAt, tz)}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000) : null,
+      daysLeft: p.dueAt ? Math.round((Date.parse(`${dayKey(p.dueAt, tz())}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000) : null,
     })),
     recent: all.filter((p) => p.status !== "open").sort((a, b) => (b.dueAt?.getTime() ?? 0) - (a.dueAt?.getTime() ?? 0)).slice(0, 20),
     patterns: promisePatterns(all, now),

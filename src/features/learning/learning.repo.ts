@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import type { Pillar } from "@/shared/domain";
 import type { Json } from "@/shared/supabase/database.types";
 import { escapeLike } from "@/shared/supabase/like";
@@ -74,7 +74,7 @@ export interface SkillProgress {
 }
 
 /** Every skill (or one, by name) with its progress and what's due for review. */
-export async function loadLearning(db: Db, now: Date, skillName?: string, config = DEFAULT_CONFIG): Promise<SkillProgress[]> {
+export async function loadLearning(db: Db, now: Date, skillName?: string, config = currentConfig()): Promise<SkillProgress[]> {
   let skillsQuery = db.from("skills").select(SKILL_COLUMNS).order("created_at");
   if (skillName) skillsQuery = skillsQuery.ilike("name", escapeLike(skillName.trim()));
   const { data: skills, error } = await skillsQuery;

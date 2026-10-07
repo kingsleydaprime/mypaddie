@@ -15,17 +15,18 @@ import { loadMoneyStage } from "@/features/money/money.repo";
 import type { MoneyStage } from "@/features/money/stage";
 import { roomOn } from "@/features/tasks/capacity";
 import { catchUp, loadCapacity, loadDayTasks, loadTasksAroundToday } from "@/features/tasks/tasks.repo";
-import { DEFAULT_CONFIG } from "@/shared/config";
+import { currentConfig } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { dayKey, formatLocal } from "@/shared/time";
 import { pickFocus, type FocusItem } from "./focus";
 
-const tz = DEFAULT_CONFIG.timeZone;
+/** The current user's time zone (read per call, never at import). */
+const tz = () => currentConfig().timeZone;
 
 const item = (i: FocusItem) => ({
   id: i.id,
   title: i.title,
-  due: i.dueAt ? formatLocal(i.dueAt, tz) : null,
+  due: i.dueAt ? formatLocal(i.dueAt, tz()) : null,
   overdue: i.overdue,
   nonNegotiable: i.nonNegotiable,
 });
@@ -67,7 +68,7 @@ export function registerTodayTools(server: McpServer) {
           loadMode(db, now),
           loadMoneyStage(db, now),
           loadCapacity(db),
-          loadDayTasks(db, dayKey(now, tz)),
+          loadDayTasks(db, dayKey(now, tz())),
           loadActiveIdentity(db),
           loadUpcomingEvents(db),
           loadLearning(db, now),
@@ -77,13 +78,13 @@ export function registerTodayTools(server: McpServer) {
           loadWeekLoad(db, now),
         ]);
         const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
-        const room = roomOn(dayKey(now, tz), dayTasks, capacity, now, undefined, dayEndsAt(schedule));
+        const room = roomOn(dayKey(now, tz()), dayTasks, capacity, now, undefined, dayEndsAt(schedule));
         const focus = pickFocus(tasks, now);
         // Fun counts: suggest some once today's quests are done, or when it's been too long.
         const funDue = fun.daysSinceFun !== null && schedule.funEveryDays > 0 && fun.daysSinceFun >= schedule.funEveryDays;
         const questsDone = focus.top.length === 0 && focus.rest.length === 0 && focus.doneToday > 0;
         return ok({
-          now: formatLocal(now, tz),
+          now: formatLocal(now, tz()),
           mode,
           focus: focus.top.map(item),
           rest: focus.rest.map(item),
@@ -99,7 +100,7 @@ export function registerTodayTools(server: McpServer) {
             .slice(0, 5),
           // Today's events, and important ones within the week (prepare for those).
           events: {
-            today: soon.filter((e) => e.daysAway === 0).map((e) => ({ title: e.title, kind: e.kind, at: e.allDay ? "all day" : formatLocal(e.at, tz) })),
+            today: soon.filter((e) => e.daysAway === 0).map((e) => ({ title: e.title, kind: e.kind, at: e.allDay ? "all day" : formatLocal(e.at, tz()) })),
             prepareNow: soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now").map((e) => ({ title: e.title, daysAway: e.daysAway })),
           },
           // Days since any fun (null = no fun list yet: offer to start one). `ideas` only when he's earned a break or is overdue for one.
