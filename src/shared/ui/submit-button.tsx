@@ -9,12 +9,14 @@ import { useFormStatus } from "react-dom";
  * does something. Drop-in for <button> inside a <form action={serverAction}>.
  */
 export function SubmitButton({ children, className, disabled, ...rest }: ButtonHTMLAttributes<HTMLButtonElement>) {
-  const { pending } = useFormStatus();
+  const { pending, data } = useFormStatus();
+  // In a form with several buttons (Deny / Allow), only the one pressed spins; the rest just wait.
+  const pressed = pending && (rest.name === undefined || data?.get(String(rest.name)) === String(rest.value ?? ""));
   // A one-symbol button (✓, ✕) is too small for a spinner and its label: just the spinner.
   const tiny = typeof children !== "string" || children.length <= 2;
   return (
     <button {...rest} type={rest.type ?? "submit"} disabled={pending || disabled} aria-busy={pending || undefined} className={`${className ?? ""} ${pending ? "opacity-70" : ""}`}>
-      {pending ? (
+      {pressed ? (
         <span className="inline-flex items-center gap-1.5">
           <span className="spinner" aria-hidden />
           <span className="sr-only">Saving…</span>

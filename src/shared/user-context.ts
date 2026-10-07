@@ -22,11 +22,20 @@ export interface UserContext {
   plan: PlanState;
 }
 
-const als = new AsyncLocalStorage<UserContext>();
+/**
+ * The store is a holder that's filled in later. Why: AsyncLocalStorage.enterWith
+ * inside an awaited helper doesn't carry back to the caller once the helper
+ * returns — so a server action that loaded the user inside requireDb() then ran
+ * its rules on the defaults (Free plan, Lagos). The holder is entered
+ * synchronously at the start of the request, before any await, so it belongs
+ * to the caller; loading just fills it.
+ */
+type Holder = { ctx?: UserContext };
+const als = new AsyncLocalStorage<Holder>();
 const renderCell = cache((): { ctx?: UserContext } => ({}));
 
 function current(): UserContext | undefined {
-  const stored = als.getStore();
+  const stored = als.getStore()?.ctx;
   if (stored) return stored;
   try {
     return renderCell().ctx;
@@ -63,20 +72,28 @@ const load = async (db: Db) => {
 
 /** Runs `fn` with a given context — tests and scripts that already have a profile. */
 export function runAs<T>(ctx: UserContext, fn: () => T): T {
-  return als.run(ctx, fn);
+  return als.run({ ctx }, fn);
+}
+
+/** Call first thing in a request (before any await): an empty slot the user will be loaded into. */
+export function beginUserContext(): Holder {
+  const holder: Holder = {};
+  als.enterWith(holder);
+  return holder;
 }
 
 /** Runs `fn` as this user (tool calls, scripts). */
 export async function withUser<T>(db: Db, fn: () => Promise<T>): Promise<T> {
   await touch(db, "ai");
-  return als.run(await load(db), fn);
+  const ctx = await load(db);
+  return als.run({ ctx }, fn);
 }
 
 /** For pages and actions: the rest of this request runs as this user. */
-export async function enterUser(db: Db): Promise<UserContext> {
+export async function enterUser(db: Db, holder: Holder = beginUserContext()): Promise<UserContext> {
   await touch(db, "app");
   const ctx = await load(db);
-  als.enterWith(ctx);
+  holder.ctx = ctx;
   try {
     renderCell().ctx = ctx;
   } catch {

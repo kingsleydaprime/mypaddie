@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { enterUser } from "@/shared/user-context";
+import { beginUserContext, enterUser } from "@/shared/user-context";
 import type { Db } from "@/shared/supabase/token-client";
 import { aiAppRoom } from "@/features/connect/ai-app-limit";
 import { serverClient } from "@/shared/supabase/server";
@@ -13,6 +13,7 @@ import { SubmitButton } from "@/shared/ui/submit-button";
  * you allow or deny.
  */
 export default async function ConsentPage({ searchParams }: PageProps<"/oauth/consent">) {
+  const holder = beginUserContext(); // before any await (see user-context.ts)
   const { authorization_id, confirm } = await searchParams;
   if (typeof authorization_id !== "string" || !authorization_id) {
     return <Message text="This link is missing its authorization id. Start again from your AI app." />;
@@ -25,7 +26,7 @@ export default async function ConsentPage({ searchParams }: PageProps<"/oauth/co
     redirect(`/login?next=${encodeURIComponent(here)}`);
   }
 
-  await enterUser(supabase as Db);
+  await enterUser(supabase as Db, holder);
   const { data, error } = await supabase.auth.oauth.getAuthorizationDetails(authorization_id);
   if (error || !data) return <Message text="This request has expired or is invalid. Start again from your AI app." />;
   if (!("authorization_id" in data)) redirect(data.redirect_url); // already allowed before: straight back

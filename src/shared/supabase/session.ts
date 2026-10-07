@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { serverClient } from "./server";
 import type { Db } from "./token-client";
-import { enterUser } from "../user-context";
+import { beginUserContext, enterUser } from "../user-context";
 
 /**
  * For app pages and server actions: the signed-in user's client, or a trip to
@@ -10,9 +10,11 @@ import { enterUser } from "../user-context";
  * and currency.
  */
 export async function requireDb(returnTo = "/app"): Promise<Db> {
+  // Before any await: the slot belongs to the caller (the page or action), not just to this helper.
+  const holder = beginUserContext();
   const db = await serverClient();
   const { data } = await db.auth.getClaims();
   if (!data?.claims) redirect(`/login?next=${encodeURIComponent(returnTo)}`);
-  await enterUser(db as Db);
+  await enterUser(db as Db, holder);
   return db as Db;
 }

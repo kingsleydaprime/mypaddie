@@ -4,7 +4,7 @@ import { isBroken } from "@/features/promises/promises";
 import { isIgnoredNeed } from "@/features/xp/xp";
 import { currentConfig } from "./config";
 import { formatMoney } from "./format";
-import { contextFor, currentProfile, runAs } from "./user-context";
+import { beginUserContext, contextFor, currentPlan, currentProfile, enterUser, runAs } from "./user-context";
 
 const newYork = contextFor({ ...DEFAULT_PROFILE, timeZone: "America/New_York", currency: "USD", voice: "neutral", displayName: "Sam" });
 
@@ -39,5 +39,31 @@ describe("rules follow the signed-in user", () => {
     const at = new Date("2026-10-11T02:00:00Z"); // 03:00 on the 11th in Lagos; 22:00 on the 10th in New York
     expect(isIgnoredNeed(need, [], at)).toBe(true); // Lagos: the 10th is over
     runAs(newYork, () => expect(isIgnoredNeed(need, [], at)).toBe(false)); // New York: still the 10th
+  });
+});
+
+describe("server actions see the user (regression: approve bounced on the plan check)", () => {
+  // A stand-in for the Supabase client: just enough for loadProfile, loadPlan and the activity touch.
+  const fakeDb = (timeZone: string, plan: string) =>
+    ({
+      from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { value: { timeZone, onboardedAt: "x" } }, error: null }) }) }) }),
+      rpc: async (name: string) => (name === "my_plan" ? { data: { plan, chosen: true }, error: null } : { data: null, error: null }),
+    }) as unknown as Parameters<typeof enterUser>[0];
+
+  // Shaped like a server action: load the user inside a helper, then use it.
+  const action = async (db: Parameters<typeof enterUser>[0]) => {
+    const holder = beginUserContext();
+    await Promise.resolve(); // whatever the helper awaits first (cookies, the session…)
+    await enterUser(db, holder);
+    await new Promise((r) => setTimeout(r, 1));
+    return `${currentConfig().timeZone}/${currentPlan().plan}`;
+  };
+
+  test("after the helper returns, the action runs as the user", async () => {
+    expect(await action(fakeDb("America/New_York", "pro"))).toBe("America/New_York/pro");
+  });
+  test("two at once don't see each other's user", async () => {
+    const [a, b] = await Promise.all([action(fakeDb("Europe/London", "plus")), action(fakeDb("Asia/Tokyo", "free"))]);
+    expect([a, b]).toEqual(["Europe/London/plus", "Asia/Tokyo/free"]);
   });
 });

@@ -1027,3 +1027,21 @@ page into a refresh after a second — signed-out visitors briefly saw the app.
 The proxy now decides the two that matter before streaming: no session on
 `/app/*` → sign-in (307), and a profile without `onboardedAt` opening Home →
 `/welcome`. Page-level checks stay as a backup.
+
+### Fixed: server actions ran on the default user settings
+Found from a screenshot: Allow on the consent screen bounced back
+(`confirm=needed`) for someone on Pro with an AI app already connected. The
+page showed their real plan; the action behind the button saw Free. Cause:
+`AsyncLocalStorage.enterWith()` inside an awaited helper (`requireDb` →
+`enterUser`) doesn't carry back to the caller after the helper returns, and
+pages hid it because they also read a per-render React cache that actions
+don't have. So every server action ran its rules on the defaults — Free plan,
+Lagos time, naira. Now the request enters an empty holder synchronously at
+the start (before any await, so it belongs to the caller) and loading fills it.
+A unit test shaped like an action reproduces the bug (it fails on the old
+code) and checks two concurrent actions don't see each other's user; the
+consent test now approves a second app on Pro through the real button.
+
+### Only the pressed button spins
+In a form with several submit buttons (Deny / Allow) `SubmitButton` spins only
+the one whose name/value was submitted; the others just go disabled.
