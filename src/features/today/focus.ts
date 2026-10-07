@@ -9,14 +9,18 @@ export interface TaskForFocus {
   isNonNegotiable: boolean;
   dueAt: Date | null;
   status: "pending" | "done" | "skipped" | "cancelled";
+  /** A step of a routine: shown with its routine as one item. */
+  routine?: { id: string; title: string; step: number } | null;
 }
 
 export interface FocusItem {
+  /** The task to complete — for a routine, its next step. */
   id: string;
   title: string;
   dueAt: Date | null;
   overdue: boolean;
   nonNegotiable: boolean;
+  routine?: { title: string; next: string; done: number; total: number };
 }
 
 export interface Focus {
@@ -71,9 +75,32 @@ export function pickFocus(
     nonNegotiable: t.isNonNegotiable,
   });
 
+  // A routine takes one place: its open steps collapse into a single item at
+  // the rank of its most urgent step, completing the next step in order.
+  const items: FocusItem[] = [];
+  const seenRoutine = new Set<string>();
+  for (const t of sorted) {
+    if (!t.routine) {
+      items.push(toItem(t));
+      continue;
+    }
+    if (seenRoutine.has(t.routine.id)) continue;
+    seenRoutine.add(t.routine.id);
+    const rid = t.routine.id;
+    const isToday = (x: TaskForFocus) => x.routine?.id === rid && (x.dueAt === null || dayKey(x.dueAt, config.timeZone) === today);
+    const steps = tasks.filter(isToday).sort((a, b) => a.routine!.step - b.routine!.step);
+    const next = open.filter((x) => x.routine?.id === rid).sort((a, b) => a.routine!.step - b.routine!.step)[0]!;
+    items.push({
+      ...toItem(t),
+      id: next.id,
+      title: t.routine.title,
+      routine: { title: t.routine.title, next: next.title, done: steps.filter((x) => x.status === "done").length, total: steps.length },
+    });
+  }
+
   return {
-    top: sorted.slice(0, limit).map(toItem),
-    rest: sorted.slice(limit).map(toItem),
+    top: items.slice(0, limit),
+    rest: items.slice(limit),
     doneToday: tasks.filter((t) => t.status === "done" && t.dueAt !== null && dayKey(t.dueAt, config.timeZone) === today)
       .length,
   };

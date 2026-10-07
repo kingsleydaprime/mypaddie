@@ -4,6 +4,7 @@ import { removeFavoriteAction, removeMediaAction, setMediaStatusAction } from "@
 import { loadFavorites, loadMedia } from "@/features/library/library.repo";
 import { AddFavoriteForm, AddMediaForm } from "@/features/library/ui/library-forms";
 import { requireDb } from "@/shared/supabase/session";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 const GROUPS: { status: MediaStatus; title: string }[] = [
   { status: "in_progress", title: "On it" },
@@ -37,9 +38,9 @@ export default async function LibraryPage() {
                     <span className="text-xs text-muted">{MEDIA_LABEL[m.kind as MediaKind].replace(/s$/, "")}{m.creator ? ` · ${m.creator}` : ""}</span>
                   </span>
                   <span className="flex shrink-0 gap-2 text-xs">
-                    {status === "want" && <form action={setMediaStatusAction.bind(null, m.kind as MediaKind, m.title, "in_progress", undefined)}><button className="font-semibold text-gold">Start</button></form>}
-                    {status === "in_progress" && <form action={setMediaStatusAction.bind(null, m.kind as MediaKind, m.title, "done", undefined)}><button className="font-semibold text-gold">Finished</button></form>}
-                    <form action={removeMediaAction.bind(null, m.id)}><button className="text-muted">✕</button></form>
+                    {status === "want" && <form action={setMediaStatusAction.bind(null, m.kind as MediaKind, m.title, "in_progress", undefined)}><SubmitButton className="font-semibold text-gold">Start</SubmitButton></form>}
+                    {status === "in_progress" && <form action={setMediaStatusAction.bind(null, m.kind as MediaKind, m.title, "done", undefined)}><SubmitButton className="font-semibold text-gold">Finished</SubmitButton></form>}
+                    <form action={removeMediaAction.bind(null, m.id)}><SubmitButton className="text-muted">✕</SubmitButton></form>
                   </span>
                 </li>
               ))}
@@ -55,7 +56,7 @@ export default async function LibraryPage() {
             {list.map((f, i) => (
               <span key={f.id}>
                 {i > 0 && ", "}{f.value}
-                <form action={removeFavoriteAction.bind(null, f.id)} className="inline"><button className="ml-1 text-xs text-muted" aria-label={`Remove ${f.value}`}>✕</button></form>
+                <form action={removeFavoriteAction.bind(null, f.id)} className="inline"><SubmitButton className="ml-1 text-xs text-muted" aria-label={`Remove ${f.value}`}>✕</SubmitButton></form>
               </span>
             ))}
           </p>

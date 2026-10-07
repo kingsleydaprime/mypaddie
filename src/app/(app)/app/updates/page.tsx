@@ -5,6 +5,7 @@ import { AddUpdateForm } from "@/features/updates/ui/add-update-form";
 import { currentConfig } from "@/shared/config";
 import { requireDb } from "@/shared/supabase/session";
 import { formatLocal } from "@/shared/time";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 const DAY: Record<string, string> = { MO: "Mon", TU: "Tue", WE: "Wed", TH: "Thu", FR: "Fri", SA: "Sat", SU: "Sun" };
 const cadence = (rule: string | null) => (rule ? `every ${(rule.match(/BYDAY=([A-Z,]+)/)?.[1] ?? "").split(",").map((d) => DAY[d] ?? d).join(", ") || "day"}` : "one-off");
@@ -32,7 +33,7 @@ export default async function UpdatesPage() {
                 <p className="text-xs text-muted">Last sent: {u.last_sent_at ? formatLocal(new Date(u.last_sent_at), currentConfig().timeZone) : "never"}</p>
               </div>
               <form action={markSentAction.bind(null, u.id)}>
-                <button className="rounded-xl border border-line px-3 py-2 text-sm font-medium">Sent ✓</button>
+                <SubmitButton className="rounded-xl border border-line px-3 py-2 text-sm font-medium">Sent ✓</SubmitButton>
               </form>
             </li>
           );

@@ -5,6 +5,7 @@ import { AddPromiseForm } from "@/features/promises/ui/add-promise-form";
 import { currentConfig } from "@/shared/config";
 import { requireDb } from "@/shared/supabase/session";
 import { formatLocal } from "@/shared/time";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 /** The current user's time zone (read per call, never at import). */
 const tz = () => currentConfig().timeZone;
@@ -42,10 +43,10 @@ export default async function PromisesPage() {
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <form action={keepPromiseAction.bind(null, p.id)}>
-                  <button className="rounded-xl bg-gold px-3 py-1.5 text-sm font-semibold text-on-gold">Kept it</button>
+                  <SubmitButton className="rounded-xl bg-gold px-3 py-1.5 text-sm font-semibold text-on-gold">Kept it</SubmitButton>
                 </form>
                 <form action={releasePromiseAction.bind(null, p.id)}>
-                  <button className="rounded-xl border border-line px-3 py-1.5 text-sm text-muted">They let me off</button>
+                  <SubmitButton className="rounded-xl border border-line px-3 py-1.5 text-sm text-muted">They let me off</SubmitButton>
                 </form>
               </div>
               <details className="mt-2">
@@ -53,7 +54,7 @@ export default async function PromisesPage() {
                 <form action={renegotiateAction.bind(null, p.id)} className="mt-2 flex gap-2">
                   <input name="date" type="date" required className="flex-1 rounded-lg border border-line bg-surface-2 px-2 py-1.5" aria-label="New date" />
                   <input name="time" type="time" className="rounded-lg border border-line bg-surface-2 px-2 py-1.5" aria-label="New time (optional)" />
-                  <button className="text-sm font-semibold text-gold">Move</button>
+                  <SubmitButton className="text-sm font-semibold text-gold">Move</SubmitButton>
                 </form>
               </details>
             </li>

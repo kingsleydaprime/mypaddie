@@ -4,6 +4,7 @@ import { removeSelfNoteAction, resolveSelfNoteAction } from "@/features/self/sel
 import { loadSelf } from "@/features/self/self.repo";
 import { AddSelfForm } from "@/features/self/ui/add-self-form";
 import { requireDb } from "@/shared/supabase/session";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 export default async function AboutMePage() {
   const db = await requireDb("/app/me/about");
@@ -32,9 +33,9 @@ export default async function AboutMePage() {
                   {n.working_on && <p className="mt-1 text-sm">Working on it: {n.working_on}</p>}
                   <div className="mt-2 flex gap-3 text-xs">
                     {k !== "strength" && k !== "good_habit" && k !== "history" && (
-                      <form action={resolveSelfNoteAction.bind(null, n.id)}><button className="font-semibold text-gold">Resolved 🎉</button></form>
+                      <form action={resolveSelfNoteAction.bind(null, n.id)}><SubmitButton className="font-semibold text-gold">Resolved 🎉</SubmitButton></form>
                     )}
-                    <form action={removeSelfNoteAction.bind(null, n.id)}><button className="text-muted">Remove</button></form>
+                    <form action={removeSelfNoteAction.bind(null, n.id)}><SubmitButton className="text-muted">Remove</SubmitButton></form>
                   </div>
                 </li>
               ))}

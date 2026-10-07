@@ -8,6 +8,7 @@ import { changeRoleAction, setCommitmentAction } from "@/features/commitments/co
 import { loadCommitments, loadWeekLoad } from "@/features/commitments/commitments.repo";
 import { AddCommitmentForm } from "@/features/commitments/ui/add-commitment-form";
 import { requireDb } from "@/shared/supabase/session";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 const hours = (m: number) => `${Math.round((m / 60) * 10) / 10}h`;
 const VERDICT: Record<LoadVerdict, { label: string; tone: string }> = {
@@ -63,19 +64,19 @@ export default async function CommitmentsPage() {
               {(c.roles.length > 1 || c.roles.some((r) => r.startsOn)) && <p className="mt-1 text-xs text-muted">{roleHistoryText(c.roles)}</p>}
               <div className="mt-2 flex flex-wrap gap-2">
                 <form action={setCommitmentAction.bind(null, c.id, { priority: NEXT_PRIORITY[c.priority] })}>
-                  <button className="rounded-full border border-line px-3 py-1 text-sm" aria-label={`Priority ${c.priority}, tap to change`}>{c.priority}</button>
+                  <SubmitButton className="rounded-full border border-line px-3 py-1 text-sm" aria-label={`Priority ${c.priority}, tap to change`}>{c.priority}</SubmitButton>
                 </form>
                 {c.status === "active" ? (
                   <form action={setCommitmentAction.bind(null, c.id, { status: "paused" })}>
-                    <button className="rounded-full border border-line px-3 py-1 text-sm text-muted">Pause</button>
+                    <SubmitButton className="rounded-full border border-line px-3 py-1 text-sm text-muted">Pause</SubmitButton>
                   </form>
                 ) : (
                   <form action={setCommitmentAction.bind(null, c.id, { status: "active" })}>
-                    <button className="rounded-full border border-gold px-3 py-1 text-sm text-gold">Resume</button>
+                    <SubmitButton className="rounded-full border border-gold px-3 py-1 text-sm text-gold">Resume</SubmitButton>
                   </form>
                 )}
                 <form action={setCommitmentAction.bind(null, c.id, { status: "ended" })}>
-                  <button className="rounded-full border border-line px-3 py-1 text-sm text-muted">End</button>
+                  <SubmitButton className="rounded-full border border-line px-3 py-1 text-sm text-muted">End</SubmitButton>
                 </form>
               </div>
               <details className="mt-2">
@@ -84,7 +85,7 @@ export default async function CommitmentsPage() {
                   <input name="title" required maxLength={120} placeholder="New role, e.g. Secretary" aria-label="New role"
                     className="min-w-0 flex-1 rounded-lg border border-line bg-surface-2 px-2 py-1.5" />
                   <input name="from" type="date" aria-label="Since (default today)" className="rounded-lg border border-line bg-surface-2 px-2 py-1.5" />
-                  <button className="text-sm font-semibold text-gold">Save</button>
+                  <SubmitButton className="text-sm font-semibold text-gold">Save</SubmitButton>
                 </form>
                 <p className="mt-1 text-xs text-muted">Your old role is kept, with its dates.</p>
               </details>

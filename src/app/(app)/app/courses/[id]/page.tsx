@@ -8,6 +8,7 @@ import { assessmentDoneAction, courseStatusAction, removeTopicAction, scoreActio
 import { loadClasses, loadCourses, proposeStudy } from "@/features/courses/courses.repo";
 import { AcceptStudy, AddAssessmentForm, AddTopicsForm } from "@/features/courses/ui/course-forms";
 import { requireDb } from "@/shared/supabase/session";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 const STATUS: Record<TopicStatus, { label: string; dot: string }> = {
   not_started: { label: "to start", dot: "border border-line" },
@@ -104,7 +105,7 @@ export default async function CoursePage({ params }: PageProps<"/app/courses/[id
                   </p>
                 </div>
                 <form action={removeTopicAction.bind(null, course.id, t.title)}>
-                  <button className="text-xs text-muted" aria-label={`Remove ${t.title}`}>✕</button>
+                  <SubmitButton className="text-xs text-muted" aria-label={`Remove ${t.title}`}>✕</SubmitButton>
                 </form>
               </li>
             ))}
@@ -128,11 +129,11 @@ export default async function CoursePage({ params }: PageProps<"/app/courses/[id
                 </p>
                 <div className="flex items-center gap-3">
                   <form action={assessmentDoneAction.bind(null, course.id, a.title, !a.done)}>
-                    <button className="rounded-lg border border-line px-2.5 py-1 text-sm" aria-pressed={a.done}>{a.done ? "Undo done" : "Mark done"}</button>
+                    <SubmitButton className="rounded-lg border border-line px-2.5 py-1 text-sm" aria-pressed={a.done}>{a.done ? "Undo done" : "Mark done"}</SubmitButton>
                   </form>
                   <form action={scoreAction.bind(null, course.id, a.title)} className="flex flex-1 gap-2">
                     <input name="score" defaultValue={a.score ?? ""} placeholder="Score" maxLength={50} className="w-24 rounded-lg border border-line bg-surface-2 px-2 py-1 text-sm" aria-label={`Score for ${a.title}`} />
-                    <button className="text-sm font-semibold text-gold">Save</button>
+                    <SubmitButton className="text-sm font-semibold text-gold">Save</SubmitButton>
                   </form>
                 </div>
               </li>

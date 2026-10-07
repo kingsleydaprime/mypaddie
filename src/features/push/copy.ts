@@ -1,6 +1,6 @@
 /** One nudge as decided by the database (private.collect_nudges). */
 export interface Nudge {
-  kind: "nudge" | "checkin" | "brief" | "headsup" | "reminder" | "event" | "application" | "fun";
+  kind: "nudge" | "checkin" | "brief" | "headsup" | "reminder" | "event" | "application" | "fun" | "review";
   level: number;
   title: string | null;
   items: string[] | null;
@@ -48,6 +48,16 @@ function defaultCopy(n: Nudge): NotificationCopy {
     };
   }
 
+  if (n.kind === "review") {
+    // Level: 1 week, 2 month, 3 quarter, 4 year — the biggest period ending today.
+    const what = ["your week", n.title ? n.title.split(" ")[0] : "your month", "your quarter", "your year"][Math.min(Math.max(n.level, 1), 4) - 1]!;
+    return {
+      title: n.level === 4 ? "The year in review" : n.level === 1 ? "Sunday review" : `${what[0]!.toUpperCase()}${what.slice(1)} in review`,
+      body: `Ten minutes to look back on ${what}: what you did, what you avoided, what changes next. Paddie has the facts ready.`,
+      url: "/app/growth",
+      tag: "review",
+    };
+  }
   if (n.kind === "fun") {
     const ideas = n.items ?? [];
     const days = n.days ?? 7;

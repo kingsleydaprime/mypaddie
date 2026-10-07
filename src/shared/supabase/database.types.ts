@@ -5,7 +5,20 @@ export type Database = {
   
   "public": {
           Tables: {
-            "application_requirements": {
+            "achievements": {
+                  Row: {
+                    "detail": string | null,"earned_at": string,"id": string,"key": string,"user_id": string
+                  }
+                  Insert: {
+                    "detail"?: string | null,"earned_at"?: string,"id"?: string,"key": string,"user_id"?: string
+                  }
+                  Update: {
+                    "detail"?: string | null,"earned_at"?: string,"id"?: string,"key"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"application_requirements": {
                   Row: {
                     "application_id": string,"done": boolean,"id": string,"position": number,"task_id": string | null,"title": string,"user_id": string
                   }
@@ -167,6 +180,25 @@ isOneToOne: false
       columns: ["skill_id","user_id"]
 isOneToOne: false
       referencedRelation: "skills"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"decisions": {
+                  Row: {
+                    "created_at": string,"decided_on": string,"decision": string,"expected": string | null,"id": string,"outcome": string | null,"review_on": string | null,"reviewed_at": string | null,"task_id": string | null,"user_id": string,"verdict": string | null,"why": string | null
+                  }
+                  Insert: {
+                    "created_at"?: string,"decided_on"?: string,"decision": string,"expected"?: string | null,"id"?: string,"outcome"?: string | null,"review_on"?: string | null,"reviewed_at"?: string | null,"task_id"?: string | null,"user_id"?: string,"verdict"?: string | null,"why"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"decided_on"?: string,"decision"?: string,"expected"?: string | null,"id"?: string,"outcome"?: string | null,"review_on"?: string | null,"reviewed_at"?: string | null,"task_id"?: string | null,"user_id"?: string,"verdict"?: string | null,"why"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "decisions_task_id_user_id_fkey"
+      columns: ["task_id","user_id"]
+isOneToOne: false
+      referencedRelation: "tasks"
       referencedColumns: ["id","user_id"]
     }
                   ]
@@ -466,6 +498,32 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"reviews": {
+                  Row: {
+                    "answers": NonNullable<Json>,"created_at": string,"ends_on": string,"id": string,"period": string,"starts_on": string,"summary": string | null,"updated_at": string,"user_id": string
+                  }
+                  Insert: {
+                    "answers"?: NonNullable<Json>,"created_at"?: string,"ends_on": string,"id"?: string,"period": string,"starts_on": string,"summary"?: string | null,"updated_at"?: string,"user_id"?: string
+                  }
+                  Update: {
+                    "answers"?: NonNullable<Json>,"created_at"?: string,"ends_on"?: string,"id"?: string,"period"?: string,"starts_on"?: string,"summary"?: string | null,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"routines": {
+                  Row: {
+                    "created_at": string,"id": string,"title": string,"user_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"title": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"title"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"self_notes": {
                   Row: {
                     "created_at": string,"detail": string | null,"id": string,"kind": string,"since": string | null,"status": string,"title": string,"updated_at": string,"user_id": string,"working_on": string | null
@@ -551,13 +609,13 @@ isOneToOne: false
                   ]
                 },"tasks": {
                   Row: {
-                    "base_xp": number,"commitment_id": string | null,"course_id": string | null,"created_at": string,"done_at": string | null,"due_at": string | null,"duration_minutes": number | null,"fun_activity_id": string | null,"id": string,"is_non_negotiable": boolean,"item_id": string | null,"location": string | null,"must_from": string | null,"occurs_on": string | null,"recurrence": string | null,"reminder_note": string | null,"reminders": (string)[] | null,"series_id": string | null,"skill_id": string | null,"status": Database["public"]['Enums']["task_status"],"title": string,"topic": string | null,"user_id": string
+                    "base_xp": number,"commitment_id": string | null,"course_id": string | null,"created_at": string,"done_at": string | null,"due_at": string | null,"duration_minutes": number | null,"fun_activity_id": string | null,"id": string,"is_non_negotiable": boolean,"item_id": string | null,"location": string | null,"must_from": string | null,"occurs_on": string | null,"recurrence": string | null,"reminder_note": string | null,"reminders": (string)[] | null,"routine_id": string | null,"routine_step": number | null,"series_id": string | null,"skill_id": string | null,"status": Database["public"]['Enums']["task_status"],"title": string,"topic": string | null,"user_id": string
                   }
                   Insert: {
-                    "base_xp"?: number,"commitment_id"?: string | null,"course_id"?: string | null,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"fun_activity_id"?: string | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"location"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminder_note"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title": string,"topic"?: string | null,"user_id"?: string
+                    "base_xp"?: number,"commitment_id"?: string | null,"course_id"?: string | null,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"fun_activity_id"?: string | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"location"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminder_note"?: string | null,"reminders"?: (string)[] | null,"routine_id"?: string | null,"routine_step"?: number | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title": string,"topic"?: string | null,"user_id"?: string
                   }
                   Update: {
-                    "base_xp"?: number,"commitment_id"?: string | null,"course_id"?: string | null,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"fun_activity_id"?: string | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"location"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminder_note"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"topic"?: string | null,"user_id"?: string
+                    "base_xp"?: number,"commitment_id"?: string | null,"course_id"?: string | null,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"fun_activity_id"?: string | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"location"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminder_note"?: string | null,"reminders"?: (string)[] | null,"routine_id"?: string | null,"routine_step"?: number | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"topic"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -585,12 +643,31 @@ isOneToOne: false
       referencedRelation: "items"
       referencedColumns: ["id","user_id"]
     },{
+      foreignKeyName: "tasks_routine_id_user_id_fkey"
+      columns: ["routine_id","user_id"]
+isOneToOne: false
+      referencedRelation: "routines"
+      referencedColumns: ["id","user_id"]
+    },{
       foreignKeyName: "tasks_skill_id_user_id_fkey"
       columns: ["skill_id","user_id"]
 isOneToOne: false
       referencedRelation: "skills"
       referencedColumns: ["id","user_id"]
     }
+                  ]
+                },"themes": {
+                  Row: {
+                    "created_at": string,"focus": (string)[],"id": string,"not_now": (string)[],"notes": string | null,"period": string,"starts_on": string,"title": string,"user_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"focus"?: (string)[],"id"?: string,"not_now"?: (string)[],"notes"?: string | null,"period": string,"starts_on": string,"title": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"focus"?: (string)[],"id"?: string,"not_now"?: (string)[],"notes"?: string | null,"period"?: string,"starts_on"?: string,"title"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
                   ]
                 },"transactions": {
                   Row: {

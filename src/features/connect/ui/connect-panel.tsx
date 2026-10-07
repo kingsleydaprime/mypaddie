@@ -1,6 +1,7 @@
 import { disconnectAction } from "../connect.actions";
 import type { ConnectedApp } from "../connect.repo";
 import { CopyButton } from "./copy-button";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 const OPEN = [
   { name: "Claude", href: "https://claude.ai/new" },
@@ -56,7 +57,7 @@ export function ConnectPanel({ mcpUrl, apps }: { mcpUrl: string; apps: Connected
                 <span className="text-xs text-muted">since {a.grantedAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
               </span>
               <form action={disconnectAction.bind(null, a.clientId)}>
-                <button className="rounded-lg border border-line px-3 py-1.5 text-sm text-red">Disconnect</button>
+                <SubmitButton className="rounded-lg border border-line px-3 py-1.5 text-sm text-red">Disconnect</SubmitButton>
               </form>
             </li>
           ))}

@@ -7,6 +7,7 @@ import { cancelEventAction } from "../events.actions";
 import { upcoming, type Quadrant } from "../events";
 import { loadUpcomingEvents } from "../events.repo";
 import { AddEventForm } from "./add-event-form";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 /** The current user's time zone (read per call, never at import). */
 const tz = () => currentConfig().timeZone;
@@ -49,7 +50,7 @@ export async function EventsScreen({ db }: { db: Db }) {
                       </p>
                     </div>
                     <form action={cancelEventAction.bind(null, v.id)}>
-                      <button className="text-sm text-muted" aria-label={`Cancel ${v.title}`}>Cancel</button>
+                      <SubmitButton className="text-sm text-muted" aria-label={`Cancel ${v.title}`}>Cancel</SubmitButton>
                     </form>
                   </li>
                 ))}

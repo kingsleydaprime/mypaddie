@@ -101,3 +101,23 @@ describe("pickFocus", () => {
     expect(pickFocus([], now)).toEqual({ top: [], rest: [], doneToday: 0 });
   });
 });
+
+describe("routines take one place", () => {
+  const at = (local: string) => new Date(`${local}+01:00`);
+  const now = at("2026-10-14T07:30:00");
+  const step = (title: string, n: number, status: "pending" | "done" = "pending") => ({
+    id: `r${n}`, title, tier: null, isNonNegotiable: true, dueAt: at("2026-10-14T07:00:00"), status,
+    routine: { id: "morning", title: "Morning routine", step: n },
+  });
+  test("open steps collapse into one item: the next step, with progress", () => {
+    const tasks = [step("Pray", 1, "done"), step("Read", 2), step("Brush", 3), step("Bath", 4),
+      { id: "x", title: "Reply Ada", tier: null, isNonNegotiable: false, dueAt: at("2026-10-14T12:00:00"), status: "pending" as const }];
+    const f = pickFocus(tasks, now);
+    expect(f.top.map((i) => i.title)).toEqual(["Morning routine", "Reply Ada"]);
+    expect(f.top[0]).toMatchObject({ id: "r2", routine: { next: "Read", done: 1, total: 4 } });
+  });
+  test("a finished routine disappears", () => {
+    const f = pickFocus([step("Pray", 1, "done"), step("Read", 2, "done")], now);
+    expect(f.top).toEqual([]);
+  });
+});

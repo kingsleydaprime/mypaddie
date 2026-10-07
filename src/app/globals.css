@@ -55,3 +55,80 @@ body {
 body {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Interactive feel, everywhere at once. Tailwind v4's preflight leaves buttons on
+   the default cursor; anything you can press gets the hand back. Hover is a
+   small lift in brightness, press is a small squeeze; both are skipped for
+   disabled controls and for people who prefer reduced motion. */
+@layer base {
+  button,
+  [role="button"],
+  summary,
+  select,
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]),
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="date"],
+  input[type="time"] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+  button,
+  a {
+    transition:
+      filter 120ms ease,
+      transform 120ms ease,
+      background-color 120ms ease,
+      border-color 120ms ease,
+      opacity 120ms ease;
+  }
+  button:not(:disabled):hover,
+  a[class*="rounded"]:hover {
+    filter: brightness(1.08);
+  }
+  @media (prefers-color-scheme: light) {
+    button:not(:disabled):hover,
+    a[class*="rounded"]:hover {
+      filter: brightness(0.94);
+    }
+  }
+  button:not(:disabled):active,
+  a[class*="rounded"]:active {
+    transform: scale(0.97);
+  }
+  :focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    button,
+    a {
+      transition: none;
+    }
+    button:not(:disabled):active,
+    a[class*="rounded"]:active {
+      transform: none;
+    }
+  }
+}
+
+/* A small spinner for buttons that are saving. */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spinner {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 9999px;
+  animation: spin 0.6s linear infinite;
+  vertical-align: -0.125em;
+}

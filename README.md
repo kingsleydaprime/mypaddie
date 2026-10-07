@@ -22,6 +22,7 @@ You talk to it through Claude or ChatGPT (it's an [MCP](https://modelcontextprot
 - **People**: who matters, what they are to you, things to talk about, a reach-out rhythm — Paddie tells you who's due a call.
 - **About me**: strengths, weak spots, patterns, triggers, habits, what you're healing from — so advice fits *you* ("you tend to overcommit before exams…").
 - **Library, favourites and lists**: books, films, music; your favourite things; and any list you like, ticked off with progress — your bucket list pays +50 XP a tick.
+- **Reviews, themes, achievements**: weekly to yearly reviews from the facts, year and month themes with focus and not-now, achievements recorded as you earn them, routines as one item on Today, and a decision log that asks later whether it worked.
 - **Google Calendar import** (read-only, via the private iCal feed) so real meetings count.
 
 ## Architecture
@@ -48,7 +49,7 @@ Next.js 16 · TypeScript · Supabase (Postgres 17, Auth, Vault, pg_cron, pg_net)
 ## Testing
 
 ```bash
-bun run test              # ~560 unit tests: the rules engine, with fixed clocks
+bun run test              # ~570 unit tests: the rules engine, with fixed clocks
 bun run typecheck && bun run lint
 bun run db:test           # pgTAP: RLS (checked across the whole schema), constraints, functions, the nudge scheduler
 bun run db:test:hosted    # the same pgTAP suites against the real project — always rolled back

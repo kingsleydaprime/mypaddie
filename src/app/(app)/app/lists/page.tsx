@@ -3,6 +3,7 @@ import { startBucketListAction } from "@/features/lists/lists.actions";
 import { loadLists } from "@/features/lists/lists.repo";
 import { CreateListForm } from "@/features/lists/ui/create-list-form";
 import { requireDb } from "@/shared/supabase/session";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 export default async function ListsPage() {
   const db = await requireDb("/app/lists");
@@ -17,7 +18,7 @@ export default async function ListsPage() {
         <form action={startBucketListAction} className="rounded-2xl border border-gold bg-surface p-4">
           <p className="font-semibold">Start your bucket list</p>
           <p className="mt-1 text-sm text-muted">Everything you want to do in this life. Each one you tick off is worth +50 XP.</p>
-          <button className="mt-3 rounded-xl bg-gold px-4 py-2.5 font-semibold text-on-gold">Start it</button>
+          <SubmitButton className="mt-3 rounded-xl bg-gold px-4 py-2.5 font-semibold text-on-gold">Start it</SubmitButton>
         </form>
       )}
       <CreateListForm />

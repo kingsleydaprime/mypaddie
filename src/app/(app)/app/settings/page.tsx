@@ -18,6 +18,7 @@ import { requireDb } from "@/shared/supabase/session";
 import Link from "next/link";
 import { PLAN_INFO } from "@/features/plans/plans";
 import { currentPlan, currentProfile } from "@/shared/user-context";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 export default async function SettingsPage() {
   const db = await requireDb("/app/settings");
@@ -53,7 +54,7 @@ export default async function SettingsPage() {
       <YourData />
 
       <form action={signOut}>
-        <button className="w-full rounded-xl border border-line px-4 py-3 text-muted">Sign out</button>
+        <SubmitButton className="w-full rounded-xl border border-line px-4 py-3 text-muted">Sign out</SubmitButton>
       </form>
     </div>
   );

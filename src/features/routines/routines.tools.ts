@@ -1,0 +1,78 @@
+import type { McpServer } from "@modelcontextprotocol/server";
+import { z } from "zod";
+import { withMode } from "@/features/mode/mode.repo";
+import { PILLARS } from "@/shared/domain";
+import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
+import { createRoutine, loadRoutines, stopRoutine } from "./routines.repo";
+
+const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+
+export function registerRoutineTools(server: McpServer) {
+  server.registerTool(
+    "create_routine",
+    {
+      title: "Create routine",
+      description:
+        "A routine: habits that belong together (morning routine, night routine, before study), in order. Each step is " +
+        "its own habit (XP and reminders per step) but Today shows the routine as one item — \"Morning routine · next: " +
+        "Brush (2/5)\" — and it counts as one habit for plan limits. With `time`, steps follow one another from then.",
+      inputSchema: z.object({
+        title: z.string().trim().min(1).max(100),
+        steps: z.array(z.object({
+          title: z.string().trim().min(1).max(200),
+          minutes: z.number().int().min(1).max(240).optional(),
+          weights: z.array(z.object({ pillar: z.enum(PILLARS), weight: z.number().int().min(1).max(100) })).optional(),
+        })).min(1).max(20),
+        recurrence: z.string().default("FREQ=DAILY").describe("FREQ=DAILY, or FREQ=WEEKLY;BYDAY=MO,TU…; UNTIL=YYYYMMDD to end it"),
+        time: time.optional(),
+        must_do: z.boolean().default(true).describe("Non-negotiable steps get firmer nudges"),
+        start_date: z.iso.date().optional(),
+      }),
+    },
+    async (args: { title: string; steps: { title: string; minutes?: number; weights?: { pillar: (typeof PILLARS)[number]; weight: number }[] }[]; recurrence: string; time?: string; must_do: boolean; start_date?: string }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        const now = new Date();
+        return ok(await withMode(db, now, { ...(await createRoutine(db, { title: args.title, steps: args.steps, recurrence: args.recurrence, time: args.time, nonNegotiable: args.must_do, startDate: args.start_date }, now)) }));
+      } catch (error) {
+        return toolError(`create_routine failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "list_routines",
+    {
+      title: "Routines",
+      description: "Their routines and steps. To change a step, use update_task on that step; to rebuild, stop_routine then create_routine.",
+      inputSchema: z.object({}),
+      annotations: { readOnlyHint: true },
+    },
+    async (_a: Record<string, never>, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        return ok(await withMode(db, new Date(), { routines: await loadRoutines(db) }));
+      } catch (error) {
+        return toolError(`list_routines failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "stop_routine",
+    {
+      title: "Stop routine",
+      description: "Stop a routine (by title): all its steps stop; past days stay as history.",
+      inputSchema: z.object({ routine: z.string().trim().min(1) }),
+    },
+    async ({ routine }: { routine: string }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        const now = new Date();
+        return ok(await withMode(db, now, { ...(await stopRoutine(db, routine, now)) }));
+      } catch (error) {
+        return toolError(`stop_routine failed: ${(error as Error).message}`);
+      }
+    },
+  );
+}

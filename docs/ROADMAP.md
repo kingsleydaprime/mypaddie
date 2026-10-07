@@ -87,6 +87,14 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [x] First ten minutes: Welcome → Connect your AI → Reminders (iPhone install help) → Empty your head.
 - [x] Turnstile bot protection (dormant until keys are set), feedback box, first-party usage counts.
 
+## Done: growth (2026-10-16)
+- [x] Weekly, monthly, quarterly and yearly reviews from the facts; reminder on Sunday evening / period ends.
+- [x] Year, quarter and month themes with focus and not-now (seasons).
+- [x] Achievements (21), derived from existing data, +25 XP each.
+- [x] Routines: one item on Today, one habit for plan limits.
+- [x] Decision log with review dates.
+- [x] Pointer, hover and press effects; saving spinners on one-tap buttons; page loading screens.
+
 ## Next: MyPaddie for everyone (planned 2026-10-06)
 
 Anyone signs up, connects their AI, and gets their own Paddie, hosted at

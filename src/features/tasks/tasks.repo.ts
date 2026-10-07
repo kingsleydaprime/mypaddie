@@ -27,7 +27,7 @@ const LOOKBACK_DAYS = 14;
 const SERIES_LOOKBACK_DAYS = 60;
 
 const TASK_COLUMNS =
-  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, fun_activity_id, topic, item_id, items(tier), task_pillars(pillar, weight)";
+  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, fun_activity_id, topic, item_id, routine_id, routine_step, routines(title), items(tier), task_pillars(pillar, weight)";
 
 type TaskRow = {
   id: string;
@@ -43,6 +43,9 @@ type TaskRow = {
   fun_activity_id: string | null;
   topic: string | null;
   item_id: string | null;
+  routine_id: string | null;
+  routine_step: number | null;
+  routines: { title: string } | null;
   items: { tier: Tier } | null;
   task_pillars: PillarWeight[];
 };
@@ -51,6 +54,7 @@ export interface LoadedTask extends TaskForXp {
   title: string;
   isNonNegotiable: boolean;
   itemId: string | null;
+  routine: { id: string; title: string; step: number } | null;
 }
 
 /** `now` turns a task whose must_from has passed into a non-negotiable. */
@@ -67,6 +71,7 @@ function toTask(row: TaskRow, now?: Date): LoadedTask {
     isNonNegotiable:
       row.is_non_negotiable || (now !== undefined && row.must_from !== null && Date.parse(row.must_from) <= now.getTime()),
     itemId: row.item_id,
+    routine: row.routine_id && row.routines ? { id: row.routine_id, title: row.routines.title, step: row.routine_step ?? 0 } : null,
   };
 }
 
@@ -385,6 +390,8 @@ export interface NewTask {
   commitmentId?: string | null;
   /** A class in a course's timetable. */
   courseId?: string | null;
+  /** A step in a routine (the routine counts once toward the habit limit). */
+  routine?: { id: string; step: number } | null;
   location?: string | null;
   /**
    * Set by others, not chosen: a class, a shift. Never refused for a full day
@@ -408,7 +415,7 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = curr
   if (task.recurrence) {
     parseRecurrence(task.recurrence);
     // Classes come with a course, not a choice: they don't use up habit slots.
-    if (!task.courseId) await requireRoom(db, "habits");
+    if (!task.courseId && !task.routine) await requireRoom(db, "habits");
   }
 
   const hasDay = task.dueDate !== null || task.dueTime !== null || task.recurrence !== null;
@@ -458,6 +465,8 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = curr
       topic: task.topic?.trim() || null,
       commitment_id: task.commitmentId ?? null,
       course_id: task.courseId ?? null,
+      routine_id: task.routine?.id ?? null,
+      routine_step: task.routine?.step ?? null,
       location: task.location?.trim() || null,
     })
     .select("id, title, due_at, recurrence")

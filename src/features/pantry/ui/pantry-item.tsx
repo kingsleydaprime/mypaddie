@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { CATEGORIES, stepFor, type PantryItem } from "../pantry";
 import { removeItemAction, saveItemAction, stepItemAction, type PantryFormState } from "../pantry.actions";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 const fmt = (q: number) => (Number.isInteger(q) ? String(q) : String(Math.round(q * 100) / 100));
 const field = "rounded-lg border border-line bg-surface-2 px-3 py-2 text-base";
@@ -49,7 +50,7 @@ export function PantryItemRow({ item }: { item: PantryItem }) {
             </select>
           </label>
           {state && "error" in state && <p className="col-span-2 text-sm text-red" role="alert">{state.error}</p>}
-          <button disabled={saving} className="rounded-lg bg-gold px-3 py-2 font-semibold text-on-gold disabled:opacity-60">Save</button>
+          <SubmitButton disabled={saving} className="rounded-lg bg-gold px-3 py-2 font-semibold text-on-gold disabled:opacity-60">Save</SubmitButton>
           <button type="button" onClick={() => start(() => removeItemAction(item.name))} className="rounded-lg border border-red/40 px-3 py-2 text-red">Remove</button>
         </form>
       )}

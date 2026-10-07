@@ -7,6 +7,7 @@ import { FunForm } from "@/features/fun/ui/fun-form";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { formatMoney } from "@/shared/format";
 import { requireDb } from "@/shared/supabase/session";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 const ago = (days: number | null) => (days === null ? "never yet" : days === 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`);
 const COMPANY = { solo: "alone", together: "with people", either: "alone or with people" } as const;
@@ -71,7 +72,7 @@ export default async function FunPage() {
                   <p className="text-xs text-muted">Last: {ago(daysAgo(a.lastDoneAt, now))}{a.timesDone > 0 ? ` · ${a.timesDone}×` : ""}</p>
                 </div>
                 <form action={didFunAction.bind(null, a.id)}>
-                  <button className="shrink-0 rounded-xl bg-gold px-3 py-2 text-sm font-semibold text-on-gold">Did it</button>
+                  <SubmitButton className="shrink-0 rounded-xl bg-gold px-3 py-2 text-sm font-semibold text-on-gold">Did it</SubmitButton>
                 </form>
               </div>
               <details className="mt-2">
@@ -80,10 +81,10 @@ export default async function FunPage() {
                   <FunForm activity={a} currency={currentConfig().currency} />
                   <div className="flex gap-2">
                     <form action={toggleFunAction.bind(null, a.id, false)}>
-                      <button className="rounded-xl border border-line px-3 py-2 text-sm">Pause</button>
+                      <SubmitButton className="rounded-xl border border-line px-3 py-2 text-sm">Pause</SubmitButton>
                     </form>
                     <form action={removeFunAction.bind(null, a.id)}>
-                      <button className="rounded-xl border border-line px-3 py-2 text-sm text-red">Remove</button>
+                      <SubmitButton className="rounded-xl border border-line px-3 py-2 text-sm text-red">Remove</SubmitButton>
                     </form>
                   </div>
                 </div>
@@ -101,7 +102,7 @@ export default async function FunPage() {
               <li key={a.id} className="flex items-center justify-between gap-3 rounded-2xl border border-line px-4 py-3">
                 <span className="truncate text-muted">{a.title}</span>
                 <form action={toggleFunAction.bind(null, a.id, true)}>
-                  <button className="text-sm font-semibold text-gold">Resume</button>
+                  <SubmitButton className="text-sm font-semibold text-gold">Resume</SubmitButton>
                 </form>
               </li>
             ))}

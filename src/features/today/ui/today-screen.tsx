@@ -1,4 +1,6 @@
 import { syncCalendar } from "@/features/calendar/calendar.repo";
+import { currentThemes, owedReviews } from "@/features/reviews/reviews.repo";
+import { checkAchievements } from "@/features/achievements/achievements.repo";
 import { applyBrokenPromises } from "@/features/promises/promises.repo";
 import { upcoming } from "@/features/events/events";
 import Link from "next/link";
@@ -39,12 +41,15 @@ function Row({ item, now, big }: { item: FocusItem; now: Date; big?: boolean }) 
         <Link href={`/app/tasks/${item.id}`} className={`block truncate font-semibold ${big ? "text-lg" : "text-base"}`}>
           {item.title}
         </Link>
+        {item.routine && (
+          <p className="mt-0.5 text-sm">Next: {item.routine.next} <span className="text-muted">· {item.routine.done}/{item.routine.total}</span></p>
+        )}
         <p className="mt-0.5 flex items-center gap-2 text-sm text-muted">
           <span className={item.overdue ? "font-medium text-red" : ""}>{item.overdue ? `overdue · ${due(item, now)}` : due(item, now)}</span>
           {item.nonNegotiable && <span className="text-gold">· must</span>}
         </p>
       </div>
-      <DoneButton taskId={item.id} title={item.title} />
+      <DoneButton taskId={item.id} title={item.routine ? item.routine.next : item.title} />
     </li>
   );
 }
@@ -55,7 +60,10 @@ export async function TodayScreen({ db }: { db: Db }) {
   await applyBrokenPromises(db, now);
   // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
   await syncCalendar(db, now).catch(() => null);
-  const [tasks, mode, events, learning, schedule] = await Promise.all([loadTasksAroundToday(db, now), loadMode(db, now), loadUpcomingEvents(db), loadLearning(db, now), loadSchedule(db)]);
+  const [tasks, mode, events, learning, schedule, themes, owed, earned] = await Promise.all([
+    loadTasksAroundToday(db, now), loadMode(db, now), loadUpcomingEvents(db), loadLearning(db, now), loadSchedule(db),
+    currentThemes(db, now), owedReviews(db, now), checkAchievements(db, now),
+  ]);
   const review = learning
     .filter((l) => l.skill.status === "active")
     .flatMap((l) => l.summary.reviewDue.map((t) => `${t.topic} (${l.skill.name})`));
@@ -68,7 +76,7 @@ export async function TodayScreen({ db }: { db: Db }) {
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <p className="text-sm font-medium text-muted">{date}</p>
+        <p className="text-sm font-medium text-muted">{date}{themes.month ? <> · <span className="text-gold">{themes.month.title}</span></> : null}</p>
         <h1 className="mt-1 text-2xl font-bold leading-tight">{NARRATION[mode.mode]}</h1>
         {(todayEvents.length > 0 || prepare.length > 0) && (
           <Link href="/app/events" className="mt-2 block text-sm text-muted">
@@ -82,6 +90,21 @@ export async function TodayScreen({ db }: { db: Db }) {
           </Link>
         )}
       </header>
+
+      {earned.length > 0 && (
+        <div className="rounded-2xl border border-gold bg-surface p-4" role="status">
+          {earned.map((a) => (
+            <p key={a.key} className="font-semibold">🏆 Achievement: {a.title} <span className="font-normal text-muted">— {a.description}{a.detail ? ` (${a.detail})` : ""}</span></p>
+          ))}
+        </div>
+      )}
+
+      {owed.length > 0 && (
+        <Link href={`/app/growth/review?period=${owed[0]!.period}&day=${owed[0]!.start}`} className="block rounded-2xl border border-line bg-surface p-4">
+          <p className="font-semibold">{owed[0]!.label} is ready for review <span className="text-gold">›</span></p>
+          <p className="text-sm text-muted">Ten minutes to look back, then a cleaner start.</p>
+        </Link>
+      )}
 
       {focus.top.length === 0 ? (
         <div className="rounded-2xl border border-line bg-surface p-6 text-center">

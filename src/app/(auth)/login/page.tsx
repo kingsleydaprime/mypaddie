@@ -7,6 +7,7 @@ import { loginErrorText, normalizeCode } from "@/features/auth/auth";
 import { safeNext } from "@/shared/safe-next";
 import { signIn, signInWithGoogle } from "./actions";
 import { ResetPasswordForm, SignInLinkForm } from "./link-forms";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 export const metadata: Metadata = { title: "Sign in — MyPaddie" };
 
@@ -32,9 +33,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
       <form action={signInWithGoogle}>
         <input type="hidden" name="next" value={next} />
-        <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-3.5 font-semibold">
+        <SubmitButton className="flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-3.5 font-semibold">
           <span aria-hidden className="font-bold">G</span> Continue with Google
-        </button>
+        </SubmitButton>
       </form>
 
       <SignInLinkForm next={next} />
@@ -46,7 +47,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <input name="email" type="email" required autoComplete="email" placeholder="Email" aria-label="Email" className={field} />
           <input name="password" type="password" required autoComplete="current-password" placeholder="Password" aria-label="Password" className={field} />
           <Turnstile />
-          <button className="rounded-xl border border-gold px-4 py-3.5 font-semibold text-gold">Sign in</button>
+          <SubmitButton className="rounded-xl border border-gold px-4 py-3.5 font-semibold text-gold">Sign in</SubmitButton>
         </form>
         <details className="mt-3">
           <summary className="cursor-pointer text-sm text-muted">Forgot your password?</summary>

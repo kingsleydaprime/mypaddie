@@ -5,6 +5,7 @@ import { aiAppRoom } from "@/features/connect/ai-app-limit";
 import { serverClient } from "@/shared/supabase/server";
 import { consentRules, describeDestination } from "@/features/connect/connect";
 import { decide } from "./actions";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 /**
  * Supabase Auth sends you here mid-OAuth (Authentication → OAuth Server →
@@ -77,12 +78,12 @@ export default async function ConsentPage({ searchParams }: PageProps<"/oauth/co
           </label>
         )}
         <div className="flex gap-3">
-          <button name="decision" value="deny" formNoValidate className="flex-1 rounded-xl border border-line px-4 py-3.5 font-medium">Deny</button>
+          <SubmitButton name="decision" value="deny" formNoValidate className="flex-1 rounded-xl border border-line px-4 py-3.5 font-medium">Deny</SubmitButton>
           {rules.canApprove && (
-            <button name="decision" value="approve"
+            <SubmitButton name="decision" value="approve"
               className={`flex-1 rounded-xl px-4 py-3.5 text-base font-semibold ${rules.mustConfirm ? "border border-gold text-gold" : "bg-gold text-on-gold"}`}>
               Allow
-            </button>
+            </SubmitButton>
           )}
         </div>
       </form>

@@ -7,6 +7,7 @@ import { loadBalance, loadBudget, type BucketName } from "../money.repo";
 import { purchaseInterestAction } from "../money.history.actions";
 import { BalanceCard } from "./balance-card";
 import { QuickLog } from "./quick-log";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 const BUCKETS: { name: BucketName; label: string }[] = [
   { name: "needs", label: "Needs" },
@@ -134,7 +135,7 @@ export async function MoneyScreen({ db, addMoney = false }: { db: Db; addMoney?:
                   </span>
                   {c.interest !== "bought" && (
                     <form action={purchaseInterestAction.bind(null, c.id, dropped ? "interested" : "not_interested")}>
-                      <button className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-xs text-muted">{dropped ? "Interested again" : "Not interested"}</button>
+                      <SubmitButton className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-xs text-muted">{dropped ? "Interested again" : "Not interested"}</SubmitButton>
                     </form>
                   )}
                 </li>

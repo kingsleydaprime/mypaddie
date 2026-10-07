@@ -1,4 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/server";
+import { currentThemes, owedReviews } from "@/features/reviews/reviews.repo";
+import { loadDecisions } from "@/features/decisions/decisions.repo";
+import { checkAchievements } from "@/features/achievements/achievements.repo";
 import { z } from "zod";
 import { upcoming } from "@/features/events/events";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
@@ -68,7 +71,7 @@ export function registerTodayTools(server: McpServer) {
         const caughtUp = { ...(await catchUp(db, now)), brokenPromises: await applyBrokenPromises(db, now) };
         // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
         await syncCalendar(db, now).catch(() => null);
-        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun, promises, week, people, self] = await Promise.all([
+        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun, promises, week, people, self, themes, owed, earned, decisions] = await Promise.all([
           loadTasksAroundToday(db, now),
           loadMode(db, now),
           loadMoneyStage(db, now),
@@ -83,6 +86,10 @@ export function registerTodayTools(server: McpServer) {
           loadWeekLoad(db, now),
           loadPeople(db),
           loadSelfForAdvice(db),
+          currentThemes(db, now),
+          owedReviews(db, now),
+          checkAchievements(db, now),
+          loadDecisions(db, now),
         ]);
         const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
         const room = roomOn(dayKey(now, tz()), dayTasks, capacity, now, undefined, dayEndsAt(schedule));
@@ -131,6 +138,16 @@ export function registerTodayTools(server: McpServer) {
           ...(whoToReachOut(people, now, 2).length
             ? { reachOut: whoToReachOut(people, now, 2).map(({ person, due }) => ({ name: person.name, who: person.who, overdueBy: due.overdueBy, talkAbout: person.topics[0] ?? null })) }
             : {}),
+          // This season's themes. Coach toward the focus; when something on notNow comes up, point to the theme and push back.
+          ...(Object.keys(themes).length
+            ? { themes: Object.fromEntries(Object.entries(themes).map(([k, t]) => [k, { title: t!.title, focus: t!.focus, notNow: t!.notNow }])) }
+            : {}),
+          // A review is owed: offer to do it now (prepare_review), briefly. No theme for the new month/year yet? Offer to set one.
+          ...(owed.length ? { reviewsOwed: owed.map((o) => ({ period: o.period, label: o.label })) } : {}),
+          // Just earned — celebrate it properly, once.
+          ...(earned.length ? { newAchievements: earned.map((a) => ({ title: a.title, description: a.description, ...(a.detail ? { for: a.detail } : {}) })) } : {}),
+          // Decisions due for a look back: ask how it turned out (review_decision).
+          ...(decisions.some((d) => d.dueForReview) ? { decisionsToReview: decisions.filter((d) => d.dueForReview).map((d) => ({ id: d.id, decision: d.decision, expected: d.expected })) } : {}),
           // What they know about themselves that should shape advice: patterns, triggers, weak spots, habits to break,
           // what they're healing from. Use it gently and specifically ("you tend to…"), never to shame.
           ...(self.length ? { knowThem: self } : {}),

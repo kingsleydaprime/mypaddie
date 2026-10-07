@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { connectCalendarAction, disconnectCalendarAction, syncCalendarAction, type CalendarState } from "../calendar.actions";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 type Status = { connected: false } | { connected: true; url: string; lastSyncAt: string | null; lastCount: number | null; lastError: string | null };
 
@@ -31,7 +32,7 @@ export function CalendarSettings({ status }: { status: Status }) {
             Google Calendar → Settings → your calendar → <em>Integrate calendar</em> → copy the <strong>Secret address in iCal format</strong>. Treat it like a password.
           </p>
           <input name="url" type="url" required placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" className="rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-base" />
-          <button disabled={connecting} className="rounded-xl bg-gold px-3 py-2.5 font-semibold text-on-gold disabled:opacity-60">{connecting ? "Connecting…" : "Connect"}</button>
+          <SubmitButton disabled={connecting} className="rounded-xl bg-gold px-3 py-2.5 font-semibold text-on-gold disabled:opacity-60">{connecting ? "Connecting…" : "Connect"}</SubmitButton>
         </form>
       )}
       {msg && <p className={`mt-2 text-sm ${"error" in msg ? "text-red" : "text-green"}`} role={"error" in msg ? "alert" : "status"}>{"error" in msg ? msg.error : msg.ok}</p>}

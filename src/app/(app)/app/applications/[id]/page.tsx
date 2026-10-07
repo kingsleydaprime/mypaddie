@@ -6,6 +6,7 @@ import { loadApplications } from "@/features/applications/applications.repo";
 import { currentConfig } from "@/shared/config";
 import { requireDb } from "@/shared/supabase/session";
 import { formatLocal } from "@/shared/time";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 export default async function ApplicationPage({ params }: PageProps<"/app/applications/[id]">) {
   const { id } = await params;
@@ -45,17 +46,17 @@ export default async function ApplicationPage({ params }: PageProps<"/app/applic
           {app.requirements.map((r) => (
             <li key={r.id}>
               <form action={toggleRequirementAction.bind(null, app.id, r.title, !r.done)}>
-                <button className="flex w-full items-center gap-3 px-4 py-3 text-left" aria-pressed={r.done}>
+                <SubmitButton className="flex w-full items-center gap-3 px-4 py-3 text-left" aria-pressed={r.done}>
                   <span className={`flex h-5 w-5 items-center justify-center rounded border ${r.done ? "border-green text-green" : "border-line"}`} aria-hidden>{r.done ? "✓" : ""}</span>
                   <span className={r.done ? "text-muted line-through" : ""}>{r.title}</span>
-                </button>
+                </SubmitButton>
               </form>
             </li>
           ))}
           <li className="px-4 py-2">
             <form action={addRequirementAction.bind(null, app.id)} className="flex gap-2">
               <input name="title" placeholder="Add a requirement" className="flex-1 bg-transparent py-1.5" />
-              <button className="text-sm font-semibold text-gold">Add</button>
+              <SubmitButton className="text-sm font-semibold text-gold">Add</SubmitButton>
             </form>
           </li>
         </ul>

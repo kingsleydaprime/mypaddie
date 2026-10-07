@@ -19,7 +19,24 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  await supabase.auth.getClaims(); // triggers the refresh when needed
+  const { data } = await supabase.auth.getClaims(); // also triggers the refresh when needed
+  const path = request.nextUrl.pathname;
+
+  // Decided here, before any page starts streaming, so they're real redirects
+  // (the app's loading screen would otherwise turn them into a refresh after it).
+  const redirectTo = (to: string) => {
+    const r = NextResponse.redirect(new URL(to, request.url));
+    for (const c of response.cookies.getAll()) r.cookies.set(c);
+    return r;
+  };
+  if ((path === "/app" || path.startsWith("/app/")) && !data?.claims) {
+    return redirectTo(`/login?next=${encodeURIComponent(path + request.nextUrl.search)}`);
+  }
+  if (path === "/app" && data?.claims) {
+    // First visit: set up before anything else (see app/(app)/app/page.tsx).
+    const { data: profile } = await supabase.from("settings").select("value").eq("key", "profile").maybeSingle();
+    if (!(profile?.value as { onboardedAt?: string } | null)?.onboardedAt) return redirectTo("/welcome");
+  }
   return response;
 }
 

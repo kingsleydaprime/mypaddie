@@ -3,6 +3,7 @@ import { addTopicAction, removePersonAction, talkedTodayAction } from "@/feature
 import { loadPeoplePicture } from "@/features/people/people.repo";
 import { AddPersonForm } from "@/features/people/ui/add-person-form";
 import { requireDb } from "@/shared/supabase/session";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 const ago = (d: number | null) => (d === null ? "not yet" : d === 0 ? "today" : d === 1 ? "yesterday" : `${d} days ago`);
 
@@ -40,7 +41,7 @@ export default async function PeoplePage() {
                 <p className="text-xs text-muted">{p.who ?? p.relation} · last talked {ago(p.daysSince)}{p.reachOutEveryDays ? ` · every ${p.reachOutEveryDays}d` : ""}</p>
               </div>
               <form action={talkedTodayAction.bind(null, p.id)}>
-                <button className={`shrink-0 rounded-xl px-3 py-1.5 text-sm font-semibold ${p.due ? "bg-gold text-on-gold" : "border border-line"}`}>Talked today</button>
+                <SubmitButton className={`shrink-0 rounded-xl px-3 py-1.5 text-sm font-semibold ${p.due ? "bg-gold text-on-gold" : "border border-line"}`}>Talked today</SubmitButton>
               </form>
             </div>
             {p.topics.length > 0 && <p className="mt-2 text-sm">Talk about: {p.topics.join(" · ")}</p>}
@@ -51,10 +52,10 @@ export default async function PeoplePage() {
               {p.recent.length > 0 && <p className="mt-2 text-xs text-muted">Recent: {p.recent.map((c) => `${c.on} ${c.how}${c.note ? ` — ${c.note}` : ""}`).join("; ")}</p>}
               <form action={addTopicAction.bind(null, p.id)} className="mt-2 flex gap-2">
                 <input name="topic" maxLength={200} placeholder="Something to talk about next time" aria-label="Topic" className="min-w-0 flex-1 rounded-lg border border-line bg-surface-2 px-2 py-1.5 text-sm" />
-                <button className="text-sm font-semibold text-gold">Add</button>
+                <SubmitButton className="text-sm font-semibold text-gold">Add</SubmitButton>
               </form>
               <form action={removePersonAction.bind(null, p.id)} className="mt-2">
-                <button className="text-xs text-red">Remove {p.name}</button>
+                <SubmitButton className="text-xs text-red">Remove {p.name}</SubmitButton>
               </form>
             </details>
           </li>

@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import type { Invite } from "../invites.repo";
 import { createInviteAction, revokeInviteAction, type InviteFormState } from "../invites.actions";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 const field = "rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-base";
 const STATUS: Record<Invite["status"], string> = { waiting: "waiting", used: "joined", expired: "expired", revoked: "revoked" };
@@ -71,7 +72,7 @@ export function InvitePanel({ invites, left }: { invites: Invite[]; left: number
                   <span className={i.status === "used" ? "text-green" : "text-muted"}>{STATUS[i.status]}</span>
                   {i.status === "waiting" && (
                     <form action={revokeInviteAction.bind(null, i.id)}>
-                      <button className="text-xs text-muted underline">revoke</button>
+                      <SubmitButton className="text-xs text-muted underline">revoke</SubmitButton>
                     </form>
                   )}
                 </span>

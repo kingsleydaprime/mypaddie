@@ -972,3 +972,58 @@ analytics.
 A write-only table (feedback, before users could read their own) broke the
 export; it now skips any table the caller can't select, qualified by its own
 schema.
+
+## 2026-10-16 — Reviews, themes, achievements, routines, decisions; the app's feel
+
+### Reviews: the facts first, then the questions
+`prepare_review` builds a digest of what actually happened in the week, month,
+quarter or year — done, XP by pillar, XP lost to ignored needs and broken
+promises, slips and reasons, money in/out, study, workouts, people, bucket
+ticks, achievements, energy, decisions, the theme, and what *last* review
+said to change — and the AI runs the review as a conversation, then saves
+answers and a report. Weeks run Monday–Sunday. A review is owed from the
+period's last day for a grace (week 2 days, month 3, quarter 7, year 14).
+The reminder fires on Sunday evening for the week and on the last day of a
+month for the month — or the quarter / year when they end too (biggest wins),
+only if not written, once a day, at their evening time.
+
+### Themes are seasons
+A theme for a year, quarter or month ("Month of Mercies") with *focus* and
+*not now*. That's the "seasons" idea without a separate concept. `get_today`
+carries them; the AI pushes back when something on *not now* comes up.
+
+### Achievements are derived, recorded once
+Counted from what's already recorded (tasks, the longest run on any habit,
+workouts, study time, savings, promises kept on time, bucket ticks, contacts,
+reviews, fun, levels) — no new tracking. Each is stored once with its date and
+what earned it; +25 XP through a task done on the spot; announced in
+`get_today` and on Today the first time only. Examples stay generic in code —
+"30 days in a row on one habit" names whichever habit did it.
+
+### Routines collapse on Today
+A routine's steps are ordinary habits (XP and reminders per step), linked by
+`routine_id`/`routine_step`. Today shows one item — "Morning routine · next:
+Brush (2/5)" — at the rank of its most urgent step; Done completes the next
+step. It counts as one habit for plan limits. Steps are timed back to back
+from the start time.
+
+### Decisions come back for review
+A decision with why and what you expect, and a review date (default 30 days)
+that puts "Review: …" on Today; the verdict (worked / partly / didn't)
+completes it.
+
+### The app's feel, globally
+Tailwind v4's preflight leaves buttons on the default cursor; the base layer
+restores the pointer for everything pressable, adds a small hover brighten
+and press squeeze (skipped for disabled controls and reduced motion), and a
+visible focus ring. One-tap forms (Did it, Talked today, ticks…) got
+`SubmitButton` — disabled with a spinner while saving — via a codemod over
+every `<form action={serverAction}>` without its own pending state (43
+buttons). App pages have a loading skeleton.
+
+### Redirects moved into the proxy
+The loading skeleton makes pages stream, which turned `redirect()` inside a
+page into a refresh after a second — signed-out visitors briefly saw the app.
+The proxy now decides the two that matter before streaming: no session on
+`/app/*` → sign-in (307), and a profile without `onboardedAt` opening Home →
+`/welcome`. Page-level checks stay as a backup.
