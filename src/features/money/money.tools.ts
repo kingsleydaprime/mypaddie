@@ -5,6 +5,7 @@ import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import type { Json } from "@/shared/supabase/database.types";
 import { escapeLike } from "@/shared/supabase/like";
 import { planDeficit } from "./deficit";
+import { capForCategory, loadBills, loadCaps, loadDebts } from "./guardrails.repo";
 import {
   acceptSplit,
   editTransaction,
@@ -108,7 +109,9 @@ export function registerMoneyTools(server: McpServer) {
       description:
         "Their balance (real money: opening balance + in − out), the current money stage (audit → no judgement yet; deficit → needs exceed income; surplus → income covers " +
         "needs), bucket balances, and this month's needs. In deficit, includes the plan: income funds the cheapest " +
-        "honest version of each need in priority order, plus the gap as one number and the hidden wants inside needs.",
+        "honest version of each need in priority order, plus the gap as one number and the hidden wants inside needs. " +
+          "Also: spending caps used this month, bills due in the next 7 days (and what bills cost a month), and money " +
+          "owed both ways with anything overdue.",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
@@ -116,10 +119,19 @@ export function registerMoneyTools(server: McpServer) {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const [budget, { balance }] = await Promise.all([loadBudget(db, now), loadBalance(db)]);
+        const [budget, { balance }, caps, bills, debts] = await Promise.all([loadBudget(db, now), loadBalance(db), loadCaps(db, now), loadBills(db, now), loadDebts(db, now)]);
         const deficitPlan =
           budget.stage.stage === "deficit" ? planDeficit(budget.stage.totals.income, budget.needItems) : undefined;
-        return ok(await withMode(db, now, { balance, ...budgetSummary(budget), ...(deficitPlan ? { deficitPlan } : {}) }));
+        return ok(
+          await withMode(db, now, {
+            balance,
+            ...budgetSummary(budget),
+            ...(deficitPlan ? { deficitPlan } : {}),
+            caps,
+            bills: { dueSoon: bills.dueSoon, monthlyTotal: bills.monthlyTotal },
+            debts: { iOwe: debts.iOwe, owedToMe: debts.owedToMe, overdue: debts.overdue },
+          }),
+        );
       } catch (error) {
         return toolError(`get_money_status failed: ${(error as Error).message}`);
       }
@@ -186,7 +198,8 @@ export function registerMoneyTools(server: McpServer) {
     {
       title: "Check purchase",
       description:
-        "The don't-buy-this check, for when the user says 'I want to buy X'. You judge two things: is it really a need " +
+        "The don't-buy-this check, for when the user says 'I want to buy X'. Give its spending `category` (as they log " +
+          "it: Food, Data, Clothes…) so their own monthly cap for it counts. You judge two things: is it really a need " +
         "in disguise, and does it serve one of their goals (give the goal's title, from list_items tier=goal). The " +
         "engine checks the money. Answer clearly with the verdict: yes, wait 24 hours, or no — and be honest, " +
         "not agreeable. Asking again about the same item after 24 hours can turn a wait into a yes.",
@@ -195,13 +208,14 @@ export function registerMoneyTools(server: McpServer) {
         price: amount,
         need_in_disguise: z.boolean(),
         serves_goal: z.string().optional().describe("Title of the goal it serves, if any"),
+        category: z.string().trim().min(1).optional().describe("Spending category, so a cap on it applies"),
       }),
     },
-    async (args: { item: string; price: number; need_in_disguise: boolean; serves_goal?: string }, ctx: ToolContext) => {
+    async (args: { item: string; price: number; need_in_disguise: boolean; serves_goal?: string; category?: string }, ctx: ToolContext) => {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const budget = await loadBudget(db, now);
+        const [budget, cap] = await Promise.all([loadBudget(db, now), capForCategory(db, args.category, now)]);
 
         // The earliest "wait" on this item in the last two weeks starts the 24-hour clock.
         const since = new Date(now.getTime() - 14 * 86_400_000).toISOString();
@@ -222,6 +236,7 @@ export function registerMoneyTools(server: McpServer) {
           servesGoal: args.serves_goal ?? null,
           needsOutstanding: budget.needsOutstanding,
           wantsLeft: budget.buckets.wants,
+          cap,
           waitingSince: waits[0] ? new Date(waits[0].decided_at) : null,
           now,
         });

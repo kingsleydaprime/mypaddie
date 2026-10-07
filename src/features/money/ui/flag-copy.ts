@@ -10,5 +10,7 @@ export function flagMessage(flag: SpendFlag, currency?: string): string {
       return `Needs are still ${formatMoney(flag.needsOutstanding, currency)} short this month. Wants wait their turn.`;
     case "over_wants_bucket":
       return `The wants bucket had ${formatMoney(flag.wantsLeft, currency)}. You spent ${formatMoney(flag.spent, currency)}. The maths has opinions.`;
+    case "over_cap":
+      return `${flag.category} had ${formatMoney(Math.max(0, flag.cap - flag.spentBefore), currency)} left of your own ${formatMoney(flag.cap, currency)} cap. This took it past. Your rule, not mine.`;
   }
 }

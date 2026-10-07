@@ -33,6 +33,7 @@ import { registerCapacityTools } from "@/features/tasks/capacity.tools";
 import { registerTaskTools } from "@/features/tasks/tasks.tools";
 import { registerTodayTools } from "@/features/today/today.tools";
 import { registerUpdateTools } from "@/features/updates/updates.tools";
+import { registerGuardrailTools } from "@/features/money/guardrails.tools";
 import { registerUndoTools } from "@/features/undo/undo.tools";
 import { registerWorkoutTools } from "@/features/workouts/workouts.tools";
 import type { AuthInfo } from "@modelcontextprotocol/server";
@@ -53,6 +54,7 @@ const handler = createMcpHandler(
     tools.area("Coaching", () => registerSlipTools(server));
     tools.area("Coaching", () => registerModeTools(server));
     tools.area("Money", () => registerMoneyTools(server));
+    tools.area("Money", () => registerGuardrailTools(server));
     tools.area("Stats", () => registerStatsTools(server));
     tools.area("Memory", () => registerMemoryTools(server));
     tools.area("Who I'm becoming", () => registerIdentityTools(server));

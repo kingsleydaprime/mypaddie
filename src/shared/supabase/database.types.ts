@@ -56,6 +56,31 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"bills": {
+                  Row: {
+                    "amount": number,"anchor_on": string,"category": string,"created_at": string,"every": string,"id": string,"item_id": string | null,"last_paid_at": string | null,"next_due": string,"status": string,"tag": Database["public"]['Enums']["money_tag"],"task_id": string | null,"title": string,"user_id": string
+                  }
+                  Insert: {
+                    "amount": number,"anchor_on": string,"category": string,"created_at"?: string,"every": string,"id"?: string,"item_id"?: string | null,"last_paid_at"?: string | null,"next_due": string,"status"?: string,"tag"?: Database["public"]['Enums']["money_tag"],"task_id"?: string | null,"title": string,"user_id"?: string
+                  }
+                  Update: {
+                    "amount"?: number,"anchor_on"?: string,"category"?: string,"created_at"?: string,"every"?: string,"id"?: string,"item_id"?: string | null,"last_paid_at"?: string | null,"next_due"?: string,"status"?: string,"tag"?: Database["public"]['Enums']["money_tag"],"task_id"?: string | null,"title"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bills_item_id_user_id_fkey"
+      columns: ["item_id","user_id"]
+isOneToOne: false
+      referencedRelation: "items"
+      referencedColumns: ["id","user_id"]
+    },{
+      foreignKeyName: "bills_task_id_user_id_fkey"
+      columns: ["task_id","user_id"]
+isOneToOne: false
+      referencedRelation: "tasks"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
                 },"buckets": {
                   Row: {
                     "balance": number,"name": Database["public"]['Enums']["bucket_name"],"target_pct": number | null,"user_id": string
@@ -180,6 +205,56 @@ isOneToOne: false
       columns: ["skill_id","user_id"]
 isOneToOne: false
       referencedRelation: "skills"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"debt_payments": {
+                  Row: {
+                    "amount": number,"at": string,"debt_id": string,"id": string,"transaction_id": string | null,"user_id": string
+                  }
+                  Insert: {
+                    "amount": number,"at"?: string,"debt_id": string,"id"?: string,"transaction_id"?: string | null,"user_id"?: string
+                  }
+                  Update: {
+                    "amount"?: number,"at"?: string,"debt_id"?: string,"id"?: string,"transaction_id"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "debt_payments_debt_id_user_id_fkey"
+      columns: ["debt_id","user_id"]
+isOneToOne: false
+      referencedRelation: "debts"
+      referencedColumns: ["id","user_id"]
+    },{
+      foreignKeyName: "debt_payments_transaction_id_user_id_fkey"
+      columns: ["transaction_id","user_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"debts": {
+                  Row: {
+                    "amount": number,"closed_at": string | null,"created_at": string,"direction": string,"due_on": string | null,"id": string,"person": string,"person_id": string | null,"reason": string | null,"status": string,"task_id": string | null,"user_id": string
+                  }
+                  Insert: {
+                    "amount": number,"closed_at"?: string | null,"created_at"?: string,"direction": string,"due_on"?: string | null,"id"?: string,"person": string,"person_id"?: string | null,"reason"?: string | null,"status"?: string,"task_id"?: string | null,"user_id"?: string
+                  }
+                  Update: {
+                    "amount"?: number,"closed_at"?: string | null,"created_at"?: string,"direction"?: string,"due_on"?: string | null,"id"?: string,"person"?: string,"person_id"?: string | null,"reason"?: string | null,"status"?: string,"task_id"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "debts_person_id_user_id_fkey"
+      columns: ["person_id","user_id"]
+isOneToOne: false
+      referencedRelation: "people"
+      referencedColumns: ["id","user_id"]
+    },{
+      foreignKeyName: "debts_task_id_user_id_fkey"
+      columns: ["task_id","user_id"]
+isOneToOne: false
+      referencedRelation: "tasks"
       referencedColumns: ["id","user_id"]
     }
                   ]
@@ -620,6 +695,19 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"spending_caps": {
+                  Row: {
+                    "category": string,"created_at": string,"id": string,"monthly_cap": number,"user_id": string
+                  }
+                  Insert: {
+                    "category": string,"created_at"?: string,"id"?: string,"monthly_cap": number,"user_id"?: string
+                  }
+                  Update: {
+                    "category"?: string,"created_at"?: string,"id"?: string,"monthly_cap"?: number,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"task_pillars": {
                   Row: {
                     "pillar": Database["public"]['Enums']["pillar"],"task_id": string,"user_id": string,"weight": number
@@ -906,6 +994,9 @@ isOneToOne: false
             "activate_identity":
 { Args: { "p_id": string }; Returns: boolean
                            },
+"add_debt":
+{ Args: { "p_amount": number,"p_at": string,"p_direction": string,"p_due_on": string,"p_money_moved": boolean,"p_person": string,"p_person_id": string,"p_reason": string }; Returns: string
+                           },
 "adjust_pantry":
 { Args: { "p_changes": Json }; Returns: Json
                            },
@@ -950,8 +1041,14 @@ isOneToOne: false
 "my_plan":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"pay_bill":
+{ Args: { "p_amount": number,"p_at": string,"p_bill_id": string,"p_for_due": string,"p_next_due": string,"p_xp": Json }; Returns: Json
+                           },
 "rate_hit":
 { Args: { "p_bucket": string,"p_limit": number,"p_window_seconds": number }; Returns: boolean
+                           },
+"record_debt_payment":
+{ Args: { "p_amount": number,"p_at": string,"p_debt_id": string,"p_money_moved": boolean }; Returns: Json
                            },
 "record_learning":
 { Args: { "p_at": string,"p_confidence": number,"p_count": number,"p_minutes": number,"p_notes": string,"p_skill_id": string,"p_topic": string,"p_unit": string,"p_xp": Json }; Returns: string

@@ -108,7 +108,7 @@ In build order. Each slice ships tools + app + tests before the next starts.
   (goal 2×, wish +50) that the engine has but nothing called.
 - [x] **Undo** a mis-tapped complete_task, log_fun, log_workout or learning
   session; XP reversed in the ledger, not deleted. Edit routines.
-- [ ] **Money guardrails**: per-category spending caps (check_purchase uses
+- [x] **Money guardrails**: per-category spending caps (check_purchase uses
   them), recurring bills (data, subscriptions) that become tasks and
   transactions, money owed and lent.
 - [ ] **Daily close-out** (sweep unfinished, ask what slipped and why, set up
@@ -209,6 +209,8 @@ which gets a new entry when it changes.
 - Plan caps for people / lists / library on Free, if they're ever needed.
 
 ## Known gaps
+- Undoing a bill's "Pay: …" task doesn't void its transaction (void it separately).
+- Bills, caps and debts aren't behind plan limits yet.
 - Voiding income that's already been split into buckets (needs a split undo).
 - One balance for everything; separate accounts (OPay, bank, cash) later.
 - Edit/delete events and meals from the app (chat only for now).

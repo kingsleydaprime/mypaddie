@@ -1109,3 +1109,34 @@ The plan (which steps, what order, what time) is a pure function; the order
 must name every remaining step once, and removing every step is refused (stop
 the routine instead). Times are re-laid back to back from the start, through
 `update_task` on each step's next open day, which carries forward.
+
+### Money guardrails: caps, bills, money owed
+**Caps** are per category per month, in the user's own words, matched in any
+case. Unlike the wants bucket, a cap counts every tag (it's their rule), and it
+holds during the audit too. check_purchase takes an optional category and says
+no past what's left (rule 5, after the bucket rules, before "serves a goal");
+log_transaction adds an `over_cap` flag. Flags still never cost XP.
+
+**Bills** keep their own schedule instead of extending the habit engine to
+monthly rules (that would touch the TypeScript planner, the SQL `recurs_on`
+and spawning). Each due date is one fixed "Pay: …" task, so the reminder
+ladder works unchanged; `fixed` skips capacity because a bill can't be moved
+to make room. Months count from the first due date (`anchor_on`), so a bill on
+the 31st lands on 28/29 Feb and comes back to the 31st. Paying is one RPC:
+compare-and-set on `next_due`, then `record_transaction`, so the spend and the
+move happen together.
+
+The compare-and-set wasn't enough on its own. A smoke run showed a second
+`pay_bill` call reading the already-advanced bill and paying next month too:
+the guard protected one due date, not the intent. Now a payment within half a
+period of the last one is refused as `recently_paid` unless `ahead` is said
+explicitly; the app's button sends the due date it showed (`forDue`) instead.
+
+**Money owed** both ways, with partial repayments that can't exceed what's
+left (checked in the RPC under a row lock). Borrowing, lending and repaying
+move real money as a new transaction kind, `loan`: the balance changes, but
+it's never income (no split proposal) or spending (no stage, bucket or flags).
+A due date makes a task: "Pay back …" is a must-do; "Ask … about the …" isn't.
+
+Known gap: undoing a bill's "Pay: …" task doesn't void its transaction; void
+it separately.

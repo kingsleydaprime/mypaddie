@@ -35,7 +35,10 @@ export async function MoneyScreen({ db, addMoney = false }: { db: Db; addMoney?:
     <div className="flex flex-col gap-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Money</h1>
-        <Link href="/app/pantry" className="rounded-xl border border-line px-4 py-2 text-sm font-medium">Pantry ›</Link>
+        <div className="flex gap-2">
+          <Link href="/app/money/limits" className="rounded-xl border border-line px-4 py-2 text-sm font-medium">Bills &amp; caps ›</Link>
+          <Link href="/app/pantry" className="rounded-xl border border-line px-4 py-2 text-sm font-medium">Pantry ›</Link>
+        </div>
       </header>
 
       <BalanceCard balance={balance} currency={currentConfig().currency} />

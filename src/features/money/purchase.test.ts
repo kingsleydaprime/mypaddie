@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { capStatus } from "./guardrails";
 import { flagSpend, judgePurchase, monthlyNeedsTotal, needsOutstanding, type PurchaseInput } from "./purchase";
 
 const now = new Date("2026-10-06T12:00:00+01:00");
@@ -121,5 +122,29 @@ describe("needs budgeting", () => {
     expect(needsOutstanding(150_000, 60_000, 40_000)).toBe(50_000);
     expect(needsOutstanding(150_000, 160_000, 0)).toBe(0);
     expect(needsOutstanding(0, 0, 0)).toBe(0);
+  });
+});
+
+describe("judgePurchase with a category cap", () => {
+  const cap = (spent: number) => capStatus({ category: "Gadgets", monthlyCap: 30_000 }, spent);
+  test("within the cap: the usual rules decide", () => {
+    expect(judgePurchase(input({ cap: cap(5_000) })).verdict).toBe("wait_24h");
+  });
+  test("over what's left of the cap: no, even if it serves a goal", () => {
+    expect(judgePurchase(input({ cap: cap(15_000), servesGoal: "learn guitar" }))).toEqual({
+      verdict: "no",
+      reasons: [{ kind: "over_cap", category: "Gadgets", capLeft: 15_000, price: 20_000 }],
+    });
+  });
+  test("the cap holds during the audit too — it's their own limit", () => {
+    const d = judgePurchase(input({ stage: "audit", cap: cap(15_000) }));
+    expect(d.verdict).toBe("no");
+    expect(d.reasons.map((r) => r.kind)).toEqual(["audit_no_budget", "over_cap"]);
+  });
+  test("a need in disguise still goes through", () => {
+    expect(judgePurchase(input({ needInDisguise: true, cap: cap(30_000) })).verdict).toBe("yes");
+  });
+  test("exactly what's left fits", () => {
+    expect(judgePurchase(input({ cap: cap(10_000), waitingSince: hoursAgo(25) })).verdict).toBe("yes");
   });
 });

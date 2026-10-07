@@ -1,4 +1,5 @@
 import { assertNaira, type Naira } from "@/shared/domain";
+import type { CapFlag, CapStatus } from "./guardrails";
 import type { MoneyStage } from "./stage";
 
 export type PurchaseVerdict = "yes" | "wait_24h" | "no";
@@ -8,6 +9,7 @@ export type PurchaseReason =
   | { kind: "deficit" }
   | { kind: "needs_not_covered"; needsOutstanding: Naira }
   | { kind: "over_wants_bucket"; wantsLeft: Naira; price: Naira }
+  | { kind: "over_cap"; category: string; capLeft: Naira; price: Naira }
   | { kind: "serves_goal"; goal: string }
   | { kind: "waited_24h" }
   | { kind: "cooling_off"; askAgainAfter: Date }
@@ -24,6 +26,8 @@ export interface PurchaseInput {
   needsOutstanding: Naira;
   /** What's left in the wants bucket. */
   wantsLeft: Naira;
+  /** Their own monthly cap for this purchase's category, if they set one. */
+  cap?: CapStatus | null;
   /** When this same item last got "wait 24 hours", if it did. */
   waitingSince: Date | null;
   now: Date;
@@ -39,13 +43,14 @@ const WAIT_MS = 24 * 60 * 60 * 1000;
 /**
  * The don't-buy-this check. First matching rule wins:
  *   1. a need in disguise                    → yes (log it as a need)
- *   — during the audit there are no budgets, so only 5–7 apply —
+ *   — during the audit there are no budgets, so only 5–8 apply —
  *   2. deficit mode                          → no
  *   3. this month's needs not yet covered    → no
  *   4. costs more than the wants bucket has  → no
- *   5. serves one of your goals              → yes
- *   6. asked again after a 24-hour wait      → yes
- *   7. otherwise                             → wait 24 hours
+ *   5. breaks their own cap for the category → no (in every stage: it's their limit)
+ *   6. serves one of your goals              → yes
+ *   7. asked again after a 24-hour wait      → yes
+ *   8. otherwise                             → wait 24 hours
  */
 export function judgePurchase(input: PurchaseInput): PurchaseDecision {
   assertNaira(input.price, "price");
@@ -69,6 +74,10 @@ export function judgePurchase(input: PurchaseInput): PurchaseDecision {
     }
   }
 
+  if (input.cap && input.price > input.cap.left) {
+    return { verdict: "no", reasons: [...reasons, { kind: "over_cap", category: input.cap.category, capLeft: input.cap.left, price: input.price }] };
+  }
+
   if (input.servesGoal) return { verdict: "yes", reasons: [...reasons, { kind: "serves_goal", goal: input.servesGoal }] };
 
   if (input.waitingSince && now.getTime() - input.waitingSince.getTime() >= WAIT_MS) {
@@ -84,6 +93,7 @@ export function judgePurchase(input: PurchaseInput): PurchaseDecision {
 
 export type SpendFlag =
   | { kind: "want_in_deficit" }
+  | CapFlag
   | { kind: "want_before_needs_covered"; needsOutstanding: Naira }
   | { kind: "over_wants_bucket"; wantsLeft: Naira; spent: Naira };
 

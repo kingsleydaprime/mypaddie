@@ -3,7 +3,8 @@ import type { Db } from "@/shared/supabase/token-client";
 import { computeMoneyStage, type MoneyStage, type TransactionForMoney } from "./stage";
 import type { NeedForDeficit } from "./deficit";
 import { balanceOf, correctionFor } from "./balance";
-import { flagSpend, monthlyNeedsTotal, needsOutstanding } from "./purchase";
+import { flagSpend, monthlyNeedsTotal, needsOutstanding, type SpendFlag } from "./purchase";
+import { capFlagFor } from "./guardrails.repo";
 import { transactionLoggedXp } from "@/features/xp/xp";
 import type { Json } from "@/shared/supabase/database.types";
 import { DEFAULT_SPLIT, proposeWaterfall, validateSplit, type SplitPercentages } from "./waterfall";
@@ -142,10 +143,13 @@ export async function logTransaction(db: Db, tx: NewTransaction, now: Date) {
   if (tx.direction === "out" && !tx.tag) throw new Error("outflows need a tag (need, want or unsure)");
   const before = await loadBudget(db, now);
   const tag = tx.direction === "out" ? tx.tag : null;
-  const flags =
+  const flags: SpendFlag[] =
     tag === null
       ? []
       : flagSpend({ amount: tx.amount, tag, stage: before.stage.stage, needsOutstanding: before.needsOutstanding, wantsLeft: before.buckets.wants });
+  // Their own cap for the category, judged before this spend lands.
+  const overCap = tag === null ? null : await capFlagFor(db, tx.category, tx.amount, now);
+  if (overCap) flags.push(overCap);
 
   const xp = transactionLoggedXp();
   // Generated RPC types mark every argument non-null; the SQL function accepts
