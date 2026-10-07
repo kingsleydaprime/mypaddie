@@ -7,7 +7,7 @@ select set_config('search_path', current_setting('search_path') || ', ' || n.nsp
 create function pg_temp.hold(u uuid, t timestamptz) returns text language sql as $$
   select coalesce((select hold || ':' || kind from private.holds(t) where user_id = u), 'none')
 $$;
-select plan(17);
+select plan(19);
 
 \set sam '''11111111-1111-1111-1111-111111111111'''
 \set ada '''22222222-2222-2222-2222-222222222222'''
@@ -21,8 +21,12 @@ select is(pg_temp.hold(:sam, '2026-10-14 12:00+01'), 'none', 'nothing set: no ho
 -- A class 10:00–12:00 holds everything while it runs.
 insert into public.skills (id, user_id, name) values ('dddddddd-0000-0000-0000-000000000001', :sam, 'CSC 201');
 insert into public.courses (id, user_id, skill_id, code, title) values ('cccccccc-0000-0000-0000-000000000001', :sam, 'dddddddd-0000-0000-0000-000000000001', 'CSC 201', 'Data structures');
+insert into public.tasks (user_id, title, due_at, duration_minutes, course_id, recurrence, series_id, occurs_on, is_class)
+  values (:sam, 'CSC 201 Lecture', '2026-10-14 10:00+01', 120, 'cccccccc-0000-0000-0000-000000000001', 'FREQ=WEEKLY;BYDAY=WE', gen_random_uuid(), '2026-10-14', true);
+-- A weekly study group for the same course is not a class: it doesn't hold anything.
 insert into public.tasks (user_id, title, due_at, duration_minutes, course_id, recurrence, series_id, occurs_on)
-  values (:sam, 'CSC 201 Lecture', '2026-10-14 10:00+01', 120, 'cccccccc-0000-0000-0000-000000000001', 'FREQ=WEEKLY;BYDAY=WE', gen_random_uuid(), '2026-10-14');
+  values (:sam, 'CSC 201 study group', '2026-10-14 14:00+01', 60, 'cccccccc-0000-0000-0000-000000000001', 'FREQ=WEEKLY;BYDAY=WE', gen_random_uuid(), '2026-10-14');
+select is(pg_temp.hold(:sam, '2026-10-14 14:30+01'), 'none', 'a course-linked task that isn''t a class holds nothing');
 select is(pg_temp.hold(:sam, '2026-10-14 11:00+01'), 'all:in_class', 'a running class: in class');
 select is(pg_temp.hold(:sam, '2026-10-14 12:00+01'), 'none', 'over at 12:00');
 
@@ -31,8 +35,11 @@ insert into public.statuses (user_id, kind, started_at, ends_at) values (:sam, '
 select is(pg_temp.hold(:sam, '2026-10-14 11:00+01'), 'none', '"Busy" they set beats the timetable (lecture cancelled)');
 insert into public.statuses (user_id, kind, started_at, ends_at) values (:sam, 'with_friends', '2026-10-14 17:00+01', '2026-10-14 21:00+01');
 select is(pg_temp.hold(:sam, '2026-10-14 18:00+01'), 'soft:with_friends', 'with friends: soft hold');
-update public.statuses set ended_at = '2026-10-14 18:30+01' where kind = 'with_friends';
+update public.statuses set ended_at = '2026-10-14 18:30+01' where user_id = :sam and kind = 'with_friends';
 select is(pg_temp.hold(:sam, '2026-10-14 18:45+01'), 'none', 'cleared early: gone');
+-- (Spawn first, check in a separate statement: a query can't see rows its own call inserted.)
+select public.spawn_occurrence((select series_id from public.tasks where user_id = :sam and title = 'CSC 201 Lecture'), '2026-10-21', '2026-10-21 10:00+01');
+select is((select is_class from public.tasks where user_id = :sam and title = 'CSC 201 Lecture' and occurs_on = '2026-10-21'), true, 'next week''s lecture is still a class');
 select throws_ok($$insert into public.statuses (user_id, kind, started_at, ends_at) values ('11111111-1111-1111-1111-111111111111', 'sleeping', now(), now() + interval '17 hours')$$,
   '23514', null, 'no status longer than 16 hours');
 

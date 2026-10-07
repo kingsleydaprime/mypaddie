@@ -14,10 +14,21 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
   const db = await requireDb(`/app/tasks/${id}`);
   const { data: t } = await db
     .from("tasks")
-    .select("id, title, status, due_at, duration_minutes, is_non_negotiable, reminder_note, series_id")
+    .select("id, title, status, due_at, duration_minutes, is_non_negotiable, reminder_note, series_id, commitment_id, course_id, is_class")
     .eq("id", id)
     .maybeSingle();
   if (!t) notFound();
+
+  // What it can be "for": their roles (not ended) and courses (still running).
+  const [{ data: roles }, { data: courses }] = await Promise.all([
+    db.from("commitments").select("id, title, org").neq("status", "ended").order("title"),
+    db.from("courses").select("id, code, title").eq("status", "active").order("title"),
+  ]);
+  const forOptions = [
+    ...(roles ?? []).map((r) => ({ value: `role:${r.id}`, label: r.org ? `${r.title} · ${r.org}` : r.title, group: "Roles" as const })),
+    ...(courses ?? []).map((c) => ({ value: `course:${c.id}`, label: c.code ? `${c.code} · ${c.title}` : c.title, group: "Courses" as const })),
+  ];
+  const forValue = t.commitment_id ? `role:${t.commitment_id}` : t.course_id ? `course:${t.course_id}` : "";
 
   const due = t.due_at ? new Date(t.due_at) : null;
   const time = due ? localTimeOf(due, tz()) : "";
@@ -44,7 +55,11 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
             must: t.is_non_negotiable,
             note: t.reminder_note ?? "",
             habit: t.series_id !== null,
+            forValue,
+            // A timetable class belongs to its course; changing that is set_timetable's job.
+            forLocked: t.is_class,
           }}
+          forOptions={forOptions}
         />
       )}
     </div>

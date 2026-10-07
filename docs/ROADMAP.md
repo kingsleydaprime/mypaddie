@@ -124,6 +124,7 @@ In build order. Each slice ships tools + app + tests before the next starts.
   the big moments, past and planned, with what came before and after.
 
 - [x] Undo covers slips (2026-10-07).
+- [x] Tasks for a role or a course: `commitment`/`course` on add_task and update_task, "For" on the task page; classes flagged explicitly (2026-10-07).
 
 Already covered, so not built: spiritual habits (routines + learning log),
 saying no (check_load), sleep (check-ins). The 11th pillar is Academic.

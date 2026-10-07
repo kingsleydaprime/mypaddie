@@ -15,7 +15,7 @@ const COUNTERS: Record<Exclude<Limited, "aiApps">, (db: Db) => PromiseLike<numbe
   // A habit is a series still recurring (stopping one clears its rule).
   // A routine counts once, however many steps it has; classes don't count.
   habits: async (db) => {
-    const { data } = await db.from("tasks").select("series_id, routine_id").not("recurrence", "is", null).not("series_id", "is", null).is("course_id", null);
+    const { data } = await db.from("tasks").select("series_id, routine_id").not("recurrence", "is", null).not("series_id", "is", null).eq("is_class", false);
     const units = new Set((data ?? []).map((r) => (r.routine_id ? `routine:${r.routine_id}` : `series:${r.series_id}`)));
     return units.size;
   },

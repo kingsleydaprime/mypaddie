@@ -1267,3 +1267,18 @@ words, and no XP. A dated moment in the past is recorded as having happened.
 The timeline puts what happened first (oldest first), then what's planned
 (overdue, ahead, someday), and gives each entry its neighbours, so "what came
 before" exists even when they never wrote it.
+
+### Tasks can be for a role or a course; classes are flagged, not guessed
+`add_task` and `update_task` take `commitment` and `course` (null unlinks),
+and the app's task page has a "For" picker (one at a time: picking a role
+clears the course). A course-linked task is for admin and one-offs — an exam
+form, a group meeting; study on a topic still goes through the study plan,
+which logs study time through the course's skill.
+
+Until now "a repeating task linked to a course" *meant* a timetable class,
+and three things relied on that: the timetable view, the "in class" push hold,
+and the habit limit (classes don't count). Letting any task link to a course
+would have turned a weekly study group into a class that silences Paddie. So
+classes now carry `tasks.is_class`, set only by set_timetable, copied by
+`spawn_occurrence`, and backfilled exactly (only the timetable had set
+`course_id` on repeating rows). A class stays locked to its course in the app.

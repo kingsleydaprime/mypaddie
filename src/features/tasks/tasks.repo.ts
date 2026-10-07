@@ -388,8 +388,10 @@ export interface NewTask {
   topic?: string | null;
   /** The job, role, team or group it's for. */
   commitmentId?: string | null;
-  /** A class in a course's timetable. */
+  /** The course it's for: a class, an assignment's prep, an exam form, a group meeting. */
   courseId?: string | null;
+  /** A timetable class (set only by set_timetable): shows in the timetable, holds pushes while it runs, isn't a habit. */
+  isClass?: boolean;
   /** A step in a routine (the routine counts once toward the habit limit). */
   routine?: { id: string; step: number } | null;
   location?: string | null;
@@ -415,7 +417,7 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = curr
   if (task.recurrence) {
     parseRecurrence(task.recurrence);
     // Classes come with a course, not a choice: they don't use up habit slots.
-    if (!task.courseId && !task.routine) await requireRoom(db, "habits");
+    if (!task.isClass && !task.routine) await requireRoom(db, "habits");
   }
 
   const hasDay = task.dueDate !== null || task.dueTime !== null || task.recurrence !== null;
@@ -465,6 +467,7 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = curr
       topic: task.topic?.trim() || null,
       commitment_id: task.commitmentId ?? null,
       course_id: task.courseId ?? null,
+      is_class: task.isClass ?? false,
       routine_id: task.routine?.id ?? null,
       routine_step: task.routine?.step ?? null,
       location: task.location?.trim() || null,
@@ -502,6 +505,7 @@ export interface TaskChanges {
   skillId?: string | null;
   reminderNote?: string | null;
   commitmentId?: string | null;
+  courseId?: string | null;
 }
 
 export type UpdateResult =
@@ -614,6 +618,7 @@ export async function updateTask(
     if (changes.skillId !== undefined) patch.skill_id = changes.skillId;
     if (changes.reminderNote !== undefined) patch.reminder_note = changes.reminderNote?.trim() || null;
     if (changes.commitmentId !== undefined) patch.commitment_id = changes.commitmentId;
+    if (changes.courseId !== undefined) patch.course_id = changes.courseId;
     if (moves) patch.due_at = newDueAt(row);
     if (Object.keys(patch).length > 0) {
       const { error: e } = await db.from("tasks").update(patch).eq("id", row.id);

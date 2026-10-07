@@ -4,6 +4,7 @@ import { withMode } from "@/features/mode/mode.repo";
 import { PILLARS } from "@/shared/domain";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { findCommitment } from "@/features/commitments/commitments.repo";
+import { findCourseRef } from "@/features/courses/courses.repo";
 import { findFun } from "@/features/fun/fun.repo";
 import { findOrCreateSkill } from "@/features/learning/learning.repo";
 import { completeTask, createTask, deleteTask, updateTask } from "./tasks.repo";
@@ -53,6 +54,7 @@ export function registerTaskTools(server: McpServer) {
         topic: z.string().trim().min(1).max(200).optional().describe("With `skill`: the topic it covers (e.g. a course topic), recorded with the practice time"),
         fun: z.string().trim().min(1).optional().describe("Planned fun: the title of an activity on their fun list; completing the task counts as doing it"),
         commitment: z.string().trim().min(1).optional().describe("The job, role, team or group it's for (title or id from list_commitments), e.g. extra training before a competition"),
+        course: z.string().trim().min(1).optional().describe("The course it's for (code, title or id from list_courses): an exam form, a group meeting, buying the textbook. For study sessions on a topic use accept_study_plan instead (they log study time)"),
         reminder_note: z.string().trim().max(200).optional().describe("Their own words for the notifications, e.g. 'Bring the signed form'"),
       }),
     },
@@ -74,6 +76,7 @@ export function registerTaskTools(server: McpServer) {
         topic?: string;
         fun?: string;
         commitment?: string;
+        course?: string;
         reminder_note?: string;
       },
       ctx: ToolContext,
@@ -86,6 +89,8 @@ export function registerTaskTools(server: McpServer) {
         if (args.fun && !fun) return toolError(`add_task: "${args.fun}" isn't on their fun list — add it with add_fun first`);
         const commitment = args.commitment ? await findCommitment(db, args.commitment) : null;
         if (args.commitment && !commitment) return toolError(`add_task: no single commitment matches "${args.commitment}" — check list_commitments`);
+        const course = args.course ? await findCourseRef(db, args.course) : null;
+        if (args.course && !course) return toolError(`add_task: no single course matches "${args.course}" — check list_courses`);
         const outcome = await createTask(
           db,
           {
@@ -105,6 +110,7 @@ export function registerTaskTools(server: McpServer) {
             topic: args.topic ?? null,
             funActivityId: fun?.id ?? null,
             commitmentId: commitment?.id ?? null,
+            courseId: course?.id ?? null,
             reminderNote: args.reminder_note,
           },
           now,
@@ -142,6 +148,8 @@ export function registerTaskTools(server: McpServer) {
         force_clash: z.boolean().default(false),
         skill: z.string().trim().min(1).nullable().optional().describe("null = unlink"),
         reminder_note: z.string().trim().max(200).nullable().optional().describe("null = back to the default wording"),
+        commitment: z.string().trim().min(1).nullable().optional().describe("The job, role or group it's for (from list_commitments); null = unlink"),
+        course: z.string().trim().min(1).nullable().optional().describe("The course it's for (from list_courses); null = unlink"),
       }),
     },
     async (
@@ -161,11 +169,17 @@ export function registerTaskTools(server: McpServer) {
         force_clash: boolean;
         skill?: string | null;
         reminder_note?: string | null;
+        commitment?: string | null;
+        course?: string | null;
       },
       ctx: ToolContext,
     ) => {
       try {
         const db = dbFrom(ctx);
+        const commitment = args.commitment ? await findCommitment(db, args.commitment) : null;
+        if (args.commitment && !commitment) return toolError(`update_task: no single commitment matches "${args.commitment}" — check list_commitments`);
+        const course = args.course ? await findCourseRef(db, args.course) : null;
+        if (args.course && !course) return toolError(`update_task: no single course matches "${args.course}" — check list_courses`);
         const skillId = args.skill === undefined ? undefined : args.skill === null ? null : (await findOrCreateSkill(db, args.skill)).skill.id;
         const outcome = await updateTask(
           db,
@@ -184,6 +198,8 @@ export function registerTaskTools(server: McpServer) {
             forceClash: args.force_clash,
             skillId,
             reminderNote: args.reminder_note,
+            commitmentId: args.commitment === undefined ? undefined : commitment?.id ?? null,
+            courseId: args.course === undefined ? undefined : course?.id ?? null,
           },
           args.action,
         );

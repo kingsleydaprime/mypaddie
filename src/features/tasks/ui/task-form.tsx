@@ -14,9 +14,18 @@ export interface TaskFormValues {
   must: boolean;
   note: string;
   habit: boolean;
+  /** "role:<id>", "course:<id>" or "" — what it's for. */
+  forValue: string;
+  forLocked: boolean;
 }
 
-export function TaskForm({ task }: { task: TaskFormValues }) {
+export interface ForOption {
+  value: string;
+  label: string;
+  group: "Roles" | "Courses";
+}
+
+export function TaskForm({ task, forOptions }: { task: TaskFormValues; forOptions: ForOption[] }) {
   const [state, action, pending] = useActionState<TaskFormState, FormData>(saveTaskAction, null);
   const [busy, start] = useTransition();
   const [other, setOther] = useState<TaskFormState>(null);
@@ -43,6 +52,23 @@ export function TaskForm({ task }: { task: TaskFormValues }) {
           Duration (minutes)
           <input name="duration" type="number" min={1} max={1440} defaultValue={task.duration ?? ""} placeholder="30" className={field} />
         </label>
+        {(forOptions.length > 0 || task.forValue) && (
+          <label className="flex flex-col gap-1 text-sm text-muted">
+            For
+            <select name="for" defaultValue={task.forValue} disabled={task.forLocked} className={field}>
+              <option value="">Nothing in particular</option>
+              {(["Roles", "Courses"] as const).map((g) => {
+                const opts = forOptions.filter((o) => o.group === g);
+                return opts.length ? (
+                  <optgroup key={g} label={g === "Roles" ? "Jobs, roles and teams" : "Courses"}>
+                    {opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </optgroup>
+                ) : null;
+              })}
+            </select>
+            {task.forLocked && <span className="text-xs">A class from your timetable stays with its course.</span>}
+          </label>
+        )}
         <label className="flex flex-col gap-1 text-sm text-muted">
           Reminder note — what the notification should say
           <input name="note" maxLength={200} defaultValue={task.note} placeholder="e.g. Bring the signed form" className={field} />

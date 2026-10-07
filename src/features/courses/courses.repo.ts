@@ -473,6 +473,7 @@ export async function loadClasses(db: Db, courseId: string): Promise<LoadedClass
     .from("tasks")
     .select("series_id, title, recurrence, due_at, duration_minutes, location, occurs_on")
     .eq("course_id", courseId)
+    .eq("is_class", true)
     .not("recurrence", "is", null)
     .order("occurs_on", { ascending: false });
   if (error) throw new Error(`loading classes: ${error.message}`);
@@ -559,6 +560,7 @@ export async function setTimetable(db: Db, input: { classes: ClassInput[]; from?
           weights: CLASS_WEIGHTS,
           durationMinutes: minutes,
           courseId: course.id,
+          isClass: true,
           location: c.venue ?? null,
           fixed: true,
         },
@@ -576,4 +578,13 @@ export async function setTimetable(db: Db, input: { classes: ClassInput[]; from?
   const perDay = classMinutesByWeekday(everyClass.map((c) => ({ days: c.days, minutes: c.minutes! })));
   const overloaded = WEEKDAY_CODES.filter((d) => perDay[d] > capacity.defaultMinutes).map((d) => ({ day: d, classHours: perDay[d] / 60, capacityHours: capacity.defaultMinutes / 60 }));
   return { result: "set" as const, from, until, classes: results, ...(overloaded.length ? { overloaded } : {}) };
+}
+
+/** One course by id, code or title (any case) — for linking a task. Null if none or several match. */
+export async function findCourseRef(db: Db, ref: string): Promise<{ id: string; label: string } | null> {
+  const { data, error } = await db.from("courses").select("id, code, title");
+  if (error) throw new Error(`finding the course: ${error.message}`);
+  const r = ref.trim().toLowerCase();
+  const hits = isUuid(r) ? data.filter((c) => c.id === r) : data.filter((c) => c.code?.trim().toLowerCase() === r || c.title.trim().toLowerCase() === r);
+  return hits.length === 1 ? { id: hits[0]!.id, label: hits[0]!.code ?? hits[0]!.title } : null;
 }

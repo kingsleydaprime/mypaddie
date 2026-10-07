@@ -14,8 +14,7 @@ export async function loadStatus(db: Db, now: Date) {
     db
       .from("tasks")
       .select("title, due_at, duration_minutes")
-      .not("course_id", "is", null)
-      .not("recurrence", "is", null)
+      .eq("is_class", true)
       .neq("status", "cancelled")
       .eq("occurs_on", today),
     loadSchedule(db),
