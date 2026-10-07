@@ -1,4 +1,5 @@
 import type { Pillar } from "@/shared/domain";
+import { formatMoney } from "@/shared/format";
 
 /**
  * The life map: every area of life on one page, each judged from data that's
@@ -37,7 +38,8 @@ export interface LifeInputs {
   /** XP per pillar in the last 14 days, and per 14 days on average over the 28 before. */
   xpRecent: Partial<Record<Pillar, number>>;
   xpBefore: Partial<Record<Pillar, number>>;
-  money: { stage: "audit" | "deficit" | "surplus"; capsOver: string[]; billsOverdue: number; owedOverdue: number };
+  /** `currency`: ISO code money facts are shown in. */
+  money: { stage: "audit" | "deficit" | "surplus"; capsOver: string[]; billsOverdue: number; owedOverdue: number; currency: string };
   people: { dueCount: number; contactsRecent: number; tracked: number };
   fun: { daysSince: number | null };
   slipsRecent: number;
@@ -57,10 +59,11 @@ function xpFact(area: Area, inp: LifeInputs): Fact | null {
   return { text: `${recent} XP in 2 weeks`, good: null };
 }
 
-function trendFact(t: Trend | undefined, label: string, unit: string): Fact | null {
+/** `show` formats the number (money gets its currency); default: one decimal. */
+function trendFact(t: Trend | undefined, label: string, unit: string, show: (n: number) => string = (n) => String(r1(n))): Fact | null {
   if (!t || t.recent === null) return null;
   const how = t.direction === "not_enough" || t.direction === "steady" ? "" : t.good ? ", improving" : ", slipping";
-  return { text: `${label} ${r1(t.recent)}${unit}${how}`, good: t.direction === "steady" || t.direction === "not_enough" ? null : t.good };
+  return { text: `${label} ${show(t.recent)}${unit}${how}`, good: t.direction === "steady" || t.direction === "not_enough" ? null : t.good };
 }
 
 /** The facts for each area. Thresholds are deliberately few and plain. */
@@ -92,7 +95,7 @@ export function areaFacts(area: Area, inp: LifeInputs): Fact[] {
       if (m.capsOver.length) facts.push({ text: `Over your cap: ${m.capsOver.join(", ")}`, good: false });
       if (m.billsOverdue) facts.push({ text: `${m.billsOverdue} bill${m.billsOverdue === 1 ? "" : "s"} overdue`, good: false });
       if (m.owedOverdue) facts.push({ text: `${m.owedOverdue} repayment${m.owedOverdue === 1 ? "" : "s"} you owe overdue`, good: false });
-      facts.push(trendFact(t.spending, "Spending", " a week"));
+      facts.push(trendFact(t.spending, "Spending", " a week", (n) => formatMoney(Math.round(n), m.currency)));
       break;
     }
     case "people": {

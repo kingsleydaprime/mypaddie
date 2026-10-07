@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { PILLARS } from "@/shared/domain";
+import { formatMoney } from "@/shared/format";
 import { AREA_INFO, AREAS, areaFacts, lifeMap, stateOf, type LifeInputs } from "./lifemap";
 
 const base = (extra: Partial<LifeInputs> = {}): LifeInputs => ({
   trends: {},
   xpRecent: {},
   xpBefore: {},
-  money: { stage: "audit", capsOver: [], billsOverdue: 0, owedOverdue: 0 },
+  money: { stage: "audit", capsOver: [], billsOverdue: 0, owedOverdue: 0, currency: "NGN" },
   people: { dueCount: 0, contactsRecent: 0, tracked: 0 },
   fun: { daysSince: null },
   slipsRecent: 0,
@@ -42,13 +43,20 @@ describe("areaFacts", () => {
     expect(f.map((x) => x.good)).toEqual([false, false]);
   });
   test("money: deficit, caps and overdue bills each named", () => {
-    const f = areaFacts("money", base({ money: { stage: "deficit", capsOver: ["Food"], billsOverdue: 1, owedOverdue: 2 } }));
+    const f = areaFacts("money", base({ money: { stage: "deficit", capsOver: ["Food"], billsOverdue: 1, owedOverdue: 2, currency: "NGN" } }));
     expect(f.map((x) => x.text)).toEqual([
       "In deficit: needs cost more than comes in",
       "Over your cap: Food",
       "1 bill overdue",
       "2 repayments you owe overdue",
     ]);
+  });
+  test("money: spending is shown in their currency, whole units", () => {
+    const naira = areaFacts("money", base({ trends: { spending: { recent: 5000.4, direction: "steady", good: null } } }));
+    expect(naira).toContainEqual({ text: `Spending ${formatMoney(5000, "NGN")} a week`, good: null });
+    expect(naira.find((f) => f.text.startsWith("Spending"))!.text).toContain("₦");
+    const dollars = areaFacts("money", base({ money: { stage: "audit", capsOver: [], billsOverdue: 0, owedOverdue: 0, currency: "USD" }, trends: { spending: { recent: 120, direction: "steady", good: null } } }));
+    expect(dollars.find((f) => f.text.startsWith("Spending"))!.text).toContain("$");
   });
   test("people: nothing tracked, nothing said", () => {
     expect(areaFacts("people", base())).toEqual([]);
@@ -71,13 +79,13 @@ describe("areaFacts", () => {
 describe("lifeMap", () => {
   test("seven areas, and one focus: the area with the most problems", () => {
     const m = lifeMap(base({
-      money: { stage: "deficit", capsOver: ["Food"], billsOverdue: 0, owedOverdue: 0 },
+      money: { stage: "deficit", capsOver: ["Food"], billsOverdue: 0, owedOverdue: 0, currency: "NGN" },
       fun: { daysSince: 20 },
     }));
     expect(m.areas).toHaveLength(7);
     expect(m.focus).toEqual({ area: "money", label: "Money", why: ["In deficit: needs cost more than comes in", "Over your cap: Food"] });
   });
   test("nothing wrong: no focus", () => {
-    expect(lifeMap(base({ money: { stage: "surplus", capsOver: [], billsOverdue: 0, owedOverdue: 0 } })).focus).toBeNull();
+    expect(lifeMap(base({ money: { stage: "surplus", capsOver: [], billsOverdue: 0, owedOverdue: 0, currency: "NGN" } })).focus).toBeNull();
   });
 });

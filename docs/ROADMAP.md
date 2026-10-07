@@ -143,7 +143,7 @@ which gets a new entry when it changes.
 - [x] **Sign-in and sign-up screens** (2026-10-10): Google, email link and
   password; `/signup` takes the invite (pre-filled from the shared link);
   forgotten password. Email via Resend (custom SMTP).
-- [ ] Turn sign-ups on in Supabase (after the email templates are in).
+- [x] Sign-ups on in Supabase (2026-10-07).
 - [x] First-run onboarding (2026-10-08): `/welcome` asks name, time zone
   (suggests the device's), currency and voice; Settings → You edits them;
   `update_profile` / `get_profile` for the AI.
@@ -154,8 +154,8 @@ which gets a new entry when it changes.
 - [x] "Kingsley / his" removed from the MCP instructions and every tool
   description (2026-10-08); `get_today` returns `you` (name, voice) and the
   instructions describe both voices (Naija banter, the default, or plain English).
-- [ ] Domain: point mypaddie.spectroniqlimited.com at Vercel; update the
-  Supabase site URL, redirect URLs and OAuth authorization path.
+- [x] Domain: mypaddie.spectroniqlimited.com points at Vercel; Supabase site
+  URL, redirect URLs and OAuth authorization path updated (2026-10-07).
 
 ### Phase 2: connect your AI without a hand-registered client
 - [x] Dynamic client registration on (2026-10-10): users paste
@@ -178,7 +178,7 @@ which gets a new entry when it changes.
   switch; Free is the default.
 - [x] Switches in `private.app_config`: invites_required (off),
   default_plan (free), payments_enabled (off).
-- [ ] Paystack checkout and webhooks; then `payments_enabled = true`.
+- [ ] Paystack checkout and webhooks; then `payments_enabled = true`. (Later, by choice.)
 - [ ] 14-day Plus trial for new sign-ups once payments are on.
 - [ ] Student verification (school email) for half price.
 

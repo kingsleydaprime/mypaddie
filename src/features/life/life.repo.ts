@@ -54,6 +54,7 @@ export async function loadLifeMap(db: Db, now: Date) {
       capsOver: caps.filter((c) => c.over).map((c) => c.category),
       billsOverdue: bills.dueSoon.filter((b) => b.overdue).length,
       owedOverdue: debts.overdue.filter((d) => d.direction === "i_owe").length,
+      currency: currentConfig().currency,
     },
     people: { dueCount: people.filter((p) => reachOutDue(p, now)).length, contactsRecent: contacts.count ?? 0, tracked: people.length },
     fun: { daysSince: fun.daysSinceFun },
