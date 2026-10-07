@@ -895,3 +895,13 @@ real tools.
 The plan is read on every tool call (it's in the per-request user context),
 and the tool list is the same on every plan — a tool outside the plan answers
 with what's needed. Switching Free → Pro applies to the very next message.
+
+### Signed in? The public site says "Open app", and /login moves you on
+The marketing header checks the session on the server (`isSignedIn()`), so a
+signed-in visitor sees one "Open app" button and never a flash of "Sign in".
+Cost: the public pages render per request instead of as static files — small
+pages, and the proxy already touches the session on every request. `/login`
+and `/signup` redirect a signed-in visitor: `/login` to its `next` (so an AI
+app's sign-in bounce carries straight on to the consent screen; `safeNext`
+still keeps it on this site), `/signup` to the app. `/reset-password` stays
+open: a reset link signs you in first.

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { isSignedIn } from "@/features/auth/session";
 import Link from "next/link";
 import { normalizeCode } from "@/features/auth/auth";
 import { invitesRequired } from "@/features/auth/signup-settings";
@@ -10,6 +12,7 @@ export const metadata: Metadata = { title: "Join MyPaddie" };
 
 export default async function SignUpPage({ searchParams }: PageProps<"/signup">) {
   const { invite } = await searchParams;
+  if (await isSignedIn()) redirect("/app");
   const inviteRequired = await invitesRequired((await serverClient()) as Db);
   return (
     <>

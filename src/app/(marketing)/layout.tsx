@@ -1,12 +1,14 @@
 import Link from "next/link";
+import { isSignedIn } from "@/features/auth/session";
 
 const NAV = [
   { href: "/pricing", label: "Pricing" },
   { href: "/about", label: "About" },
 ];
 
-/** Public pages: their own header and footer, no app tab bar. */
-export default function MarketingLayout({ children }: LayoutProps<"/">) {
+/** Public pages: their own header and footer, no app tab bar. Signed in? The header offers the app instead. */
+export default async function MarketingLayout({ children }: LayoutProps<"/">) {
+  const signedIn = await isSignedIn();
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="mx-auto flex w-full max-w-5xl items-center gap-4 px-5 py-5">
@@ -18,8 +20,14 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
           {NAV.map((n) => (
             <Link key={n.href} href={n.href} className="hidden text-muted hover:text-text sm:inline">{n.label}</Link>
           ))}
-          <Link href="/login" className="text-muted hover:text-text">Sign in</Link>
-          <Link href="/signup" className="rounded-full bg-gold px-4 py-2 font-semibold text-on-gold">Get started</Link>
+          {signedIn ? (
+            <Link href="/app" className="rounded-full bg-gold px-4 py-2 font-semibold text-on-gold">Open app</Link>
+          ) : (
+            <>
+              <Link href="/login" className="text-muted hover:text-text">Sign in</Link>
+              <Link href="/signup" className="rounded-full bg-gold px-4 py-2 font-semibold text-on-gold">Get started</Link>
+            </>
+          )}
         </nav>
       </header>
       <main className="flex-1">{children}</main>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { isSignedIn } from "@/features/auth/session";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { loginErrorText, normalizeCode } from "@/features/auth/auth";
@@ -17,6 +18,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const invite = one(params.invite);
   if (invite) redirect(`/signup?invite=${encodeURIComponent(normalizeCode(invite))}`);
   const next = safeNext(params.next);
+  // Already signed in: carry on to where they were going (the app, or an AI app's consent screen).
+  if (await isSignedIn()) redirect(next);
   const error = loginErrorText(one(params.error), one(params.message));
 
   return (
