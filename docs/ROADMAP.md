@@ -107,14 +107,11 @@ which gets a new entry when it changes.
   Supabase site URL, redirect URLs and OAuth authorization path.
 
 ### Phase 2: connect your AI without a hand-registered client
-- [ ] Today one OAuth client per AI app is registered by hand, and dynamic
-  client registration (DCR) is off so strangers can't register clients.
-  With open sign-ups that reason goes away: a registered client still can't
-  read anything without a user signing in and clicking Allow. Turn DCR on,
-  or use Claude's published client identity (CIMD) if Supabase supports it
-  by then, so users only paste `https://mypaddie.spectroniqlimited.com/api/mcp`.
-- [ ] Settings → "Connect your AI": the URL to copy, steps for Claude and
-  ChatGPT, the list of connected apps with a revoke button.
+- [x] Dynamic client registration on (2026-10-10): users paste
+  `https://mypaddie.spectroniqlimited.com/api/mcp` into Claude or ChatGPT.
+- [x] Consent page judges by the real destination: known apps one tap,
+  unknown/local apps only after "I started this myself", unsafe never.
+- [x] Settings → Connect your AI: the address, steps, connected apps, disconnect.
 
 ### Phase 3: safety before strangers
 - [ ] Two-user pgTAP suites: user B can't read, change or reference user A's

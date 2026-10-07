@@ -753,3 +753,36 @@ messages are shown verbatim; everything else becomes a fixed line.
 Creating a user from the Supabase dashboard (or the admin API) doesn't go
 through sign-up, so the invite hook doesn't run. That's the escape hatch for
 adding someone by hand.
+
+## 2026-10-10 — Multi-user, phase 2: connect your AI with one URL
+
+### Dynamic client registration on — the reason it was off no longer holds
+Day 2 kept DCR off so strangers couldn't register clients, and registered
+"Claude" by hand. With open (invite-gated) sign-up that's moot: a registered
+client can do nothing until a signed-in user approves it on our consent page.
+Now Claude or ChatGPT registers itself when someone pastes
+`/api/mcp`; nothing is set up per app. The hand-registered client keeps
+working.
+
+### The consent page judges by where access goes, not by name
+Anyone can register a client called "Claude". The redirect address can't be
+faked, so `describeDestination()` classifies it: Claude / ChatGPT / Gemini by
+their real hosts (subdomains included; look-alikes like `claude.ai.evil.com`
+or `user@host` tricks are not), a program on this computer (localhost), an
+unknown site, or unsafe (plain http elsewhere, nonsense). Known apps: one-tap
+Allow. Unknown or local: a red warning naming the real destination, and Allow
+only after ticking "I started this myself, just now". Unsafe: Deny only. The
+approve action re-checks all of this on the server.
+
+### Connected apps, and disconnecting
+Settings → Connect your AI shows the address to paste, short steps for Claude
+and ChatGPT, and the apps with access (Supabase's `listGrants`). Disconnect
+(`revokeGrant`) withdraws consent and kills that app's refresh tokens; its
+current access token lives until it expires (an hour).
+
+### Verified end to end
+A script does what Claude does from just the URL: 401 → resource metadata →
+authorization server metadata → register → authorize with PKCE → our consent
+page → Allow → code → token → `get_today` as that user; then Settings lists
+it, disconnecting kills the refresh token, and a look-alike "Claude" gets the
+warning, can't be allowed without the tick, and leaves with access_denied.

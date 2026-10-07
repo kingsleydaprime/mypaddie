@@ -6,21 +6,18 @@ import { ProfileEditor } from "@/features/identity/ui/profile-editor";
 import { NudgeToggle } from "@/features/push/ui/nudge-toggle";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { SettingsForm } from "@/features/settings/ui/settings-form";
+import { loadConnectedApps } from "@/features/connect/connect.repo";
+import { ConnectPanel } from "@/features/connect/ui/connect-panel";
 import { loadInvites } from "@/features/invites/invites.repo";
 import { InvitePanel } from "@/features/invites/ui/invite-panel";
 import { ProfileForm } from "@/features/profile/ui/profile-form";
+import { siteOrigin } from "@/shared/site";
 import { requireDb } from "@/shared/supabase/session";
 import { currentProfile } from "@/shared/user-context";
 
-const CHATS = [
-  { name: "Claude", href: "https://claude.ai/new" },
-  { name: "ChatGPT", href: "https://chatgpt.com/" },
-  { name: "Gemini", href: "https://gemini.google.com/app" },
-];
-
 export default async function SettingsPage() {
   const db = await requireDb("/app/settings");
-  const [versions, schedule, calendar, claims, invites] = await Promise.all([listIdentities(db), loadSchedule(db), calendarStatus(db), db.auth.getClaims(), loadInvites(db, new Date())]);
+  const [versions, schedule, calendar, claims, invites, apps] = await Promise.all([listIdentities(db), loadSchedule(db), calendarStatus(db), db.auth.getClaims(), loadInvites(db, new Date()), loadConnectedApps(db)]);
   const email = claims.data?.claims.email;
   const profile = currentProfile();
 
@@ -42,17 +39,7 @@ export default async function SettingsPage() {
       <CalendarSettings status={calendar} />
       {(invites.left > 0 || invites.invites.length > 0) && <InvitePanel invites={invites.invites} left={invites.left} />}
 
-      <section className="flex flex-col gap-2">
-        <h2 className="font-bold">Talk to Paddie</h2>
-        <p className="-mt-1 text-sm text-muted">Paddie lives in your AI app. Open one and start with &ldquo;What&apos;s today?&rdquo;</p>
-        <div className="grid grid-cols-3 gap-2">
-          {CHATS.map((c) => (
-            <a key={c.name} href={c.href} target="_blank" rel="noopener noreferrer" className="rounded-xl border border-line bg-surface px-2 py-3 text-center text-sm font-semibold">
-              {c.name} <span className="text-muted" aria-hidden>↗</span>
-            </a>
-          ))}
-        </div>
-      </section>
+      <ConnectPanel mcpUrl={`${await siteOrigin()}/api/mcp`} apps={apps} />
 
       <form action={signOut}>
         <button className="w-full rounded-xl border border-line px-4 py-3 text-muted">Sign out</button>
