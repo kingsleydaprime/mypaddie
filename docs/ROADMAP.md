@@ -89,9 +89,10 @@ which gets a new entry when it changes.
 ### Phase 1: sign-up and onboarding
 - [x] **Invite codes** (2026-10-09): the sign-up hook admits only a valid code
   or an invited email; allowances per user; Settings → Invite someone.
-- [ ] Turn sign-ups on. Google sign-in and/or magic links, with a real email
-  provider (e.g. Resend) as custom SMTP. Supabase's built-in sender is
-  rate-limited to a few emails an hour, the reason magic links were rejected.
+- [x] **Sign-in and sign-up screens** (2026-10-10): Google, email link and
+  password; `/signup` takes the invite (pre-filled from the shared link);
+  forgotten password. Email via Resend (custom SMTP).
+- [ ] Turn sign-ups on in Supabase (after the email templates are in).
 - [x] First-run onboarding (2026-10-08): `/welcome` asks name, time zone
   (suggests the device's), currency and voice; Settings → You edits them;
   `update_profile` / `get_profile` for the AI.

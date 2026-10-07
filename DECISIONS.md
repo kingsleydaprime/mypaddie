@@ -716,3 +716,40 @@ allowance) or turning the hook off.
 Two people signing up with the same open code at the same instant could both
 pass the hook before the trigger marks it used. Harmless at this scale (one
 extra account you invited anyway); tied-to-email invites don't have it.
+
+## 2026-10-10 — Multi-user, part 3: sign-in and sign-up screens
+
+### Three ways in, one gate
+Google, an emailed link, or a password — for signing in (`/login`) and for
+joining (`/signup`). The invite hook is the gate for all of them; the pages
+only make it pleasant.
+
+### The sign-up page claims the invite first
+`claim_invite(code, email)` (callable signed out) checks the code and ties an
+open one to the email typed. Two reasons: mistakes ("used", "expired", "for a
+different email", "you already have an account") are explained on the page
+instead of surfacing as a refusal from Google; and Google sign-up, which can't
+carry a code, is then admitted by email. A code tied by claiming can be
+re-claimed (a typo shouldn't burn it); one the host tied to an email can't be
+taken by anyone else.
+
+### Email links verify a token hash, not a PKCE code
+Links go to `/auth/confirm?token_hash=…&type=…`, which works on any device —
+people open these emails on their phone after asking on a laptop. A PKCE code
+exchange only works in the browser that asked. Google uses `/auth/callback`
+(code exchange), which is fine: it starts and ends in the same browser.
+Supabase's email templates have to point at `/auth/confirm` for this.
+
+### "Sign in with a link" never creates an account
+`shouldCreateUser: false` on /login; only /signup (with an invite) creates
+accounts. Both link forms answer the same way whether or not the email has an
+account, so they can't be used to find out who's a member.
+
+### Error text is never echoed from the URL
+Errors come back as `?error=<kind>&message=…`. Only the invite hook's own
+messages are shown verbatim; everything else becomes a fixed line.
+
+### Seen while testing: accounts created by an admin skip the hook
+Creating a user from the Supabase dashboard (or the admin API) doesn't go
+through sign-up, so the invite hook doesn't run. That's the escape hatch for
+adding someone by hand.

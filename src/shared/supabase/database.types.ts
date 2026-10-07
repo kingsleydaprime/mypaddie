@@ -198,13 +198,13 @@ isOneToOne: false
                   ]
                 },"invites": {
                   Row: {
-                    "code": string,"created_at": string,"created_by": string,"email": string | null,"expires_at": string,"id": string,"note": string | null,"revoked_at": string | null,"used_at": string | null,"used_by": string | null
+                    "bound_by_claim": boolean,"code": string,"created_at": string,"created_by": string,"email": string | null,"expires_at": string,"id": string,"note": string | null,"revoked_at": string | null,"used_at": string | null,"used_by": string | null
                   }
                   Insert: {
-                    "code": string,"created_at"?: string,"created_by"?: string,"email"?: string | null,"expires_at"?: string,"id"?: string,"note"?: string | null,"revoked_at"?: string | null,"used_at"?: string | null,"used_by"?: string | null
+                    "bound_by_claim"?: boolean,"code": string,"created_at"?: string,"created_by"?: string,"email"?: string | null,"expires_at"?: string,"id"?: string,"note"?: string | null,"revoked_at"?: string | null,"used_at"?: string | null,"used_by"?: string | null
                   }
                   Update: {
-                    "code"?: string,"created_at"?: string,"created_by"?: string,"email"?: string | null,"expires_at"?: string,"id"?: string,"note"?: string | null,"revoked_at"?: string | null,"used_at"?: string | null,"used_by"?: string | null
+                    "bound_by_claim"?: boolean,"code"?: string,"created_at"?: string,"created_by"?: string,"email"?: string | null,"expires_at"?: string,"id"?: string,"note"?: string | null,"revoked_at"?: string | null,"used_at"?: string | null,"used_by"?: string | null
                   }
                   Relationships: [
                     
@@ -645,6 +645,9 @@ isOneToOne: false
                            },
 "award_xp":
 { Args: { "p_entries": Json }; Returns: number
+                           },
+"claim_invite":
+{ Args: { "p_code": string,"p_email": string }; Returns: string
                            },
 "complete_task":
 { Args: { "p_done_at": string,"p_entries": Json,"p_task_id": string }; Returns: Json
