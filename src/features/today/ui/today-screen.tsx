@@ -37,7 +37,7 @@ function due(item: FocusItem, now: Date) {
   return dayKey(item.dueAt, tz()) === dayKey(now, tz()) ? time : `yesterday ${time}`;
 }
 
-function Row({ item, now, big }: { item: FocusItem; now: Date; big?: boolean }) {
+function Row({ item, now, big, details }: { item: FocusItem; now: Date; big?: boolean; details?: string | null }) {
   return (
     <li className={`flex items-center gap-3 rounded-2xl border border-line bg-surface ${big ? "p-4" : "px-4 py-3"}`}>
       <div className="min-w-0 flex-1">
@@ -46,6 +46,10 @@ function Row({ item, now, big }: { item: FocusItem; now: Date; big?: boolean }) 
         </Link>
         {item.routine && (
           <p className="mt-0.5 text-sm">Next: {item.routine.next} <span className="text-muted">· {item.routine.done}/{item.routine.total}</span></p>
+        )}
+        {/* A preview: two lines on the top three, one in the list. The task page has it all. */}
+        {details && (
+          <p className={`mt-0.5 whitespace-pre-line break-words text-sm text-muted ${big ? "line-clamp-2" : "line-clamp-1"}`}>{details}</p>
         )}
         <p className="mt-0.5 flex items-center gap-2 text-sm text-muted">
           <span className={item.overdue ? "font-medium text-red" : ""}>{item.overdue ? `overdue · ${due(item, now)}` : due(item, now)}</span>
@@ -74,6 +78,11 @@ export async function TodayScreen({ db }: { db: Db }) {
   const todayEvents = soon.filter((e) => e.daysAway === 0);
   const prepare = soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now");
   const focus = pickFocus(tasks, now);
+  const shownIds = [...focus.top, ...focus.rest].map((f) => f.id);
+  const { data: detailRows } = shownIds.length
+    ? await db.from("tasks").select("id, details").in("id", shownIds).not("details", "is", null)
+    : { data: [] as { id: string; details: string | null }[] };
+  const details = new Map((detailRows ?? []).map((d) => [d.id, d.details]));
   const date = new Intl.DateTimeFormat("en-GB", { timeZone: tz(), weekday: "long", day: "numeric", month: "long" }).format(now);
 
   return (
@@ -119,7 +128,7 @@ export async function TodayScreen({ db }: { db: Db }) {
       ) : (
         <ol className="flex flex-col gap-3">
           {focus.top.map((item) => (
-            <Row key={item.id} item={item} now={now} big />
+            <Row key={item.id} item={item} now={now} big details={details.get(item.id)} />
           ))}
         </ol>
       )}
@@ -131,7 +140,7 @@ export async function TodayScreen({ db }: { db: Db }) {
           </summary>
           <ul className="mt-3 flex flex-col gap-2">
             {focus.rest.map((item) => (
-              <Row key={item.id} item={item} now={now} />
+              <Row key={item.id} item={item} now={now} details={details.get(item.id)} />
             ))}
           </ul>
         </details>
