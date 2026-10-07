@@ -470,6 +470,31 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"meal_plans": {
+                  Row: {
+                    "created_at": string,"day": string,"id": string,"meal_id": string | null,"name": string,"recipe_id": string | null,"slot": string,"status": string,"user_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"day": string,"id"?: string,"meal_id"?: string | null,"name": string,"recipe_id"?: string | null,"slot": string,"status"?: string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"day"?: string,"id"?: string,"meal_id"?: string | null,"name"?: string,"recipe_id"?: string | null,"slot"?: string,"status"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "meal_plans_meal_id_user_id_fkey"
+      columns: ["meal_id","user_id"]
+isOneToOne: false
+      referencedRelation: "meals"
+      referencedColumns: ["id","user_id"]
+    },{
+      foreignKeyName: "meal_plans_recipe_id_user_id_fkey"
+      columns: ["recipe_id","user_id"]
+isOneToOne: false
+      referencedRelation: "recipes"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
                 },"meals": {
                   Row: {
                     "at": string,"id": string,"ingredients": NonNullable<Json>,"name": string,"notes": string | null,"user_id": string
@@ -614,6 +639,19 @@ isOneToOne: false
                   }
                   Update: {
                     "auth"?: string,"created_at"?: string,"endpoint"?: string,"id"?: string,"p256dh"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"recipes": {
+                  Row: {
+                    "created_at": string,"id": string,"ingredients": NonNullable<Json>,"minutes": number | null,"name": string,"notes": string | null,"slots": (string)[],"user_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"ingredients"?: NonNullable<Json>,"minutes"?: number | null,"name": string,"notes"?: string | null,"slots"?: (string)[],"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"ingredients"?: NonNullable<Json>,"minutes"?: number | null,"name"?: string,"notes"?: string | null,"slots"?: (string)[],"user_id"?: string
                   }
                   Relationships: [
                     

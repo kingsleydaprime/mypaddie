@@ -1170,3 +1170,25 @@ the AI closes it in one go.
 
 `export_data` doesn't push the whole JSON through chat: it gives the signed-in
 download link and record counts, and returns one part's rows (up to 500) on request.
+
+### Meal planning
+Recipes are a table of their own, and also learned: cook_meal with
+ingredients saves a new dish as a recipe (any meal slot until told otherwise),
+so planning gets better just by logging what was cooked. Ingredients use the
+pantry's units, and an ingredient in a different unit counts as missing —
+the pantry deliberately does no conversions.
+
+`propose_meals` is read-only, like plan_day. For each open slot (the meals in
+their schedule, from today's still-ahead ones), in time order, it ranks
+suitable recipes by: makeable from what's left → not eaten or planned in the
+last 2 days → eaten longest ago → fewest missing → name. Each pick reserves its
+ingredients, so a later slot sees what's really left and two meals don't both
+count on the same rice. Stock ranks above variety (eating beans twice in three
+days beats a plan you can't cook), with one hard rule found in a smoke run:
+**never the same dish twice in a day** — the slot is left open and reported
+instead. The shopping list adds up what the whole plan is short.
+
+`accept_meals` saves any dish name (a recipe isn't required); a planned slot is
+replaced, a cooked one never. cook_meal ticks today's planned slot by name.
+Planned dishes name the meal slots in Plan my day ("Lunch: Jollof") and ride
+along in get_today.

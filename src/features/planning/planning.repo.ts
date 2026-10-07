@@ -6,6 +6,7 @@ import { loadCapacity, loadDayTasks, loadSeriesTemplates, updateTask } from "@/f
 import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, localTimeOf, zonedInstant } from "@/shared/time";
+import { mealsForDay } from "@/features/pantry/meals.repo";
 import { dayEndsAt } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { CHORE_MAX_XP, planDay, type FixedBlock, type FlexibleTask } from "./plan";
@@ -96,6 +97,9 @@ export async function proposeDay(db: Db, day: string, now: Date) {
 
   const plan = planDay({ day, now, fixed, flexible, meals: schedule.meals, window: { start: schedule.quietEnd, end: dayEndsAt(schedule) } });
   const habitIds = new Set(flexible.filter((f) => f.habit).map((f) => f.id));
+  // A planned dish names its meal slot: "Lunch: Jollof rice".
+  const dishes = await mealsForDay(db, day);
+  plan.slots = plan.slots.map((sl) => (sl.kind === "meal" && dishes.has(sl.title.toLowerCase()) ? { ...sl, title: `${sl.title}: ${dishes.get(sl.title.toLowerCase())}` } : sl));
 
   // Free time gets an idea from his fun list that fits the gap (time, money, mood).
   const free = plan.slots.find((s) => s.kind === "free");

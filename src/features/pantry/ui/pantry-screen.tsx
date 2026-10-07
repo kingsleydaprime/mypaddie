@@ -19,6 +19,7 @@ export async function PantryScreen({ db }: { db: Db }) {
       <header className="flex items-center gap-3">
         <Link href="/app/money" className="text-muted" aria-label="Back to money">‹ Money</Link>
         <h1 className="text-2xl font-bold">Pantry</h1>
+        <Link href="/app/pantry/meals" className="ml-auto rounded-xl border border-line px-4 py-2 text-sm font-medium">Meal plan ›</Link>
       </header>
 
       {list.length > 0 && (

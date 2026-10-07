@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import { afterCooking } from "./meals.repo";
 import { withMode } from "@/features/mode/mode.repo";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { byCategory, shoppingList } from "./pantry";
@@ -87,7 +88,9 @@ export function registerPantryTools(server: McpServer) {
       title: "Cook meal",
       description:
         "Record a meal the user cooked and use up its ingredients from the pantry (use the pantry's units). Ingredients " +
-        "the user didn't have logged come back as `missing` — that's fine; offer to add them to the pantry next time.",
+        "the user didn't have logged come back as `missing` — that's fine; offer to add them to the pantry next time. " +
+          "If it was today's planned meal, the plan is ticked; a new dish with ingredients is saved as a recipe so " +
+          "propose_meals can suggest it again.",
       inputSchema: z.object({
         name: z.string().trim().min(1),
         ingredients: z.array(z.object({ name: z.string().trim().min(1), quantity, unit: z.string().trim() })).default([]),
@@ -98,9 +101,11 @@ export function registerPantryTools(server: McpServer) {
     async (args: { name: string; ingredients: { name: string; quantity: number; unit: string }[]; notes?: string; at?: string }, ctx: ToolContext) => {
       try {
         const db = dbFrom(ctx);
+        const now = new Date();
         const cooked = await cookMeal(db, args);
+        const plan = await afterCooking(db, { mealId: cooked.meal_id, name: args.name, ingredients: args.ingredients }, args.at ? new Date(args.at) : now);
         const list = shoppingList(await loadPantry(db));
-        return ok(await withMode(db, new Date(), { ...cooked, shoppingList: list }));
+        return ok(await withMode(db, now, { ...cooked, ...plan, shoppingList: list }));
       } catch (error) {
         return toolError(`cook_meal failed: ${(error as Error).message}`);
       }

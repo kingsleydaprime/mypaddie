@@ -20,6 +20,7 @@ import { dayEndsAt } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { loadMode } from "@/features/mode/mode.repo";
 import { loadMoneyStage } from "@/features/money/money.repo";
+import { mealsForDay } from "@/features/pantry/meals.repo";
 import type { MoneyStage } from "@/features/money/stage";
 import { roomOn } from "@/features/tasks/capacity";
 import { catchUp, loadCapacity, loadDayTasks, loadTasksAroundToday } from "@/features/tasks/tasks.repo";
@@ -73,7 +74,7 @@ export function registerTodayTools(server: McpServer) {
         const caughtUp = { ...(await catchUp(db, now)), brokenPromises: await applyBrokenPromises(db, now) };
         // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
         await syncCalendar(db, now).catch(() => null);
-        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun, promises, week, people, self, themes, owed, earned, decisions, values, experimentsDue] = await Promise.all([
+        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun, promises, week, people, self, themes, owed, earned, decisions, values, experimentsDue, mealsToday] = await Promise.all([
           loadTasksAroundToday(db, now),
           loadMode(db, now),
           loadMoneyStage(db, now),
@@ -94,6 +95,7 @@ export function registerTodayTools(server: McpServer) {
           loadDecisions(db, now),
           loadValues(db),
           dueExperiments(db, now),
+          mealsForDay(db, dayKey(now, tz())),
         ]);
         const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
         const room = roomOn(dayKey(now, tz()), dayTasks, capacity, now, undefined, dayEndsAt(schedule));
@@ -126,6 +128,8 @@ export function registerTodayTools(server: McpServer) {
             today: soon.filter((e) => e.daysAway === 0).map((e) => ({ title: e.title, kind: e.kind, at: e.allDay ? "all day" : formatLocal(e.at, tz()) })),
             prepareNow: soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now").map((e) => ({ title: e.title, daysAway: e.daysAway })),
           },
+          // Today's planned meals by slot. None planned: offer propose_meals when food comes up.
+          ...(mealsToday.size ? { meals: Object.fromEntries(mealsToday) } : {}),
           // Days since any fun (null = no fun list yet: offer to start one). `ideas` only when they've earned a break or is overdue for one.
           fun: {
             daysSince: fun.daysSinceFun,
