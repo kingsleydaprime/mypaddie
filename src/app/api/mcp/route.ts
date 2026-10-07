@@ -5,6 +5,7 @@ import { registerCommitmentTools } from "@/features/commitments/commitments.tool
 import { registerCourseTools } from "@/features/courses/courses.tools";
 import { registerEventTools } from "@/features/events/events.tools";
 import { registerFunTools } from "@/features/fun/fun.tools";
+import { catalogue, registerHelpTool } from "@/features/help/help.tools";
 import { registerIdentityTools } from "@/features/identity/identity.tools";
 import { registerItemTools } from "@/features/items/items.tools";
 import { registerLearningTools } from "@/features/learning/learning.tools";
@@ -30,30 +31,33 @@ import { withUser } from "@/shared/user-context";
 
 const handler = createMcpHandler(
   (server) => {
-    registerTodayTools(server);
-    registerTaskTools(server);
-    registerCapacityTools(server);
-    registerItemTools(server);
-    registerLearningTools(server);
-    registerSlipTools(server);
-    registerModeTools(server);
-    registerMoneyTools(server);
-    registerStatsTools(server);
-    registerMemoryTools(server);
-    registerIdentityTools(server);
-    registerWorkoutTools(server);
-    registerPantryTools(server);
-    registerEventTools(server);
-    registerPlanningTools(server);
-    registerSettingsTools(server);
-    registerApplicationTools(server);
-    registerUpdateTools(server);
-    registerCalendarTools(server);
-    registerFunTools(server);
-    registerCourseTools(server);
-    registerCommitmentTools(server);
-    registerPromiseTools(server);
-    registerProfileTools(server);
+    // Every tool is catalogued by area as it's registered; what_can_paddie_do lists them.
+    const tools = catalogue(server);
+    tools.area("Today", () => registerTodayTools(server));
+    tools.area("Tasks and habits", () => registerTaskTools(server));
+    tools.area("Tasks and habits", () => registerCapacityTools(server));
+    tools.area("Goals and needs", () => registerItemTools(server));
+    tools.area("Learning", () => registerLearningTools(server));
+    tools.area("Coaching", () => registerSlipTools(server));
+    tools.area("Coaching", () => registerModeTools(server));
+    tools.area("Money", () => registerMoneyTools(server));
+    tools.area("Stats", () => registerStatsTools(server));
+    tools.area("Memory", () => registerMemoryTools(server));
+    tools.area("Who I'm becoming", () => registerIdentityTools(server));
+    tools.area("Workouts", () => registerWorkoutTools(server));
+    tools.area("Pantry and meals", () => registerPantryTools(server));
+    tools.area("Events", () => registerEventTools(server));
+    tools.area("Planning", () => registerPlanningTools(server));
+    tools.area("Settings", () => registerSettingsTools(server));
+    tools.area("Applications", () => registerApplicationTools(server));
+    tools.area("Updates owed", () => registerUpdateTools(server));
+    tools.area("Google Calendar", () => registerCalendarTools(server));
+    tools.area("Fun", () => registerFunTools(server));
+    tools.area("School", () => registerCourseTools(server));
+    tools.area("Jobs, roles and teams", () => registerCommitmentTools(server));
+    tools.area("Promises", () => registerPromiseTools(server));
+    tools.area("Settings", () => registerProfileTools(server));
+    registerHelpTool(server, tools.entries);
   },
   {
     serverInfo: { name: "mypaddie", version: "1.0.0" },
@@ -66,7 +70,10 @@ const handler = createMcpHandler(
       "`mode` (curious, strict, soft, strictest, softest) with the facts behind it — set your tone from it. get_today also " +
       "returns `becoming`, their 'Who I'm becoming' profile: praise choices that fit it, push back on ones that don't, and " +
       "never debate whether it's the right one. They can ask you to edit it (update_identity), or change their name, " +
-      "time zone, currency or voice (update_profile). Money is whole units of their currency.",
+      "time zone, currency or voice (update_profile). Money is whole units of their currency. MyPaddie has tools for a " +
+      "lot more than tasks — courses and study plans, promises, jobs and roles (with history), fun, workouts, pantry, " +
+      "events, applications, updates owed, Google Calendar. Before telling them it can't do something, check your " +
+      "tools or call what_can_paddie_do. If a tool says their plan doesn't include something, tell them exactly that.",
   },
 );
 

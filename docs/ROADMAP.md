@@ -69,6 +69,8 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
   first day; `export_all` missed every table added after Day 1.
 
 ## Done: commitments and promises (2026-10-07)
+- [x] Role history per commitment (Member → Secretary, with dates), 2026-10-13.
+- [x] `what_can_paddie_do` + instructions so AI apps check their tools before saying no.
 - [x] **Commitments**: jobs, roles, memberships, teams; priority; regular
   sessions as recurring tasks; competitions/meetings as linked events; pause
   or end to free the time. Quests → Commitments.

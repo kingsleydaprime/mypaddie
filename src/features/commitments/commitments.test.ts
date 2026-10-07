@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { parseRecurrence } from "@/features/tasks/recurrence";
-import { assessLoad, verdictFor, weeklyMinutes, type CommitmentLoad } from "./commitments";
+import { assessLoad, planRoleChange, roleHistoryText, verdictFor, weeklyMinutes, type CommitmentLoad } from "./commitments";
 
 const c = (title: string, priority: CommitmentLoad["priority"], scheduledMinutes: number, extraMinutes = 0): CommitmentLoad => ({
   id: title, title, priority, scheduledMinutes, extraMinutes,
@@ -80,5 +80,39 @@ describe("assessLoad", () => {
   test("commitments with nothing scheduled aren't suggested for dropping", () => {
     const load = assessLoad({ capacity: WEEK, scheduled: 2500, commitments: [c("Old club", "optional", 0)] });
     expect(load.dropCandidates).toEqual([]);
+  });
+});
+
+describe("planRoleChange", () => {
+  const member = { title: "Member", startsOn: "2025-09-01", endsOn: null };
+  test("a new title from a later date: the old role ends the day before", () => {
+    expect(planRoleChange(member, { title: "Secretary", from: "2026-03-10" })).toEqual({
+      kind: "change", closeOn: "2026-03-09", open: { title: "Secretary", startsOn: "2026-03-10" },
+    });
+  });
+  test("the same title (any case): nothing to do", () => {
+    expect(planRoleChange(member, { title: " member ", from: "2026-03-10" })).toEqual({ kind: "same" });
+  });
+  test("a 'change' dated on or before the current role's start is a correction: rename", () => {
+    expect(planRoleChange(member, { title: "General member", from: "2025-09-01" })).toEqual({ kind: "rename", title: "General member" });
+  });
+  test("no current role: just open one", () => {
+    expect(planRoleChange(null, { title: "Captain", from: "2026-01-05" })).toEqual({ kind: "change", closeOn: null, open: { title: "Captain", startsOn: "2026-01-05" } });
+  });
+  test("a current role with no known start: a change is still a change", () => {
+    expect(planRoleChange({ title: "Member", startsOn: null, endsOn: null }, { title: "Secretary", from: "2026-03-10" })).toMatchObject({ kind: "change", closeOn: "2026-03-09" });
+  });
+});
+
+describe("roleHistoryText", () => {
+  test("oldest first, with dates", () => {
+    expect(roleHistoryText([
+      { title: "Secretary", startsOn: "2026-03-10", endsOn: null },
+      { title: "Member", startsOn: "2025-09-01", endsOn: "2026-03-09" },
+    ])).toBe("Member (Sep 2025 – Mar 2026) → Secretary (since Mar 2026)");
+  });
+  test("unknown start dates", () => {
+    expect(roleHistoryText([{ title: "Member", startsOn: null, endsOn: "2026-03-09" }])).toBe("Member (until Mar 2026)");
+    expect(roleHistoryText([{ title: "Member", startsOn: null, endsOn: null }])).toBe("Member");
   });
 });

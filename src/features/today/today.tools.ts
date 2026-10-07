@@ -87,6 +87,8 @@ export function registerTodayTools(server: McpServer) {
         const questsDone = focus.top.length === 0 && focus.rest.length === 0 && focus.doneToday > 0;
         const me = currentProfile();
         return ok({
+          // Some AI apps ignore server instructions; this rides along with the first call of every chat.
+          tip: "MyPaddie can do far more than this summary shows. Before saying it can't do something, call what_can_paddie_do.",
           // Who you're talking to, and how they want to be talked to.
           you: { name: me.displayName, voice: me.voice, timeZone: me.timeZone, currency: me.currency, ...(me.onboardedAt ? {} : { setUp: false }) },
           now: formatLocal(now, tz()),

@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { roleHistoryText } from "@/features/commitments/commitments";
 import { currentPlan } from "@/shared/user-context";
 import { hasFeature } from "@/features/plans/plans";
 import { UpgradeNote } from "@/features/plans/ui/upgrade-note";
 import { KIND_LABEL, type CommitmentPriority, type LoadVerdict } from "@/features/commitments/commitments";
-import { setCommitmentAction } from "@/features/commitments/commitments.actions";
+import { changeRoleAction, setCommitmentAction } from "@/features/commitments/commitments.actions";
 import { loadCommitments, loadWeekLoad } from "@/features/commitments/commitments.repo";
 import { AddCommitmentForm } from "@/features/commitments/ui/add-commitment-form";
 import { requireDb } from "@/shared/supabase/session";
@@ -59,6 +60,7 @@ export default async function CommitmentsPage() {
                 <span className="shrink-0 text-sm text-muted">{c.status === "paused" ? "paused" : `${hours(minutesFor(c.id))}/wk`}</span>
               </div>
               <p className="text-xs text-muted">{KIND_LABEL[c.kind]}</p>
+              {(c.roles.length > 1 || c.roles.some((r) => r.startsOn)) && <p className="mt-1 text-xs text-muted">{roleHistoryText(c.roles)}</p>}
               <div className="mt-2 flex flex-wrap gap-2">
                 <form action={setCommitmentAction.bind(null, c.id, { priority: NEXT_PRIORITY[c.priority] })}>
                   <button className="rounded-full border border-line px-3 py-1 text-sm" aria-label={`Priority ${c.priority}, tap to change`}>{c.priority}</button>
@@ -76,6 +78,16 @@ export default async function CommitmentsPage() {
                   <button className="rounded-full border border-line px-3 py-1 text-sm text-muted">End</button>
                 </form>
               </div>
+              <details className="mt-2">
+                <summary className="cursor-pointer text-sm text-muted">Role changed?</summary>
+                <form action={changeRoleAction.bind(null, c.id)} className="mt-2 flex flex-wrap gap-2">
+                  <input name="title" required maxLength={120} placeholder="New role, e.g. Secretary" aria-label="New role"
+                    className="min-w-0 flex-1 rounded-lg border border-line bg-surface-2 px-2 py-1.5" />
+                  <input name="from" type="date" aria-label="Since (default today)" className="rounded-lg border border-line bg-surface-2 px-2 py-1.5" />
+                  <button className="text-sm font-semibold text-gold">Save</button>
+                </form>
+                <p className="mt-1 text-xs text-muted">Your old role is kept, with its dates.</p>
+              </details>
             </li>
           ))}
         </ul>
@@ -85,7 +97,11 @@ export default async function CommitmentsPage() {
       {ended.length > 0 && (
         <section className="flex flex-col gap-1">
           <h2 className="font-bold text-muted">Ended</h2>
-          {ended.map((c) => <p key={c.id} className="text-sm text-muted">{c.title}{c.org ? `, ${c.org}` : ""}</p>)}
+          {ended.map((c) => (
+            <p key={c.id} className="text-sm text-muted">
+              {c.org ?? c.title}: {roleHistoryText(c.roles) || c.title}
+            </p>
+          ))}
         </section>
       )}
     </div>

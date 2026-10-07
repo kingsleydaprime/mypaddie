@@ -69,6 +69,25 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"commitment_roles": {
+                  Row: {
+                    "commitment_id": string,"created_at": string,"ends_on": string | null,"id": string,"notes": string | null,"starts_on": string | null,"title": string,"user_id": string
+                  }
+                  Insert: {
+                    "commitment_id": string,"created_at"?: string,"ends_on"?: string | null,"id"?: string,"notes"?: string | null,"starts_on"?: string | null,"title": string,"user_id"?: string
+                  }
+                  Update: {
+                    "commitment_id"?: string,"created_at"?: string,"ends_on"?: string | null,"id"?: string,"notes"?: string | null,"starts_on"?: string | null,"title"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "commitment_roles_commitment_id_user_id_fkey"
+      columns: ["commitment_id","user_id"]
+isOneToOne: false
+      referencedRelation: "commitments"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
                 },"commitments": {
                   Row: {
                     "created_at": string,"ends_on": string | null,"extra_minutes_per_week": number,"id": string,"kind": string,"notes": string | null,"org": string | null,"priority": string,"starts_on": string | null,"status": string,"title": string,"user_id": string

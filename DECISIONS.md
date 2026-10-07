@@ -868,3 +868,30 @@ Home: the hook, how it works in three steps (account → connect your AI → ask
 privacy promise, and a pricing band. About: the "paddy" idea and the
 principles from the blueprint, with Spectroniq Limited as the face — no
 personal details on public pages. Checked at 390 px in headless Firefox.
+
+## 2026-10-13 — Role history, and telling the AI what it can do
+
+### Roles are history, not a field
+`commitment_roles` keeps every role a commitment has had, with dates; the
+commitment's title is just the current one. "Role changed" (`new_role`)
+closes the current role the day before the new one starts; a "change" dated
+on or before the current role's start is a correction and just renames it
+(so a typo doesn't create history). Ending the commitment closes its role.
+One current role per commitment is a unique index. Existing commitments were
+backfilled with their title as the first role, unknown start dates left
+unknown rather than invented. Month names come from a fixed list — runtimes
+disagree on "Sep" vs "Sept".
+
+### The AI checks before it says "I can't"
+Testing with ChatGPT, it told Kingsley it couldn't do things it has tools for.
+Three layers, because not every AI app honours server instructions: the
+instructions now name the areas and say to check first; `what_can_paddie_do`
+lists every tool by area with the user's plan; and `get_today` (the first
+call of every chat) carries a one-line tip pointing at it. The list is built
+by wrapping `registerTool` as the server starts, so it can't drift from the
+real tools.
+
+### Plan changes need no reconnect
+The plan is read on every tool call (it's in the per-request user context),
+and the tool list is the same on every plan — a tool outside the plan answers
+with what's needed. Switching Free → Pro applies to the very next message.

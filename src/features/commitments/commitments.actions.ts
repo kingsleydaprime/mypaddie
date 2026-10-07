@@ -58,3 +58,13 @@ export async function setCommitmentAction(id: string, changes: { status?: Commit
   revalidatePath("/app/commitments");
   revalidatePath("/app");
 }
+
+/** "Role changed?" — the old role is kept as history (see planRoleChange). */
+export async function changeRoleAction(id: string, form: FormData) {
+  const title = String(form.get("title") ?? "").trim();
+  const from = String(form.get("from") ?? "").trim();
+  if (!title) return;
+  const db = await requireDb("/app/commitments");
+  await updateCommitment(db, id, { newRole: { title, ...(from ? { from } : {}) } }, new Date());
+  revalidatePath("/app/commitments");
+}

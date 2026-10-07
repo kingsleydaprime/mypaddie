@@ -1,5 +1,6 @@
 import { DEFAULT_DURATION } from "@/features/tasks/capacity";
 import type { Recurrence } from "@/features/tasks/recurrence";
+import { addDays } from "@/shared/time";
 
 export const COMMITMENT_KINDS = [
   "full_time", "part_time", "freelance", "internship", "volunteer", "leadership", "membership", "team", "other",
@@ -138,4 +139,45 @@ export function assessLoad(input: {
     ...(after ? { after } : {}),
     dropCandidates,
   };
+}
+
+export interface RoleLike {
+  title: string;
+  startsOn: string | null;
+  endsOn: string | null;
+}
+
+export type RoleChange =
+  | { kind: "same" }
+  /** A correction (typo, or the new role "starts" when the current one did): rename it, no history. */
+  | { kind: "rename"; title: string }
+  /** A real change: the current role ends the day before, the new one starts on `from`. */
+  | { kind: "change"; closeOn: string | null; open: { title: string; startsOn: string } };
+
+/**
+ * Member → Secretary. A new title from a date after the current role began is
+ * a change, kept as history; the same date (or no current role start to
+ * compare with and the same day) is treated as fixing the title.
+ */
+export function planRoleChange(current: RoleLike | null, next: { title: string; from: string }): RoleChange {
+  const title = next.title.trim();
+  if (current && current.title.trim().toLowerCase() === title.toLowerCase()) return { kind: "same" };
+  if (!current) return { kind: "change", closeOn: null, open: { title, startsOn: next.from } };
+  if (current.startsOn !== null && next.from <= current.startsOn) return { kind: "rename", title };
+  return { kind: "change", closeOn: addDays(next.from, -1), open: { title, startsOn: next.from } };
+}
+
+/** "Member (Sep 2025 – Mar 2026) → Secretary (since Mar 2026)" */
+export function roleHistoryText(roles: readonly RoleLike[]): string {
+  // A fixed list: Intl's short months differ between runtimes ("Sep" vs "Sept").
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = (d: string) => `${MONTHS[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}`;
+  return [...roles]
+    .sort((a, b) => (a.startsOn ?? "").localeCompare(b.startsOn ?? ""))
+    .map((r) => {
+      const from = r.startsOn ? month(r.startsOn) : null;
+      if (r.endsOn) return `${r.title} (${from ? `${from} – ` : "until "}${month(r.endsOn)})`;
+      return from ? `${r.title} (since ${from})` : r.title;
+    })
+    .join(" → ");
 }

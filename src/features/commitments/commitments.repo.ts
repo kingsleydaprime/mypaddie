@@ -13,11 +13,12 @@ import {
   type CommitmentLoad,
   type CommitmentPriority,
   type CommitmentStatus,
+  planRoleChange,
 } from "./commitments";
 
 /** The current user's time zone (read per call, never at import). */
 const tz = () => currentConfig().timeZone;
-const COLUMNS = "id, kind, title, org, priority, status, starts_on, ends_on, extra_minutes_per_week, notes, created_at";
+const COLUMNS = "id, kind, title, org, priority, status, starts_on, ends_on, extra_minutes_per_week, notes, created_at, commitment_roles(id, title, starts_on, ends_on)";
 
 export interface Commitment {
   id: string;
@@ -30,7 +31,17 @@ export interface Commitment {
   ends_on: string | null;
   extra_minutes_per_week: number;
   notes: string | null;
+  /** Every role held here, oldest first; the one with no end is current. */
+  roles: { id: string; title: string; startsOn: string | null; endsOn: string | null }[];
 }
+
+type CommitmentRow = Omit<Commitment, "roles"> & { commitment_roles: { id: string; title: string; starts_on: string | null; ends_on: string | null }[] };
+const toCommitment = ({ commitment_roles, ...c }: CommitmentRow): Commitment => ({
+  ...c,
+  roles: commitment_roles
+    .map((r) => ({ id: r.id, title: r.title, startsOn: r.starts_on, endsOn: r.ends_on }))
+    .sort((a, b) => (a.startsOn ?? "").localeCompare(b.startsOn ?? "") || (a.endsOn === null ? 1 : b.endsOn === null ? -1 : 0)),
+});
 
 export const commitmentLabel = (c: { title: string; org: string | null }) => (c.org ? `${c.title}, ${c.org}` : c.title);
 
@@ -58,7 +69,7 @@ export async function loadCommitments(db: Db, opts: { includeEnded?: boolean } =
   if (!opts.includeEnded) query = query.neq("status", "ended");
   const { data, error } = await query;
   if (error) throw new Error(`loading commitments: ${error.message}`);
-  return data as Commitment[];
+  return (data as unknown as CommitmentRow[]).map(toCommitment);
 }
 
 const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
@@ -134,7 +145,10 @@ export async function addCommitment(db: Db, input: NewCommitment, now: Date) {
     .select(COLUMNS)
     .single();
   if (error) throw new Error(`saving the commitment: ${error.message}`);
-  const commitment = data as Commitment;
+  const commitment = toCommitment(data as unknown as CommitmentRow);
+  // Its first role, from when it started (if known).
+  const { error: roleError } = await db.from("commitment_roles").insert({ commitment_id: commitment.id, title: commitment.title, starts_on: commitment.starts_on });
+  if (roleError) throw new Error(`saving the role: ${roleError.message}`);
   const sessions = [];
   for (const s of input.sessions ?? []) {
     const made = await addSession(db, commitment, s, now);
@@ -144,6 +158,8 @@ export async function addCommitment(db: Db, input: NewCommitment, now: Date) {
 }
 
 export interface CommitmentChanges {
+  /** Their role changed (Member → Secretary): kept as history. `from` defaults to today. */
+  newRole?: { title: string; from?: string };
   kind?: CommitmentKind;
   title?: string;
   org?: string | null;
@@ -160,9 +176,34 @@ export interface CommitmentChanges {
  * cancels its open one-off tasks — the time comes back. Past sessions stay as
  * history. Resuming doesn't recreate them: add the sessions again.
  */
-export async function updateCommitment(db: Db, ref: string, changes: CommitmentChanges, now: Date) {
+export async function updateCommitment(db: Db, ref: string, changesIn: CommitmentChanges, now: Date) {
+  let changes = changesIn;
   const c = await findCommitment(db, ref);
   if (!c) return { result: "not_found" as const };
+  const today = dayKey(now, tz());
+  const current = c.roles.find((r) => r.endsOn === null) ?? null;
+
+  // Role history: a new role closes the current one; a plain title edit just renames it.
+  let roleChange: ReturnType<typeof planRoleChange> | null = null;
+  if (changes.newRole) {
+    roleChange = planRoleChange(current, { title: changes.newRole.title, from: changes.newRole.from ?? today });
+    if (roleChange.kind === "change") {
+      if (current) await db.from("commitment_roles").update({ ends_on: roleChange.closeOn }).eq("id", current.id);
+      const { error: e } = await db.from("commitment_roles").insert({ commitment_id: c.id, title: roleChange.open.title, starts_on: roleChange.open.startsOn });
+      if (e) throw new Error(`saving the new role: ${e.message}`);
+      changes = { ...changes, title: roleChange.open.title };
+    } else if (roleChange.kind === "rename") {
+      changes = { ...changes, title: roleChange.title };
+    }
+  }
+  if (changes.title && (!roleChange || roleChange.kind === "rename") && current) {
+    await db.from("commitment_roles").update({ title: changes.title.trim() }).eq("id", current.id);
+  }
+  if (changes.status === "ended" && current) {
+    const end = changes.endsOn ?? c.ends_on ?? today;
+    await db.from("commitment_roles").update({ ends_on: current.startsOn && end < current.startsOn ? current.startsOn : end }).eq("id", current.id);
+  }
+
   const { error } = await db
     .from("commitments")
     .update({
@@ -192,7 +233,12 @@ export async function updateCommitment(db: Db, ref: string, changes: CommitmentC
     }
     stopped = [...new Set(stopped)];
   }
-  return { result: "updated" as const, commitment: commitmentLabel({ title: changes.title ?? c.title, org: changes.org === undefined ? c.org : changes.org }), ...(stopped.length ? { stopped } : {}) };
+  return {
+    result: "updated" as const,
+    commitment: commitmentLabel({ title: changes.title ?? c.title, org: changes.org === undefined ? c.org : changes.org }),
+    ...(roleChange ? { role: roleChange.kind } : {}),
+    ...(stopped.length ? { stopped } : {}),
+  };
 }
 
 /**

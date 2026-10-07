@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/server";
+import { roleHistoryText } from "./commitments";
 import { requireFeature } from "@/features/plans/guard";
 import { hasFeature } from "@/features/plans/plans";
 import { currentPlan } from "@/shared/user-context";
@@ -119,7 +120,7 @@ export function registerCommitmentTools(server: McpServer) {
     "list_commitments",
     {
       title: "List commitments",
-      description: "Their jobs, roles, memberships and teams with priority, status and hours a week, plus the week's load.",
+      description: "Their jobs, roles, memberships and teams with priority, status, hours a week, and role history (with dates — useful for a CV or an update), plus the week's load.",
       inputSchema: z.object({ include_ended: z.boolean().default(false) }),
       annotations: { readOnlyHint: true },
     },
@@ -134,6 +135,8 @@ export function registerCommitmentTools(server: McpServer) {
             commitments: list.map((c) => ({
               id: c.id, kind: c.kind, title: c.title, org: c.org, priority: c.priority, status: c.status, startsOn: c.starts_on, endsOn: c.ends_on,
               hoursPerWeek: hours(load.byCommitment.find((b) => b.id === c.id)?.minutes ?? c.extra_minutes_per_week), notes: c.notes,
+              roles: c.roles.map((r) => ({ title: r.title, from: r.startsOn, to: r.endsOn })),
+              history: roleHistoryText(c.roles),
             })),
             ...(showLoad ? { load: loadView(load) } : {}),
           }),
@@ -149,11 +152,14 @@ export function registerCommitmentTools(server: McpServer) {
     {
       title: "Update commitment",
       description:
-        "Change a commitment (by title, org, or id): details, priority, unscheduled hours, or status. Pausing or ending " +
+        "Change a commitment (by title, org, or id). Their role changed (Member → Secretary, promoted, moved team)? Use " +
+        "`new_role` (with `from`, default today): the old role is kept as history with its dates. `title` alone just fixes " +
+        "the current role's name. Details, priority, unscheduled hours, or status: pausing or ending " +
         "it stops its recurring sessions and cancels its open tasks, so the time comes back (resuming doesn't recreate " +
         "them — add sessions again). `add_sessions` adds regular sessions to it.",
       inputSchema: z.object({
         commitment: z.string().trim().min(1),
+        new_role: z.object({ title: z.string().trim().min(1).max(120), from: z.iso.date().optional() }).optional().describe("A real role change, kept as history"),
         kind: z.enum(COMMITMENT_KINDS).optional(),
         title: z.string().trim().min(1).max(120).optional(),
         org: z.string().trim().max(120).nullable().optional(),
@@ -168,7 +174,7 @@ export function registerCommitmentTools(server: McpServer) {
     },
     async (
       args: {
-        commitment: string; kind?: CommitmentKind; title?: string; org?: string | null; priority?: CommitmentPriority; status?: CommitmentStatus;
+        commitment: string; new_role?: { title: string; from?: string }; kind?: CommitmentKind; title?: string; org?: string | null; priority?: CommitmentPriority; status?: CommitmentStatus;
         starts_on?: string | null; ends_on?: string | null; extra_hours_per_week?: number; notes?: string | null; add_sessions?: SessionArg[];
       },
       ctx: ToolContext,
@@ -180,7 +186,7 @@ export function registerCommitmentTools(server: McpServer) {
           db,
           args.commitment,
           {
-            kind: args.kind, title: args.title, org: args.org, priority: args.priority, status: args.status, startsOn: args.starts_on, endsOn: args.ends_on,
+            newRole: args.new_role, kind: args.kind, title: args.title, org: args.org, priority: args.priority, status: args.status, startsOn: args.starts_on, endsOn: args.ends_on,
             extraMinutesPerWeek: args.extra_hours_per_week === undefined ? undefined : Math.round(args.extra_hours_per_week * 60), notes: args.notes,
           },
           now,
