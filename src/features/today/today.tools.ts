@@ -102,6 +102,11 @@ export function registerTodayTools(server: McpServer) {
         const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
         const room = roomOn(dayKey(now, tz()), dayTasks, capacity, now, undefined, dayEndsAt(schedule));
         const focus = pickFocus(tasks, now);
+        // Details for the top three only: what they'd read when starting one.
+        const { data: detailRows } = focus.top.length
+          ? await db.from("tasks").select("id, details").in("id", focus.top.map((f) => f.id)).not("details", "is", null)
+          : { data: [] as { id: string; details: string | null }[] };
+        const details = new Map((detailRows ?? []).map((d) => [d.id, d.details]));
         // Fun counts: suggest some once today's quests are done, or when it's been too long.
         const funDue = fun.daysSinceFun !== null && schedule.funEveryDays > 0 && fun.daysSinceFun >= schedule.funEveryDays;
         const questsDone = focus.top.length === 0 && focus.rest.length === 0 && focus.doneToday > 0;
@@ -115,7 +120,7 @@ export function registerTodayTools(server: McpServer) {
           // Where they are (set, a class, or a phone-free window). While it holds, keep replies short and don't add to their plate.
           ...(status ? { status } : {}),
           mode,
-          focus: focus.top.map(item),
+          focus: focus.top.map((f) => ({ ...item(f), ...(details.get(f.id) ? { details: details.get(f.id) } : {}) })),
           rest: focus.rest.map(item),
           doneToday: focus.doneToday,
           money: moneySummary(money),

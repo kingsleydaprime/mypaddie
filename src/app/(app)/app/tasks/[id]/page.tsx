@@ -14,7 +14,7 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
   const db = await requireDb(`/app/tasks/${id}`);
   const { data: t } = await db
     .from("tasks")
-    .select("id, title, status, due_at, duration_minutes, is_non_negotiable, reminder_note, series_id, commitment_id, course_id, is_class")
+    .select("id, title, status, due_at, duration_minutes, is_non_negotiable, reminder_note, series_id, commitment_id, course_id, is_class, details")
     .eq("id", id)
     .maybeSingle();
   if (!t) notFound();
@@ -54,6 +54,7 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
             duration: t.duration_minutes,
             must: t.is_non_negotiable,
             note: t.reminder_note ?? "",
+            details: t.details ?? "",
             habit: t.series_id !== null,
             forValue,
             // A timetable class belongs to its course; changing that is set_timetable's job.

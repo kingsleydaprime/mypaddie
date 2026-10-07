@@ -125,6 +125,7 @@ In build order. Each slice ships tools + app + tests before the next starts.
 
 - [x] Undo covers slips (2026-10-07).
 - [x] Tasks for a role or a course: `commitment`/`course` on add_task and update_task, "For" on the task page; classes flagged explicitly (2026-10-07).
+- [x] Task details (2026-10-07): steps, links, what done looks like; up to 2000 characters; carried to a habit's later days; shown for the top three in get_today.
 
 Already covered, so not built: spiritual habits (routines + learning log),
 saying no (check_load), sleep (check-ins). The 11th pillar is Academic.
@@ -205,6 +206,16 @@ which gets a new entry when it changes.
 - Competition prep plan: "final in 10 days" → proposed personal training sessions, like study plans.
 - Promise nudge wording of its own ("tell them now if you can't") instead of the generic task reminder.
 - Resuming a paused commitment brings its old sessions back.
+
+## Undecided: look into later (2026-10-07)
+Not agreed to build yet. A full start/stop/pause timer was considered and
+leaned against: more taps, forgotten timers corrupt data, and nothing (XP,
+capacity, lateness) depends on time actually spent.
+- Actual minutes on completion: `complete_task` takes an optional real
+  duration, mainly so study tasks log the time really spent instead of the
+  planned block (and, over time, show how good estimates are).
+- "Start" on a timed task sets status deep work until the block's planned
+  end, so pushes hold while focusing; Done or "I'm back" clears it.
 
 ## Ideas for later (people and self)
 - Push nudge for people due a check-in (today it's in chat and on the People page).

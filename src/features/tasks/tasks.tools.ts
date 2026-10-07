@@ -55,6 +55,7 @@ export function registerTaskTools(server: McpServer) {
         fun: z.string().trim().min(1).optional().describe("Planned fun: the title of an activity on their fun list; completing the task counts as doing it"),
         commitment: z.string().trim().min(1).optional().describe("The job, role, team or group it's for (title or id from list_commitments), e.g. extra training before a competition"),
         course: z.string().trim().min(1).optional().describe("The course it's for (code, title or id from list_courses): an exam form, a group meeting, buying the textbook. For study sessions on a topic use accept_study_plan instead (they log study time)"),
+        details: z.string().trim().max(2000).optional().describe("Steps, links, what done looks like — anything they'd want to read when they start it. Not the notification text (that's reminder_note)"),
         reminder_note: z.string().trim().max(200).optional().describe("Their own words for the notifications, e.g. 'Bring the signed form'"),
       }),
     },
@@ -78,6 +79,7 @@ export function registerTaskTools(server: McpServer) {
         commitment?: string;
         course?: string;
         reminder_note?: string;
+        details?: string;
       },
       ctx: ToolContext,
     ) => {
@@ -112,6 +114,7 @@ export function registerTaskTools(server: McpServer) {
             commitmentId: commitment?.id ?? null,
             courseId: course?.id ?? null,
             reminderNote: args.reminder_note,
+            details: args.details ?? null,
           },
           now,
         );
@@ -150,6 +153,7 @@ export function registerTaskTools(server: McpServer) {
         reminder_note: z.string().trim().max(200).nullable().optional().describe("null = back to the default wording"),
         commitment: z.string().trim().min(1).nullable().optional().describe("The job, role or group it's for (from list_commitments); null = unlink"),
         course: z.string().trim().min(1).nullable().optional().describe("The course it's for (from list_courses); null = unlink"),
+        details: z.string().trim().max(2000).nullable().optional().describe("Steps, links, what done looks like; for a habit it applies from this day on. null = clear"),
       }),
     },
     async (
@@ -171,6 +175,7 @@ export function registerTaskTools(server: McpServer) {
         reminder_note?: string | null;
         commitment?: string | null;
         course?: string | null;
+        details?: string | null;
       },
       ctx: ToolContext,
     ) => {
@@ -200,6 +205,7 @@ export function registerTaskTools(server: McpServer) {
             reminderNote: args.reminder_note,
             commitmentId: args.commitment === undefined ? undefined : commitment?.id ?? null,
             courseId: args.course === undefined ? undefined : course?.id ?? null,
+            details: args.details,
           },
           args.action,
         );
