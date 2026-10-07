@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { InvalidRecurrenceError, occursOn, withUntil, parseRecurrence, planOccurrences, projectedOccurrences, type SeriesForSpawn, type SeriesTemplate } from "./recurrence";
+import { firstOccurrence, InvalidRecurrenceError, occursOn, withUntil, parseRecurrence, planOccurrences, projectedOccurrences, type SeriesForSpawn, type SeriesTemplate } from "./recurrence";
 
 const at = (local: string) => new Date(`${local}+01:00`);
 
@@ -140,5 +140,38 @@ describe("UNTIL", () => {
     const now = new Date("2026-12-20T09:00:00+01:00");
     const out = planOccurrences([{ seriesId: "s", rule: "FREQ=DAILY;UNTIL=20261218", lastOccursOn: "2026-12-15", lastDueAt: null }], now, 7);
     expect(out.map((o) => o.occursOn)).toEqual(["2026-12-16", "2026-12-17", "2026-12-18"]);
+  });
+});
+
+describe("firstOccurrence", () => {
+  // Wednesday 7 October 2026, 17:00.
+  const now = { today: "2026-10-07", time: "17:00" };
+  const tuesdays = parseRecurrence("FREQ=WEEKLY;BYDAY=TU");
+  const daily = parseRecurrence("FREQ=DAILY");
+
+  test("a Tuesday habit set up on a Wednesday starts next Tuesday", () => {
+    expect(firstOccurrence(tuesdays, "2026-10-07", now, "16:00")).toBe("2026-10-13");
+  });
+  test("a daily habit whose time has passed starts tomorrow", () => {
+    expect(firstOccurrence(daily, "2026-10-07", now, "06:00")).toBe("2026-10-08");
+  });
+  test("a daily habit later today starts today", () => {
+    expect(firstOccurrence(daily, "2026-10-07", now, "19:00")).toBe("2026-10-07");
+  });
+  test("an any-time habit can still start today", () => {
+    expect(firstOccurrence(daily, "2026-10-07", now, null)).toBe("2026-10-07");
+  });
+  test("exactly now counts as passed", () => {
+    expect(firstOccurrence(daily, "2026-10-07", now, "17:00")).toBe("2026-10-08");
+  });
+  test("a future start date is respected, then matched to the rule", () => {
+    expect(firstOccurrence(tuesdays, "2026-10-14", now, "16:00")).toBe("2026-10-20");
+  });
+  test("a start date in the past doesn't create past days", () => {
+    expect(firstOccurrence(daily, "2026-10-01", now, null)).toBe("2026-10-07");
+    expect(firstOccurrence(tuesdays, "2026-08-01", now, "16:00")).toBe("2026-10-13");
+  });
+  test("a rule that ends before it ever happens: null", () => {
+    expect(firstOccurrence(parseRecurrence("FREQ=WEEKLY;BYDAY=TU;UNTIL=20261010"), "2026-10-07", now, "16:00")).toBeNull();
   });
 });

@@ -1293,3 +1293,20 @@ includes habits worked out from their repeat rule, because the nightly job
 only creates today's rows. A push without a summary (sent by an older job)
 still gets the old wording, so the database and the site can deploy in either
 order.
+
+### A new habit starts on its first real day
+Found while testing course links: a new habit's first row was always created
+on its start date (default today), whether or not its rule included that day —
+so a Tuesday habit set up on a Wednesday got a stray Wednesday that showed on
+Today, took Wednesday's capacity, and could become a slip. And the capacity
+check always included today, where only the minutes left before quiet hours
+count, so a habit set up in the evening could be refused because of a day it
+didn't even happen on.
+
+Now `firstOccurrence` picks the first day, from the start date on (never in
+the past), that the rule includes; if that's today and its time has passed it
+moves to the next. An any-time habit counts as due when the day ends (quiet
+hours start), so one set up at 23:30 starts tomorrow. The capacity and clash
+check only looks at the days it really happens. A routine picks its first day
+once from its start time, so all its steps start together. Existing habits
+and one-off tasks are unchanged.

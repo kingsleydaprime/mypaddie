@@ -1,7 +1,7 @@
 import { requireRoom } from "@/features/plans/guard";
 import { createTask, updateTask, type CreateResult } from "@/features/tasks/tasks.repo";
 import type { PillarWeight } from "@/features/xp/split";
-import { parseRecurrence } from "@/features/tasks/recurrence";
+import { firstOccurrence, parseRecurrence } from "@/features/tasks/recurrence";
 import type { Db } from "@/shared/supabase/token-client";
 import { currentConfig } from "@/shared/config";
 import { dayKey, localTimeOf } from "@/shared/time";
@@ -31,8 +31,13 @@ export async function createRoutine(
   input: { title: string; steps: StepInput[]; recurrence: string; time?: string | null; nonNegotiable?: boolean; startDate?: string | null },
   now: Date,
 ) {
-  parseRecurrence(input.recurrence);
+  const rule = parseRecurrence(input.recurrence);
   await requireRoom(db, "habits");
+  // Every step starts on the same day, judged by the routine's start time — so
+  // set up at 06:10, a 06:00 routine starts tomorrow as a whole, not half today.
+  const today = dayKey(now, currentConfig().timeZone);
+  const firstDay = firstOccurrence(rule, input.startDate ?? today, { today, time: localTimeOf(now, currentConfig().timeZone) }, input.time ?? null);
+  if (firstDay === null) throw new Error("this routine's rule ends before it ever happens — check the UNTIL date");
   const { data: routine, error } = await db.from("routines").insert({ title: input.title.trim() }).select("id").single();
   if (error?.code === "23505") return { result: "exists" as const, title: input.title.trim() };
   if (error) throw new Error(`creating the routine: ${error.message}`);
@@ -46,7 +51,8 @@ export async function createRoutine(
         title: s.title.trim(),
         itemId: null,
         baseXp: 5,
-        dueDate: input.startDate ?? null,
+        // Timed: the shared first day. Untimed steps can always start today (or the given date).
+        dueDate: input.time ? firstDay : input.startDate ?? null,
         dueTime: at,
         recurrence: input.recurrence,
         nonNegotiable: input.nonNegotiable ?? true,

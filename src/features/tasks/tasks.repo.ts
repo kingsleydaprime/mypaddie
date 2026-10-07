@@ -20,7 +20,7 @@ import {
   type DayRoom,
   type DayTask,
 } from "./capacity";
-import { occursOn, parseRecurrence, planOccurrences, projectedOccurrences, type SeriesForSpawn, type SeriesTemplate } from "./recurrence";
+import { firstOccurrence, occursOn, parseRecurrence, planOccurrences, projectedOccurrences, type SeriesForSpawn, type SeriesTemplate } from "./recurrence";
 
 /** How far back catch-up looks for ignored needs and recurring templates. */
 const LOOKBACK_DAYS = 14;
@@ -423,15 +423,23 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = curr
   }
 
   const hasDay = task.dueDate !== null || task.dueTime !== null || task.recurrence !== null;
-  const day = task.dueDate ?? dayKey(now, config.timeZone);
+  const today = dayKey(now, config.timeZone);
+  const startDay = task.dueDate ?? today;
+  // A habit starts on its first real day: one its rule includes, not already past.
+  const rule = task.recurrence ? parseRecurrence(task.recurrence) : null;
+  // An any-time habit counts as due when their day ends (quiet hours start): set up after that, it starts tomorrow.
+  const day = rule
+    ? firstOccurrence(rule, startDay, { today, time: localTimeOf(now, config.timeZone) }, task.dueTime ?? (startDay <= today ? dayEndsAt(await loadSchedule(db)) : null))
+    : startDay;
+  if (day === null) throw new Error("this habit's rule ends before it ever happens — check the UNTIL date");
   const start = task.dueTime ? zonedInstant(day, task.dueTime, config.timeZone) : null;
   const dueAt = start ?? (task.dueDate ? zonedInstant(day, "23:59", config.timeZone) : null);
 
   if (hasDay && !task.fixed) {
     // A one-off is checked on its day; a habit on each of its next 14 days,
     // so a daily habit can't quietly overfill next Tuesday.
-    const rule = task.recurrence ? parseRecurrence(task.recurrence) : null;
-    const days = rule ? Array.from({ length: HABIT_CHECK_DAYS }, (_, i) => addDays(day, i)).filter((d) => d === day || occursOn(rule, d)) : [day];
+    // Only the days it really happens, from its first.
+    const days = rule ? Array.from({ length: HABIT_CHECK_DAYS }, (_, i) => addDays(day, i)).filter((d) => occursOn(rule, d)) : [day];
     for (const d of days) {
       const refusal = await guardDay(
         db,

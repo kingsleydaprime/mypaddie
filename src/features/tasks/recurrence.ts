@@ -68,6 +68,32 @@ export function occursOn(recurrence: Recurrence, day: string): boolean {
   return recurrence.freq === "daily" || recurrence.days.has(weekdayOf(day));
 }
 
+/**
+ * The day a new habit really starts: the first day, from `start` on, that its
+ * rule includes — so a Tuesday habit set up on a Wednesday starts next Tuesday,
+ * not with a stray Wednesday. If that day is today and its time has already
+ * passed, it starts at the next one instead (for an any-time habit, pass when
+ * the day ends as its time). Null if the rule ends (UNTIL)
+ * before it ever happens. A weekly rule always hits within 7 days.
+ */
+export function firstOccurrence(
+  recurrence: Recurrence,
+  start: string,
+  now: { today: string; time: string },
+  dueTime: string | null,
+): string | null {
+  // Never in the past, however old the start date.
+  const from = start < now.today ? now.today : start;
+  for (let i = 0; i < 8; i++) {
+    const day = addDays(from, i);
+    if (recurrence.until && day > recurrence.until) return null;
+    if (!occursOn(recurrence, day)) continue;
+    if (day === now.today && dueTime !== null && dueTime <= now.time) continue;
+    return day;
+  }
+  return null;
+}
+
 /** "FREQ=WEEKLY;BYDAY=MO" + "2027-01-31" → "FREQ=WEEKLY;BYDAY=MO;UNTIL=20270131" (replacing any UNTIL already there). */
 export function withUntil(rule: string, until: string | null): string {
   const base = rule.split(";").filter((p) => p && !/^UNTIL=/i.test(p)).join(";");
