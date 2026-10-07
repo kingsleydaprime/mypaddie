@@ -44,10 +44,12 @@ export function registerSettingsTools(server: McpServer) {
         meals: z.array(mealSchema).max(6).optional(),
         fun_every_days: z.number().int().min(0).max(60).optional().describe("Nudge after this many days without fun; 0 = off"),
         fun_at: time.optional().describe("When the fun nudge arrives"),
+        close_out: z.boolean().optional().describe("The evening close-out push on or off"),
+        close_at: time.optional().describe("When the close-out push arrives (if the day isn't closed)"),
       }),
     },
     async (
-      args: { quiet_start?: string; quiet_end?: string; brief_at?: string; evening_at?: string; morning_at?: string; event_close_days?: number; meals?: z.infer<typeof mealSchema>[]; fun_every_days?: number; fun_at?: string },
+      args: { quiet_start?: string; quiet_end?: string; brief_at?: string; evening_at?: string; morning_at?: string; event_close_days?: number; meals?: z.infer<typeof mealSchema>[]; fun_every_days?: number; fun_at?: string; close_out?: boolean; close_at?: string },
       ctx: ToolContext,
     ) => {
       try {
@@ -62,6 +64,8 @@ export function registerSettingsTools(server: McpServer) {
           ...(args.meals ? { meals: args.meals } : {}),
           ...(args.fun_every_days !== undefined ? { funEveryDays: args.fun_every_days } : {}),
           ...(args.fun_at ? { funAt: args.fun_at } : {}),
+          ...(args.close_out !== undefined ? { closeOut: args.close_out } : {}),
+          ...(args.close_at ? { closeAt: args.close_at } : {}),
         };
         const result = await updateSchedule(db, change);
         if (!result.ok) return toolError(`update_settings: ${result.error}`);

@@ -1140,3 +1140,33 @@ A due date makes a task: "Pay back …" is a must-do; "Ask … about the …" is
 
 Known gap: undoing a bill's "Pay: …" task doesn't void its transaction; void
 it separately.
+
+### The evening close-out
+`close_day` works in two steps, like plan_day: first the picture (done, still
+open with the options each allows, tomorrow's tasks/events/bills/free time,
+check-in fields missing), then the decisions. Each open task is moved, dropped
+or owned as a slip, but not every option fits every task: a **need can't be
+dropped** (skipping a need is a slip, judged like any other, so the close-out
+can't become a way round the ignored-need deduction), and a **habit's missed
+day can't be moved** (tomorrow has its own row). Something carried 3+ days is
+called out: shrink it or drop it, rather than move it again.
+
+Closing pays +5 XP (character, mental) once a day, whatever the day was like:
+the habit of closing is what's rewarded. A second close the same day updates
+the win/note and pays nothing (`day_closes` is unique per day).
+
+Slips use the same rules as log_slip, now in `slips.repo.ts` (moved out of the
+tool). In chat the AI judges the reason; in the app nobody does, so reasons are
+picked from a list where the real ones (sick, emergency, no power or data,
+plans changed by someone else) are accepted and the rest (tired, no time,
+forgot, didn't feel like it) are recorded honestly but don't protect a need.
+
+The evening push comes at `closeAt` (default 21:30, between the 20:00
+reminders and 22:00 quiet hours; `closeOut` switches it off), once, only if
+the day isn't closed and something was due today or is still open. Its level
+carries the open count for the message. Closing from the app records the
+decisions as they're tapped, so the day's summary counts are only filled when
+the AI closes it in one go.
+
+`export_data` doesn't push the whole JSON through chat: it gives the signed-in
+download link and record counts, and returns one part's rows (up to 500) on request.

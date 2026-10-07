@@ -35,6 +35,11 @@ export function SettingsForm({ schedule }: { schedule: Schedule }) {
           <input type="number" name="funEveryDays" min={0} max={60} defaultValue={schedule.funEveryDays} required className={`${field} w-20`} />
         </label>
         <Time name="funAt" label="Fun nudge at" value={schedule.funAt} />
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span className="text-muted">Evening close-out push</span>
+          <input type="checkbox" name="closeOut" defaultChecked={schedule.closeOut} className="h-5 w-5 accent-gold" />
+        </label>
+        <Time name="closeAt" label="Close out the day at" value={schedule.closeAt} />
         <p className="text-xs text-muted">
           Meals: {schedule.meals.map((m) => `${m.name} ${m.at}`).join(" · ")} — change these by asking Paddie.
         </p>

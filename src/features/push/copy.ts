@@ -1,6 +1,6 @@
 /** One nudge as decided by the database (private.collect_nudges). */
 export interface Nudge {
-  kind: "nudge" | "checkin" | "brief" | "headsup" | "reminder" | "event" | "application" | "fun" | "review";
+  kind: "nudge" | "checkin" | "brief" | "headsup" | "reminder" | "event" | "application" | "fun" | "review" | "close_out";
   level: number;
   title: string | null;
   items: string[] | null;
@@ -48,6 +48,18 @@ function defaultCopy(n: Nudge): NotificationCopy {
     };
   }
 
+  if (n.kind === "close_out") {
+    // Level carries how many things are still open.
+    const open = n.level;
+    return {
+      title: "Close out the day",
+      body: open === 0
+        ? "Everything's done. Name one win and see tomorrow — two minutes."
+        : `${open} thing${open === 1 ? "" : "s"} still open. Move, drop or own each one, then see tomorrow.`,
+      url: "/app/close",
+      tag: "close-out",
+    };
+  }
   if (n.kind === "review") {
     // Level: 1 week, 2 month, 3 quarter, 4 year — the biggest period ending today.
     const what = ["your week", n.title ? n.title.split(" ")[0] : "your month", "your quarter", "your year"][Math.min(Math.max(n.level, 1), 4) - 1]!;

@@ -33,6 +33,7 @@ import { registerCapacityTools } from "@/features/tasks/capacity.tools";
 import { registerTaskTools } from "@/features/tasks/tasks.tools";
 import { registerTodayTools } from "@/features/today/today.tools";
 import { registerUpdateTools } from "@/features/updates/updates.tools";
+import { registerCloseOutTools } from "@/features/closeout/closeout.tools";
 import { registerGuardrailTools } from "@/features/money/guardrails.tools";
 import { registerUndoTools } from "@/features/undo/undo.tools";
 import { registerWorkoutTools } from "@/features/workouts/workouts.tools";
@@ -62,6 +63,7 @@ const handler = createMcpHandler(
     tools.area("Pantry and meals", () => registerPantryTools(server));
     tools.area("Events", () => registerEventTools(server));
     tools.area("Planning", () => registerPlanningTools(server));
+    tools.area("Close out the day and backups", () => registerCloseOutTools(server));
     tools.area("Settings", () => registerSettingsTools(server));
     tools.area("Applications", () => registerApplicationTools(server));
     tools.area("Updates owed", () => registerUpdateTools(server));

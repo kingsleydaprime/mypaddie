@@ -18,6 +18,8 @@ export async function saveSettingsAction(_prev: SettingsState, form: FormData): 
     eventCloseDays: Number(get("eventCloseDays")),
     funEveryDays: Number(get("funEveryDays")),
     funAt: get("funAt"),
+    closeOut: form.get("closeOut") === "on",
+    closeAt: get("closeAt"),
   });
   if (!result.ok) return { error: result.error };
   revalidatePath("/app/settings");

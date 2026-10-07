@@ -208,6 +208,19 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"day_closes": {
+                  Row: {
+                    "closed_at": string,"day": string,"id": string,"note": string | null,"summary": NonNullable<Json>,"user_id": string,"win": string | null
+                  }
+                  Insert: {
+                    "closed_at"?: string,"day": string,"id"?: string,"note"?: string | null,"summary"?: NonNullable<Json>,"user_id"?: string,"win"?: string | null
+                  }
+                  Update: {
+                    "closed_at"?: string,"day"?: string,"id"?: string,"note"?: string | null,"summary"?: NonNullable<Json>,"user_id"?: string,"win"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"debt_payments": {
                   Row: {
                     "amount": number,"at": string,"debt_id": string,"id": string,"transaction_id": string | null,"user_id": string
@@ -1012,6 +1025,9 @@ isOneToOne: false
 "claim_invite":
 { Args: { "p_code": string,"p_email": string }; Returns: string
                            },
+"close_day":
+{ Args: { "p_day": string,"p_note": string,"p_summary": Json,"p_win": string,"p_xp": Json }; Returns: Json
+                           },
 "complete_item":
 { Args: { "p_done_at": string,"p_entries": Json,"p_item_id": string }; Returns: Json
                            },
@@ -1097,7 +1113,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "bucket_name": "needs"|"buffer"|"savings"|"wants"|"flexible","item_status": "active"|"done"|"paused"|"dropped","mode": "curious"|"strict"|"soft"|"strictest"|"softest","money_direction": "in"|"out","money_tag": "need"|"want"|"unsure","pillar": "spiritual"|"mental"|"physical"|"financial"|"emotional"|"social"|"character"|"skills"|"creativity"|"relationships"|"academic","purchase_verdict": "yes"|"wait_24h"|"no","spend_level": "floor"|"comfortable","task_status": "pending"|"done"|"skipped"|"cancelled","tier": "need"|"want"|"goal"|"wish"|"dream","xp_reason": "completion"|"late_completion"|"ignored_need"|"goal_completion"|"wish_fulfilled"|"dream_milestone"|"transaction_logged"|"learning"|"broken_promise"|"undo"
+            "bucket_name": "needs"|"buffer"|"savings"|"wants"|"flexible","item_status": "active"|"done"|"paused"|"dropped","mode": "curious"|"strict"|"soft"|"strictest"|"softest","money_direction": "in"|"out","money_tag": "need"|"want"|"unsure","pillar": "spiritual"|"mental"|"physical"|"financial"|"emotional"|"social"|"character"|"skills"|"creativity"|"relationships"|"academic","purchase_verdict": "yes"|"wait_24h"|"no","spend_level": "floor"|"comfortable","task_status": "pending"|"done"|"skipped"|"cancelled","tier": "need"|"want"|"goal"|"wish"|"dream","xp_reason": "completion"|"late_completion"|"ignored_need"|"goal_completion"|"wish_fulfilled"|"dream_milestone"|"transaction_logged"|"learning"|"broken_promise"|"undo"|"day_closed"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1213,7 +1229,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "bucket_name": ["needs", "buffer", "savings", "wants", "flexible"],"item_status": ["active", "done", "paused", "dropped"],"mode": ["curious", "strict", "soft", "strictest", "softest"],"money_direction": ["in", "out"],"money_tag": ["need", "want", "unsure"],"pillar": ["spiritual", "mental", "physical", "financial", "emotional", "social", "character", "skills", "creativity", "relationships", "academic"],"purchase_verdict": ["yes", "wait_24h", "no"],"spend_level": ["floor", "comfortable"],"task_status": ["pending", "done", "skipped", "cancelled"],"tier": ["need", "want", "goal", "wish", "dream"],"xp_reason": ["completion", "late_completion", "ignored_need", "goal_completion", "wish_fulfilled", "dream_milestone", "transaction_logged", "learning", "broken_promise", "undo"]
+            "bucket_name": ["needs", "buffer", "savings", "wants", "flexible"],"item_status": ["active", "done", "paused", "dropped"],"mode": ["curious", "strict", "soft", "strictest", "softest"],"money_direction": ["in", "out"],"money_tag": ["need", "want", "unsure"],"pillar": ["spiritual", "mental", "physical", "financial", "emotional", "social", "character", "skills", "creativity", "relationships", "academic"],"purchase_verdict": ["yes", "wait_24h", "no"],"spend_level": ["floor", "comfortable"],"task_status": ["pending", "done", "skipped", "cancelled"],"tier": ["need", "want", "goal", "wish", "dream"],"xp_reason": ["completion", "late_completion", "ignored_need", "goal_completion", "wish_fulfilled", "dream_milestone", "transaction_logged", "learning", "broken_promise", "undo", "day_closed"]
           }
         }
 } as const

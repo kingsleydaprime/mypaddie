@@ -111,7 +111,7 @@ In build order. Each slice ships tools + app + tests before the next starts.
 - [x] **Money guardrails**: per-category spending caps (check_purchase uses
   them), recurring bills (data, subscriptions) that become tasks and
   transactions, money owed and lent.
-- [ ] **Daily close-out** (sweep unfinished, ask what slipped and why, set up
+- [x] **Daily close-out** (sweep unfinished, ask what slipped and why, set up
   tomorrow) and `export_data` for the AI.
 - [ ] **Meal plan**: `propose_meals` / `accept_meals` from the pantry, like plan_day.
 - [ ] **Where I am**: a status (with friends, in class, deep work, sleeping)

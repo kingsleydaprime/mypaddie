@@ -76,3 +76,15 @@ describe("fun nudge settings", () => {
     expect(readSchedule({ quietStart: "23:00" })).toMatchObject({ quietStart: "23:00", funEveryDays: 7, funAt: "17:00" });
   });
 });
+
+describe("close-out settings", () => {
+  test("on at 21:30 by default", () => {
+    expect(readSchedule(null)).toMatchObject({ closeOut: true, closeAt: "21:30" });
+  });
+  test("a close-out time inside quiet hours is refused while it's on", () => {
+    expect(applyScheduleChange(DEFAULT_SCHEDULE, { closeAt: "22:30" }).ok).toBe(false);
+  });
+  test("but not when it's switched off", () => {
+    expect(applyScheduleChange(DEFAULT_SCHEDULE, { closeOut: false, closeAt: "22:30" }).ok).toBe(true);
+  });
+});

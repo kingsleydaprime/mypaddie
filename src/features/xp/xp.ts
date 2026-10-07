@@ -13,7 +13,9 @@ export type XpReason =
   | "dream_milestone"
   | "transaction_logged"
   | "learning"
-  | "broken_promise";
+  | "broken_promise"
+  | "undo"
+  | "day_closed";
 
 /** One row destined for `xp_log`. */
 export interface XpEntry {

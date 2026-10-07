@@ -100,3 +100,16 @@ describe("review nudge", () => {
     expect(copyFor({ kind: "review", level: 1, title: null, items: null }).url).toBe("/app/growth");
   });
 });
+
+describe("close-out nudge", () => {
+  test("says how many are open and opens the close-out", () => {
+    const c = copyFor({ kind: "close_out", level: 2, title: null, items: null });
+    expect(c.title).toBe("Close out the day");
+    expect(c.body).toStartWith("2 things still open");
+    expect(c.url).toBe("/app/close");
+  });
+  test("one open, and none open", () => {
+    expect(copyFor({ kind: "close_out", level: 1, title: null, items: null }).body).toStartWith("1 thing still open");
+    expect(copyFor({ kind: "close_out", level: 0, title: null, items: null }).body).toContain("one win");
+  });
+});

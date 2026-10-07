@@ -155,6 +155,7 @@ export async function TodayScreen({ db }: { db: Db }) {
         <Link href="/app/plan" className="rounded-xl border border-line px-2 py-3 text-center text-sm font-medium">Plan my day</Link>
         <Link href="/app/events" className="rounded-xl border border-line px-2 py-3 text-center text-sm font-medium">Events</Link>
         <Link href="/app/workout" className="rounded-xl border border-line px-2 py-3 text-center text-sm font-medium">Workout</Link>
+        <Link href="/app/close" className="col-span-3 rounded-xl border border-line px-2 py-3 text-center text-sm font-medium">Close out the day</Link>
       </nav>
     </div>
   );

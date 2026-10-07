@@ -24,6 +24,9 @@ export const scheduleSchema = z.object({
   funEveryDays: z.number().int().min(0).max(60),
   /** When the fun nudge arrives. */
   funAt: time,
+  /** The evening close-out push, if the day isn't closed by then. */
+  closeOut: z.boolean(),
+  closeAt: time,
 });
 
 export type Schedule = z.infer<typeof scheduleSchema>;
@@ -43,6 +46,9 @@ export const DEFAULT_SCHEDULE: Schedule = {
   ],
   funEveryDays: 7,
   funAt: "17:00",
+  closeOut: true,
+  // Before the default quiet hours (22:00), after the evening reminders (20:00).
+  closeAt: "21:30",
 };
 
 /** Is a local "HH:MM" inside quiet hours? Handles windows that cross midnight. */
@@ -82,7 +88,8 @@ export function applyScheduleChange(current: Schedule, change: ScheduleChange): 
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "invalid setting" };
   const next = { ...current, ...parsed.data };
   if (next.quietStart === next.quietEnd) return { ok: false, error: "quiet hours can't start and end at the same time" };
-  for (const [label, t] of [["morning brief", next.briefAt], ["evening reminder", next.eveningAt], ["morning reminder", next.morningAt], ["fun nudge", next.funAt]] as const) {
+  for (const [label, t] of [["morning brief", next.briefAt], ["evening reminder", next.eveningAt], ["morning reminder", next.morningAt], ["fun nudge", next.funAt], ["close-out", next.closeAt]] as const) {
+    if (label === "close-out" && !next.closeOut) continue;
     if (isQuiet(t, next)) return { ok: false, error: `the ${label} at ${t} falls inside quiet hours (${next.quietStart}–${next.quietEnd}), so it would never arrive` };
   }
   return { ok: true, schedule: next };
