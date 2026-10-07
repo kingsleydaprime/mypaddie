@@ -26,7 +26,8 @@ export default function AboutPage() {
         <div className="mt-6 flex flex-col gap-4 text-lg text-muted">
           <p>
             Most productivity apps hand you a longer list. MyPaddie does the opposite: it carries the list so you don&apos;t have to,
-            and tells you the three things that matter right now.
+            and tells you the three things that matter right now. Everything else waits — and comes back to you exactly when it
+            needs you, not a minute before.
           </p>
           <p>
             In Nigeria a <em>paddy</em> is a close friend — the one who checks on you, tells you the truth, and drags you out of the

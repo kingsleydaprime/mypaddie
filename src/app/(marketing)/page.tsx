@@ -4,8 +4,14 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "MyPaddie — the 3 things that matter right now",
   description:
-    "A life coach that lives in the AI you already use. It runs your day like a game, keeps your habits, money and promises honest, and knows when to push and when to go easy.",
+    "Stop carrying everything in your head. Tell MyPaddie once, focus on one thing, and get reminded when something else needs you — a life coach that lives in the AI you already use.",
 };
+
+const OFFLOAD = [
+  { title: "Tell it once", body: "In a sentence, in your AI chat: “I promised Ada the notes by Friday.” “Exam on the 20th.” “Training Tue and Thu, 4pm.”" },
+  { title: "Then let it go", body: "Paddie holds it — the dates, the time it takes, how full your week already is. Nothing to re-read, nothing to re-plan." },
+  { title: "Get reminded at the right time", body: "The night before, the morning of, half an hour out. Until then, it's off your mind and you can be fully where you are." },
+];
 
 const STEPS = [
   { n: "1", title: "Make your account", body: "A minute: your name, time zone, currency, and how you like to be talked to." },
@@ -39,8 +45,9 @@ export default async function MarketingPage({ searchParams }: PageProps<"/">) {
         <p className="text-sm font-semibold tracking-widest text-gold uppercase">Your paddy for life</p>
         <h1 className="mt-3 max-w-3xl text-4xl leading-tight font-bold sm:text-6xl">Here are the 3 things that matter right now. Do one.</h1>
         <p className="mt-5 max-w-2xl text-lg text-muted">
-          MyPaddie is a life coach that lives in the AI you already use. It runs your day like a game, keeps your habits, money and
-          promises honest, and knows when to push and when to go easy.
+          Stop carrying everything in your head. Tell MyPaddie once — the assignment, the promise, the gym, the budget, your
+          mum&apos;s birthday — and give your full attention to the one thing in front of you. When something else needs you,
+          you&apos;ll be reminded.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/signup" className="rounded-full bg-gold px-6 py-3 font-semibold text-on-gold">Start free</Link>
@@ -57,6 +64,22 @@ export default async function MarketingPage({ searchParams }: PageProps<"/">) {
             The knife is looking great. Your morning reading is not. <span className="text-gold">Put the phone down.</span>&rdquo;
           </p>
         </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-5 pb-16">
+        <h2 className="max-w-3xl text-2xl font-bold sm:text-3xl">You were never meant to remember all of it.</h2>
+        <p className="mt-3 max-w-2xl text-muted">
+          Every open loop — reply to her, submit that form, train before Saturday, don&apos;t spend the rent — sits in the back of
+          your mind and costs you a little focus. Too many, and you spend the day deciding instead of doing.
+        </p>
+        <ul className="mt-6 grid gap-4 sm:grid-cols-3">
+          {OFFLOAD.map((o) => (
+            <li key={o.title} className="rounded-2xl border border-line bg-surface p-5">
+              <h3 className="font-semibold">{o.title}</h3>
+              <p className="mt-2 text-sm text-muted">{o.body}</p>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section id="how" className="mx-auto max-w-5xl scroll-mt-6 px-5 pb-16">
