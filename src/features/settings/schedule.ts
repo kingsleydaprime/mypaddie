@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { phoneFreeAt } from "@/features/status/status";
 
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "use HH:MM, 24-hour");
 
@@ -27,6 +28,10 @@ export const scheduleSchema = z.object({
   /** The evening close-out push, if the day isn't closed by then. */
   closeOut: z.boolean(),
   closeAt: time,
+  /** No phone for this many minutes after quiet hours end (0 = off). Nothing arrives then. */
+  phoneFreeMorning: z.number().int().min(0).max(240),
+  /** No phone for this many minutes before quiet hours start (0 = off). */
+  phoneFreeEvening: z.number().int().min(0).max(240),
 });
 
 export type Schedule = z.infer<typeof scheduleSchema>;
@@ -49,6 +54,8 @@ export const DEFAULT_SCHEDULE: Schedule = {
   closeOut: true,
   // Before the default quiet hours (22:00), after the evening reminders (20:00).
   closeAt: "21:30",
+  phoneFreeMorning: 0,
+  phoneFreeEvening: 0,
 };
 
 /** Is a local "HH:MM" inside quiet hours? Handles windows that cross midnight. */
@@ -91,6 +98,8 @@ export function applyScheduleChange(current: Schedule, change: ScheduleChange): 
   for (const [label, t] of [["morning brief", next.briefAt], ["evening reminder", next.eveningAt], ["morning reminder", next.morningAt], ["fun nudge", next.funAt], ["close-out", next.closeAt]] as const) {
     if (label === "close-out" && !next.closeOut) continue;
     if (isQuiet(t, next)) return { ok: false, error: `the ${label} at ${t} falls inside quiet hours (${next.quietStart}–${next.quietEnd}), so it would never arrive` };
+    const free = phoneFreeAt(t, next);
+    if (free) return { ok: false, error: `the ${label} at ${t} falls inside your phone-free ${free.which} (${free.start}–${free.end}): move it to ${free.which === "morning" ? free.end : "before " + free.start}, or shorten the window` };
   }
   return { ok: true, schedule: next };
 }

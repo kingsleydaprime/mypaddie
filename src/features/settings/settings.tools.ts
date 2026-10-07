@@ -46,10 +46,12 @@ export function registerSettingsTools(server: McpServer) {
         fun_at: time.optional().describe("When the fun nudge arrives"),
         close_out: z.boolean().optional().describe("The evening close-out push on or off"),
         close_at: time.optional().describe("When the close-out push arrives (if the day isn't closed)"),
+        phone_free_morning: z.number().int().min(0).max(240).optional().describe("Minutes after quiet hours end with no phone (and no pushes); 0 = off"),
+        phone_free_evening: z.number().int().min(0).max(240).optional().describe("Minutes before quiet hours start with no phone; 0 = off"),
       }),
     },
     async (
-      args: { quiet_start?: string; quiet_end?: string; brief_at?: string; evening_at?: string; morning_at?: string; event_close_days?: number; meals?: z.infer<typeof mealSchema>[]; fun_every_days?: number; fun_at?: string; close_out?: boolean; close_at?: string },
+      args: { quiet_start?: string; quiet_end?: string; brief_at?: string; evening_at?: string; morning_at?: string; event_close_days?: number; meals?: z.infer<typeof mealSchema>[]; fun_every_days?: number; fun_at?: string; close_out?: boolean; close_at?: string; phone_free_morning?: number; phone_free_evening?: number },
       ctx: ToolContext,
     ) => {
       try {
@@ -66,6 +68,8 @@ export function registerSettingsTools(server: McpServer) {
           ...(args.fun_at ? { funAt: args.fun_at } : {}),
           ...(args.close_out !== undefined ? { closeOut: args.close_out } : {}),
           ...(args.close_at ? { closeAt: args.close_at } : {}),
+          ...(args.phone_free_morning !== undefined ? { phoneFreeMorning: args.phone_free_morning } : {}),
+          ...(args.phone_free_evening !== undefined ? { phoneFreeEvening: args.phone_free_evening } : {}),
         };
         const result = await updateSchedule(db, change);
         if (!result.ok) return toolError(`update_settings: ${result.error}`);

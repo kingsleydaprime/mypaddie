@@ -51,7 +51,7 @@ export function planNotifications(nudges: readonly OutgoingNudge[], threshold = 
     }
 
     // Deadlines are rare and specific; fun is its own invitation: never bundled.
-    for (const n of group.filter((n) => n.kind === "application" || n.kind === "fun" || n.kind === "review" || n.kind === "close_out")) push(copyFor(n));
+    for (const n of group.filter((n) => n.kind === "application" || n.kind === "fun" || n.kind === "review" || n.kind === "close_out" || n.kind === "leave")) push(copyFor(n));
 
     const upcoming = group.filter((n) => n.kind === "headsup" || n.kind === "reminder" || n.kind === "event");
     if (upcoming.length >= threshold) {

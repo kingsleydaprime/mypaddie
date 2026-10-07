@@ -759,6 +759,19 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"statuses": {
+                  Row: {
+                    "ended_at": string | null,"ends_at": string,"id": string,"kind": string,"leave_lead_minutes": number,"note": string | null,"started_at": string,"user_id": string
+                  }
+                  Insert: {
+                    "ended_at"?: string | null,"ends_at": string,"id"?: string,"kind": string,"leave_lead_minutes"?: number,"note"?: string | null,"started_at"?: string,"user_id"?: string
+                  }
+                  Update: {
+                    "ended_at"?: string | null,"ends_at"?: string,"id"?: string,"kind"?: string,"leave_lead_minutes"?: number,"note"?: string | null,"started_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"task_pillars": {
                   Row: {
                     "pillar": Database["public"]['Enums']["pillar"],"task_id": string,"user_id": string,"weight": number

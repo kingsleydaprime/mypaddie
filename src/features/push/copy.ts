@@ -1,6 +1,6 @@
 /** One nudge as decided by the database (private.collect_nudges). */
 export interface Nudge {
-  kind: "nudge" | "checkin" | "brief" | "headsup" | "reminder" | "event" | "application" | "fun" | "review" | "close_out";
+  kind: "nudge" | "checkin" | "brief" | "headsup" | "reminder" | "event" | "application" | "fun" | "review" | "close_out" | "leave";
   level: number;
   title: string | null;
   items: string[] | null;
@@ -48,6 +48,14 @@ function defaultCopy(n: Nudge): NotificationCopy {
     };
   }
 
+  if (n.kind === "leave") {
+    return {
+      title: `Time to head out${n.due ? ` — ${n.title ?? "next thing"} at ${n.due}` : ""}`,
+      body: `${n.title ?? "Your next thing"} starts soon. Say your goodbyes now; the good ones understand.`,
+      url: "/app",
+      tag: `leave-${n.title ?? ""}`,
+    };
+  }
   if (n.kind === "close_out") {
     // Level carries how many things are still open.
     const open = n.level;

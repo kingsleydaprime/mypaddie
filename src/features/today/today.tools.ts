@@ -21,6 +21,7 @@ import { loadSchedule } from "@/features/settings/settings.repo";
 import { loadMode } from "@/features/mode/mode.repo";
 import { loadMoneyStage } from "@/features/money/money.repo";
 import { mealsForDay } from "@/features/pantry/meals.repo";
+import { loadStatus } from "@/features/status/status.repo";
 import type { MoneyStage } from "@/features/money/stage";
 import { roomOn } from "@/features/tasks/capacity";
 import { catchUp, loadCapacity, loadDayTasks, loadTasksAroundToday } from "@/features/tasks/tasks.repo";
@@ -74,7 +75,7 @@ export function registerTodayTools(server: McpServer) {
         const caughtUp = { ...(await catchUp(db, now)), brokenPromises: await applyBrokenPromises(db, now) };
         // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
         await syncCalendar(db, now).catch(() => null);
-        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun, promises, week, people, self, themes, owed, earned, decisions, values, experimentsDue, mealsToday] = await Promise.all([
+        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun, promises, week, people, self, themes, owed, earned, decisions, values, experimentsDue, mealsToday, status] = await Promise.all([
           loadTasksAroundToday(db, now),
           loadMode(db, now),
           loadMoneyStage(db, now),
@@ -96,6 +97,7 @@ export function registerTodayTools(server: McpServer) {
           loadValues(db),
           dueExperiments(db, now),
           mealsForDay(db, dayKey(now, tz())),
+          loadStatus(db, now),
         ]);
         const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
         const room = roomOn(dayKey(now, tz()), dayTasks, capacity, now, undefined, dayEndsAt(schedule));
@@ -110,6 +112,8 @@ export function registerTodayTools(server: McpServer) {
           // Who you're talking to, and how they want to be talked to.
           you: { name: me.displayName, voice: me.voice, timeZone: me.timeZone, currency: me.currency, ...(me.onboardedAt ? {} : { setUp: false }) },
           now: formatLocal(now, tz()),
+          // Where they are (set, a class, or a phone-free window). While it holds, keep replies short and don't add to their plate.
+          ...(status ? { status } : {}),
           mode,
           focus: focus.top.map(item),
           rest: focus.rest.map(item),

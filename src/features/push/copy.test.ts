@@ -113,3 +113,11 @@ describe("close-out nudge", () => {
     expect(copyFor({ kind: "close_out", level: 0, title: null, items: null }).body).toContain("one win");
   });
 });
+
+describe("leave nudge", () => {
+  test("names what's next and when", () => {
+    const c = copyFor({ kind: "leave", level: 1, title: "Standup", items: null, due: "18:20" });
+    expect(c.title).toBe("Time to head out — Standup at 18:20");
+    expect(c.body).toContain("Standup starts soon");
+  });
+});

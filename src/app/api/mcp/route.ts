@@ -33,6 +33,7 @@ import { registerCapacityTools } from "@/features/tasks/capacity.tools";
 import { registerTaskTools } from "@/features/tasks/tasks.tools";
 import { registerTodayTools } from "@/features/today/today.tools";
 import { registerUpdateTools } from "@/features/updates/updates.tools";
+import { registerStatusTools } from "@/features/status/status.tools";
 import { registerMealTools } from "@/features/pantry/meals.tools";
 import { registerCloseOutTools } from "@/features/closeout/closeout.tools";
 import { registerGuardrailTools } from "@/features/money/guardrails.tools";
@@ -55,6 +56,7 @@ const handler = createMcpHandler(
     tools.area("Learning", () => registerLearningTools(server));
     tools.area("Coaching", () => registerSlipTools(server));
     tools.area("Coaching", () => registerModeTools(server));
+    tools.area("Where I am", () => registerStatusTools(server));
     tools.area("Money", () => registerMoneyTools(server));
     tools.area("Money", () => registerGuardrailTools(server));
     tools.area("Stats", () => registerStatsTools(server));

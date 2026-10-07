@@ -88,3 +88,22 @@ describe("close-out settings", () => {
     expect(applyScheduleChange(DEFAULT_SCHEDULE, { closeOut: false, closeAt: "22:30" }).ok).toBe(true);
   });
 });
+
+describe("phone-free settings", () => {
+  test("off by default", () => {
+    expect(readSchedule(null)).toMatchObject({ phoneFreeMorning: 0, phoneFreeEvening: 0 });
+  });
+  test("a reminder inside a phone-free window is refused, with where to move it", () => {
+    const r = applyScheduleChange(DEFAULT_SCHEDULE, { phoneFreeMorning: 120 });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("move it to 09:00");
+  });
+  test("fine once the brief is moved out of it", () => {
+    expect(applyScheduleChange(DEFAULT_SCHEDULE, { phoneFreeMorning: 120, briefAt: "09:00", morningAt: "09:30" }).ok).toBe(true);
+  });
+  test("the evening window catches the close-out push", () => {
+    const r = applyScheduleChange(DEFAULT_SCHEDULE, { phoneFreeEvening: 60 });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("close-out");
+  });
+});

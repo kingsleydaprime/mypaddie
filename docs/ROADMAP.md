@@ -114,7 +114,7 @@ In build order. Each slice ships tools + app + tests before the next starts.
 - [x] **Daily close-out** (sweep unfinished, ask what slipped and why, set up
   tomorrow) and `export_data` for the AI.
 - [x] **Meal plan**: `propose_meals` / `accept_meals` from the pantry, like plan_day.
-- [ ] **Where I am**: a status (with friends, in class, deep work, sleeping)
+- [x] **Where I am**: a status (with friends, in class, deep work, sleeping)
   with an end time; classes set it automatically; nudges hold or say "leave
   now". Phone-free windows (first hours, last hour) as part of it.
 

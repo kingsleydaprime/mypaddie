@@ -15,6 +15,7 @@ import type { Db } from "@/shared/supabase/token-client";
 import { dayKey, localTimeOf } from "@/shared/time";
 import { pickFocus, type FocusItem } from "../focus";
 import { DoneButton } from "./done-button";
+import { StatusBar } from "@/features/status/ui/status-bar";
 import { loadCheckin } from "@/features/metrics/metrics.repo";
 import { CheckinForm } from "@/features/metrics/ui/checkin-form";
 
@@ -92,6 +93,8 @@ export async function TodayScreen({ db }: { db: Db }) {
           </Link>
         )}
       </header>
+
+      <StatusBar db={db} />
 
       {earned.length > 0 && (
         <div className="rounded-2xl border border-gold bg-surface p-4" role="status">

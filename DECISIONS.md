@@ -1192,3 +1192,40 @@ instead. The shopping list adds up what the whole plan is short.
 replaced, a cooked one never. cook_meal ticks today's planned slot by name.
 Planned dishes name the meal slots in Plan my day ("Lunch: Jollof") and ride
 along in get_today.
+
+### Where I am: statuses hold pushes, and held pushes come later
+A status (with friends, out, at work, in class, deep work, sleeping, worship,
+commuting, resting, other) always has an end, at most 16 hours away, so a
+forgotten one can't silence Paddie for days. One is active at a time; setting
+a new one ends the last. Each has a hold:
+- **all** (sleeping, in class, worship, deep work, phone-free windows): nothing arrives.
+- **soft** (with friends, out, at work, commuting, resting): only what's coming
+  up — reminders, heads-ups, events, and "time to head out".
+- **none** ("Busy"/other): just information for the AI.
+
+Priority: a status they set beats a running class (a cancelled lecture),
+which beats a phone-free window. A class is a timetable task (course + repeat)
+whose block contains now, so "in class" needs no tapping.
+
+**Held means delayed, not dropped.** Every collector records what it sends
+with `sent_at = now()`, and all of them run in one transaction, so `now()` is
+the same value for all of them. `private.apply_holds` deletes those records for
+held users before anything is posted, which makes each collector find the same
+nudge on the next minute's run. It goes out once the hold ends, if it still
+applies; a reminder for something already over expires naturally. This needed
+no change to any of the five collectors. The cost is that held users are
+re-collected every minute, which is cheap.
+
+**Leave nudges**: while with friends, out or at work, a timed task or event
+starting within the status's lead (default 30 minutes) gets one "Time to head
+out — Standup at 18:20". (Event leave nudges use level 0 so they fit the
+existing event index without colliding with reminder levels.)
+
+**Phone-free windows** are minutes after quiet hours end and before they
+start. They hold like quiet hours, and like quiet hours, a reminder time inside
+one is refused at save with where to move it — clearer than a brief that
+silently arrives late.
+
+The rules live twice: `status.ts` (Today, get_today, set_status) and
+`private.holds` (the send job). The pgTAP test pins the SQL side to the same
+cases as the unit tests.

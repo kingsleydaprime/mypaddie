@@ -20,6 +20,8 @@ export async function saveSettingsAction(_prev: SettingsState, form: FormData): 
     funAt: get("funAt"),
     closeOut: form.get("closeOut") === "on",
     closeAt: get("closeAt"),
+    phoneFreeMorning: Number(get("phoneFreeMorning")),
+    phoneFreeEvening: Number(get("phoneFreeEvening")),
   });
   if (!result.ok) return { error: result.error };
   revalidatePath("/app/settings");

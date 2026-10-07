@@ -40,6 +40,14 @@ export function SettingsForm({ schedule }: { schedule: Schedule }) {
           <input type="checkbox" name="closeOut" defaultChecked={schedule.closeOut} className="h-5 w-5 accent-gold" />
         </label>
         <Time name="closeAt" label="Close out the day at" value={schedule.closeAt} />
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span className="text-muted">Phone-free after waking (minutes, 0 = off)</span>
+          <input type="number" name="phoneFreeMorning" min={0} max={240} step={15} defaultValue={schedule.phoneFreeMorning} required className={`${field} w-20`} />
+        </label>
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span className="text-muted">Phone-free before quiet hours (minutes, 0 = off)</span>
+          <input type="number" name="phoneFreeEvening" min={0} max={240} step={15} defaultValue={schedule.phoneFreeEvening} required className={`${field} w-20`} />
+        </label>
         <p className="text-xs text-muted">
           Meals: {schedule.meals.map((m) => `${m.name} ${m.at}`).join(" · ")} — change these by asking Paddie.
         </p>
