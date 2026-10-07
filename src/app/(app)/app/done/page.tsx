@@ -4,7 +4,7 @@ import { UndoButton } from "@/features/undo/ui/undo-button";
 import { currentConfig } from "@/shared/config";
 import { requireDb } from "@/shared/supabase/session";
 
-const KIND_LABEL = { task: "Task", fun: "Fun", workout: "Workout", learning: "Learning" } as const;
+const KIND_LABEL = { task: "Task", fun: "Fun", workout: "Workout", learning: "Learning", slip: "Slip" } as const;
 
 export default async function DonePage() {
   const db = await requireDb("/app/done");

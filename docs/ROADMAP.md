@@ -119,9 +119,11 @@ In build order. Each slice ships tools + app + tests before the next starts.
   now". Phone-free windows (first hours, last hour) as part of it.
 
 ## Later: seeing the whole life
-- [ ] Life map: one view of every area (body, mind, money, people, faith, work, fun) and how each is doing.
-- [ ] Milestones under goals and dreams (3× XP when hit) and a life timeline:
+- [x] Life map: one view of every area (body, mind, money, people, faith, work, fun) and how each is doing.
+- [x] Milestones under goals and dreams (3× XP when hit) and a life timeline:
   the big moments, past and planned, with what came before and after.
+
+- [x] Undo covers slips (2026-10-07).
 
 Already covered, so not built: spiritual habits (routines + learning log),
 saying no (check_load), sleep (check-ins). The 11th pillar is Academic.

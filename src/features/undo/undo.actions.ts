@@ -8,7 +8,7 @@ import { undo } from "./undo.repo";
 export type UndoState = { message: string } | { error: string } | null;
 
 export async function undoAction(_prev: UndoState, form: FormData): Promise<UndoState> {
-  const parsed = z.object({ kind: z.enum(["task", "fun", "workout", "learning"]), id: z.uuid() }).safeParse(Object.fromEntries(form));
+  const parsed = z.object({ kind: z.enum(["task", "fun", "workout", "learning", "slip"]), id: z.uuid() }).safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: "Couldn't tell what to undo." };
   const db = await requireDb("/app/done");
   const res = await undo(db, parsed.data.kind, parsed.data.id);

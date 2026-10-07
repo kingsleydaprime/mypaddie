@@ -114,7 +114,7 @@ export async function setItemStatus(db: Db, id: string, to: Exclude<ItemStatus, 
 }
 
 /** Where the item's effort went (its tasks' weights) and the XP of its last finished task. */
-async function bonusInputs(db: Db, itemId: string) {
+export async function bonusInputs(db: Db, itemId: string) {
   const { data, error } = await db
     .from("tasks")
     .select("base_xp, status, done_at, task_pillars (pillar, weight)")

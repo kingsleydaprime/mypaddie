@@ -12,8 +12,9 @@ export function registerModeTools(server: McpServer) {
     {
       title: "Set mode",
       description:
-        "The user's override always wins. 'no_mercy' = strictest until the user switches it off. 'go_easy' = softest " +
-        "for the rest of today. 'normal' = clear any override and let the data decide.",
+        "Paddie's tone, not where they are. The user's override always wins. 'no_mercy' = strictest until the user " +
+        "switches it off. 'go_easy' = softest for the rest of today. 'normal' = clear any override and let the data " +
+        "decide. For where they are (with friends, in class, deep work, asleep) and what gets sent meanwhile, use set_status.",
       inputSchema: z.object({ mode: z.enum(["no_mercy", "go_easy", "normal"]) }),
     },
     async ({ mode }: { mode: "no_mercy" | "go_easy" | "normal" }, ctx: ToolContext) => {

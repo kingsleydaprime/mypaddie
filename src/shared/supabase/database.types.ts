@@ -534,6 +534,25 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"milestones": {
+                  Row: {
+                    "achieved_on": string | null,"after": string | null,"before": string | null,"created_at": string,"id": string,"item_id": string | null,"kind": string,"note": string | null,"on_date": string | null,"status": string,"title": string,"user_id": string
+                  }
+                  Insert: {
+                    "achieved_on"?: string | null,"after"?: string | null,"before"?: string | null,"created_at"?: string,"id"?: string,"item_id"?: string | null,"kind"?: string,"note"?: string | null,"on_date"?: string | null,"status"?: string,"title": string,"user_id"?: string
+                  }
+                  Update: {
+                    "achieved_on"?: string | null,"after"?: string | null,"before"?: string | null,"created_at"?: string,"id"?: string,"item_id"?: string | null,"kind"?: string,"note"?: string | null,"on_date"?: string | null,"status"?: string,"title"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "milestones_item_id_user_id_fkey"
+      columns: ["item_id","user_id"]
+isOneToOne: false
+      referencedRelation: "items"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
                 },"pantry_items": {
                   Row: {
                     "category": string,"id": string,"low_at": number | null,"name": string,"quantity": number,"unit": string,"updated_at": string,"user_id": string
@@ -1020,13 +1039,13 @@ isOneToOne: false
                   ]
                 },"xp_log": {
                   Row: {
-                    "amount": number,"at": string,"id": string,"item_id": string | null,"learning_session_id": string | null,"note": string | null,"pillar": Database["public"]['Enums']["pillar"],"reason": Database["public"]['Enums']["xp_reason"],"reversed_at": string | null,"task_id": string | null,"user_id": string
+                    "amount": number,"at": string,"id": string,"item_id": string | null,"learning_session_id": string | null,"milestone_id": string | null,"note": string | null,"pillar": Database["public"]['Enums']["pillar"],"reason": Database["public"]['Enums']["xp_reason"],"reversed_at": string | null,"task_id": string | null,"user_id": string
                   }
                   Insert: {
-                    "amount": number,"at"?: string,"id"?: string,"item_id"?: string | null,"learning_session_id"?: string | null,"note"?: string | null,"pillar": Database["public"]['Enums']["pillar"],"reason": Database["public"]['Enums']["xp_reason"],"reversed_at"?: string | null,"task_id"?: string | null,"user_id"?: string
+                    "amount": number,"at"?: string,"id"?: string,"item_id"?: string | null,"learning_session_id"?: string | null,"milestone_id"?: string | null,"note"?: string | null,"pillar": Database["public"]['Enums']["pillar"],"reason": Database["public"]['Enums']["xp_reason"],"reversed_at"?: string | null,"task_id"?: string | null,"user_id"?: string
                   }
                   Update: {
-                    "amount"?: number,"at"?: string,"id"?: string,"item_id"?: string | null,"learning_session_id"?: string | null,"note"?: string | null,"pillar"?: Database["public"]['Enums']["pillar"],"reason"?: Database["public"]['Enums']["xp_reason"],"reversed_at"?: string | null,"task_id"?: string | null,"user_id"?: string
+                    "amount"?: number,"at"?: string,"id"?: string,"item_id"?: string | null,"learning_session_id"?: string | null,"milestone_id"?: string | null,"note"?: string | null,"pillar"?: Database["public"]['Enums']["pillar"],"reason"?: Database["public"]['Enums']["xp_reason"],"reversed_at"?: string | null,"task_id"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -1042,6 +1061,12 @@ isOneToOne: false
       referencedRelation: "learning_sessions"
       referencedColumns: ["id","user_id"]
     },{
+      foreignKeyName: "xp_log_milestone_id_user_id_fkey"
+      columns: ["milestone_id","user_id"]
+isOneToOne: false
+      referencedRelation: "milestones"
+      referencedColumns: ["id","user_id"]
+    },{
       foreignKeyName: "xp_log_task_id_user_id_fkey"
       columns: ["task_id","user_id"]
 isOneToOne: false
@@ -1055,7 +1080,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "activate_identity":
+            "achieve_milestone":
+{ Args: { "p_entries": Json,"p_id": string,"p_on": string }; Returns: Json
+                           },
+"activate_identity":
 { Args: { "p_id": string }; Returns: boolean
                            },
 "add_debt":
@@ -1155,6 +1183,9 @@ isOneToOne: false
                            },
 "undo_learning":
 { Args: { "p_session_id": string }; Returns: Json
+                           },
+"undo_slip":
+{ Args: { "p_slip_id": string }; Returns: Json
                            },
 "undo_task":
 { Args: { "p_cancel": boolean,"p_task_id": string }; Returns: Json

@@ -24,6 +24,11 @@ export async function StatsScreen({ db }: { db: Db }) {
         </p>
       </header>
 
+      <Link href="/app/life" className="rounded-2xl border border-line bg-surface p-4">
+        <span className="font-semibold">Your life <span className="text-gold">›</span></span>
+        <span className="block text-sm text-muted">Every area at a glance, the one to work on this week, and your timeline.</span>
+      </Link>
+
       <Link href="/app/stats/trends" className="rounded-2xl border border-line bg-surface p-4">
         <span className="font-semibold">Trends and experiments <span className="text-gold">›</span></span>
         <span className="block text-sm text-muted">Sleep, mood, screen time, study, spending and your word — week by week.</span>

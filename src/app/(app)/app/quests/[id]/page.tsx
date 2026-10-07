@@ -3,13 +3,15 @@ import { notFound } from "next/navigation";
 import { completionPays } from "@/features/items/items";
 import { AddItemForm } from "@/features/items/ui/add-item-form";
 import { ItemStatusPanel } from "@/features/items/ui/item-status-panel";
+import { MilestonesPanel } from "@/features/life/ui/milestones-panel";
 import { currentConfig } from "@/shared/config";
 import { requireDb } from "@/shared/supabase/session";
 
 const STATUS_NOTE = { active: null, paused: "Paused.", dropped: "Dropped.", done: "Done." } as const;
 
-export default async function QuestPage({ params }: PageProps<"/app/quests/[id]">) {
+export default async function QuestPage({ params, searchParams }: PageProps<"/app/quests/[id]">) {
   const { id } = await params;
+  const { ask, m } = await searchParams;
   const db = await requireDb(`/app/quests/${id}`);
   const { data: item } = await db
     .from("items")
@@ -38,6 +40,8 @@ export default async function QuestPage({ params }: PageProps<"/app/quests/[id]"
           comfortableAmount: item.comfortable_amount,
         }}
       />
+      {typeof m === "string" && <p className="rounded-xl border border-line px-4 py-3 text-sm" role="status">{m}</p>}
+      {(item.tier === "goal" || item.tier === "dream") && <MilestonesPanel db={db} itemId={item.id} ask={typeof ask === "string" ? ask : null} />}
       <ItemStatusPanel id={item.id} status={item.status} pays={completionPays(item.tier)} />
     </div>
   );

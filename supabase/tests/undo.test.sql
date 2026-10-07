@@ -4,7 +4,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select set_config('search_path', current_setting('search_path') || ', ' || n.nspname, true)
   from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgtap';
-select plan(21);
+select plan(25);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'sam@example.com'),
@@ -54,6 +54,15 @@ select public.record_learning('cccccccc-0000-0000-0000-000000000001', 'Graphs', 
 select is(public.undo_learning(:'session_id')->>'xp', '-12', 'undo a learning session');
 select is((select xp::int from public.pillars where name = 'skills'), 0, 'its XP is taken back');
 select is((select count(*)::int from public.learning_sessions), 0, 'the session is gone');
+
+-- A slip logged by mistake: gone, and its task back to pending.
+insert into public.tasks (id, title) values ('bbbbbbbb-0000-0000-0000-000000000003', 'Pray');
+select public.record_slip('bbbbbbbb-0000-0000-0000-000000000003', 'Overslept', 'tired', false, 'curious') as slip_id \gset
+select is((select status::text from public.tasks where id = 'bbbbbbbb-0000-0000-0000-000000000003'), 'skipped', 'a slip skips the task');
+select is(public.undo_slip(:'slip_id')->>'result', 'undone', 'undo the slip');
+select is((select status::text || '|' || (select count(*) from public.slips where task_id = 'bbbbbbbb-0000-0000-0000-000000000003')
+  from public.tasks where id = 'bbbbbbbb-0000-0000-0000-000000000003'), 'pending|0', 'the slip is gone and the task is pending again');
+select is(public.undo_slip(:'slip_id')->>'result', 'not_found', 'undoing twice finds nothing');
 
 -- A penalty can't be reversed through the helper.
 insert into public.xp_log (id, pillar, amount, reason) values ('ffffffff-0000-0000-0000-000000000001', 'character', -15, 'broken_promise');

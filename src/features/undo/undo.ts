@@ -21,7 +21,7 @@ export function cancelOnUndo(task: TaskForUndo): boolean {
 }
 
 /** What a done task was, so the "is this the one?" list reads naturally. */
-export type UndoKind = "task" | "fun" | "workout" | "learning";
+export type UndoKind = "task" | "fun" | "workout" | "learning" | "slip";
 
 export function kindOfTask(t: { funActivityId: string | null; hasWorkoutLog: boolean }): UndoKind {
   if (t.funActivityId) return "fun";

@@ -1229,3 +1229,41 @@ silently arrives late.
 The rules live twice: `status.ts` (Today, get_today, set_status) and
 `private.holds` (the send job). The pgTAP test pins the SQL side to the same
 cases as the unit tests.
+
+### Undo covers slips
+A slip logged by mistake (wrong task, or it was done after all) is deleted,
+not reversed: it has no ledger, and mode, stats, reviews and the
+repeat-excuse rule should read as if it never happened. Its task goes back to
+pending unless another slip still explains it — so if it was a need whose day
+is over, the ignored-need deduction applies, because the slip was the only
+thing protecting it. `set_mode` (tone) now points to `set_status` (where they
+are), since the two were easy to confuse.
+
+### Eleven pillars, on purpose
+The Gamified Life has ten stats; MyPaddie has eleven because Academic was split
+from Skills (2026-10-05). Code, both blueprints and the stats tools all say
+eleven; only the book says ten. Merging back would rewrite every coursework
+task's XP history, so it stays unless decided deliberately. Noted in the
+blueprint so the difference reads as a choice.
+
+### The life map judges, it doesn't ask
+Seven areas — body, mind, money, people, faith, work & school, fun — cover all
+eleven pillars exactly once (a unit test checks it). Each area is judged only
+from what's already logged: trends, XP in the last 14 days against the 28
+before (halved, to compare like with like), money state, people due, days
+since fun. Thresholds are few and plain (sleep under 6h, mood ≤ 2.5, five slips
+in two weeks, three people due, two weeks without fun). Any problem means
+"attention"; "unknown" means nothing is logged, never "fine". It names one
+focus area — the most problems, then the least XP — because the blueprint's
+rule is fewer decisions, not a dashboard of everything wrong.
+
+### Milestones and moments
+A **milestone** sits under a goal or dream and pays 3× its base XP (the last
+finished task's, as for goals) to the pillars its tasks feed, once ever:
+`xp_log.milestone_id` with a unique index, so reopening and hitting again pays
+nothing, while each milestone on the same dream pays. A **moment** is a life
+event (graduated, first job, moving) with what came before and after, in their
+words, and no XP. A dated moment in the past is recorded as having happened.
+The timeline puts what happened first (oldest first), then what's planned
+(overdue, ahead, someday), and gives each entry its neighbours, so "what came
+before" exists even when they never wrote it.

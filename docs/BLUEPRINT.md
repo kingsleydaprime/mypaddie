@@ -40,7 +40,7 @@ Everything you do or want is sorted into one of five tiers, and every task feeds
 
 Spiritual, Mental, Physical, Financial, Emotional, Social, Character, Skills, Creativity, Relationships, Academic.
 
-Academic (coursework, studying for school) was added after the first build and is separate from Skills (DSA, LeetCode, craft). It sits last because pillar order breaks ties when XP is split.
+Academic (coursework, studying for school) was added after the first build and is separate from Skills (DSA, LeetCode, craft). It sits last because pillar order breaks ties when XP is split. The Gamified Life has ten stats; MyPaddie deliberately has eleven, because school and craft move at different speeds and deserve separate levels. Folding Academic back into Skills would rewrite the XP history of every coursework task, so it stays unless that's decided on purpose.
 
 ### Weighted XP
 

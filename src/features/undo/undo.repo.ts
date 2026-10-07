@@ -14,7 +14,7 @@ export interface Undoable {
 /** Recently done tasks (fun and workouts included) and learning sessions, newest first. */
 export async function recentUndoable(db: Db, now: Date, kind?: UndoKind, limit = 8): Promise<Undoable[]> {
   const since = new Date(now.getTime() - RECENT_HOURS * 3_600_000).toISOString();
-  const [tasks, sessions] = await Promise.all([
+  const [tasks, sessions, slips] = await Promise.all([
     kind === "learning"
       ? Promise.resolve({ data: [], error: null })
       : db.from("tasks").select("id, title, done_at, fun_activity_id, workout_logs(id)").eq("status", "done").gte("done_at", since).order("done_at", { ascending: false }).limit(30),
@@ -22,9 +22,13 @@ export async function recentUndoable(db: Db, now: Date, kind?: UndoKind, limit =
       ? Promise.resolve({ data: [], error: null })
       // Practice logged by completing a task goes with that task, not on its own.
       : db.from("learning_sessions").select("id, topic, minutes, at, skills(name)").gte("at", since).not("notes", "like", "From task:%").order("at", { ascending: false }).limit(30),
+    kind && kind !== "slip"
+      ? Promise.resolve({ data: [], error: null })
+      : db.from("slips").select("id, why, at, tasks(title)").gte("at", since).order("at", { ascending: false }).limit(30),
   ]);
   if (tasks.error) throw new Error(`loading recent tasks: ${tasks.error.message}`);
   if (sessions.error) throw new Error(`loading recent learning: ${sessions.error.message}`);
+  if (slips.error) throw new Error(`loading recent slips: ${slips.error.message}`);
 
   const fromTasks: Undoable[] = (tasks.data ?? []).map((t) => ({
     kind: kindOfTask({ funActivityId: t.fun_activity_id, hasWorkoutLog: (t.workout_logs ?? []).length > 0 }),
@@ -38,7 +42,13 @@ export async function recentUndoable(db: Db, now: Date, kind?: UndoKind, limit =
     title: `${s.skills?.name ?? "Learning"}${s.topic ? `: ${s.topic}` : ""} (${s.minutes} min)`,
     at: s.at,
   }));
-  return [...fromTasks.filter((u) => !kind || u.kind === kind), ...fromLearning]
+  const fromSlips: Undoable[] = (slips.data ?? []).map((s) => ({
+    kind: "slip",
+    id: s.id,
+    title: `Slipped: ${s.tasks?.title ?? "a task"}${s.why ? ` — ${s.why}` : ""}`,
+    at: s.at,
+  }));
+  return [...fromTasks.filter((u) => !kind || u.kind === kind), ...fromLearning, ...fromSlips]
     .sort((a, b) => (a.at < b.at ? 1 : -1))
     .slice(0, limit);
 }
@@ -46,6 +56,7 @@ export async function recentUndoable(db: Db, now: Date, kind?: UndoKind, limit =
 export type UndoResult =
   | { result: "undone" | "cancelled"; title: string; xp: number }
   | { result: "undone"; minutes: number; topic: string | null; xp: number }
+  | { result: "undone"; title: string | null; why: string | null; wasAccepted: boolean }
   | { result: "not_found" | "not_done"; status?: string };
 
 /** Undo a done task: XP reversed, side effects rolled back; logged-after-the-fact tasks are cancelled. */
@@ -70,6 +81,15 @@ export async function undoLearning(db: Db, sessionId: string): Promise<UndoResul
   return data as UndoResult;
 }
 
+/** A slip logged by mistake: deleted (it has no ledger), and its task pending again. */
+export async function undoSlip(db: Db, slipId: string): Promise<UndoResult> {
+  const { data, error } = await db.rpc("undo_slip", { p_slip_id: slipId });
+  if (error) throw new Error(`undoing the slip: ${error.message}`);
+  return data as UndoResult;
+}
+
 export async function undo(db: Db, kind: UndoKind, id: string): Promise<UndoResult> {
-  return kind === "learning" ? undoLearning(db, id) : undoTask(db, id);
+  if (kind === "learning") return undoLearning(db, id);
+  if (kind === "slip") return undoSlip(db, id);
+  return undoTask(db, id);
 }

@@ -135,7 +135,7 @@ export function registerItemTools(server: McpServer) {
         "Mark an item done. A goal pays a bonus of 2× its last task's XP; a wish happening pays +50. Each pays once, ever. " +
         "The bonus goes to the pillars the item's tasks fed; if the result is 'needs_weights' (no tasks to go on), ask " +
         "which pillars it served and call again with weights summing to 100. Needs, wants and dreams just close (a dream " +
-        "pays through its milestones). Celebrate a finished goal properly.",
+        "pays through its milestones: add_milestone / achieve_milestone). Celebrate a finished goal properly.",
       inputSchema: z.object({
         item_id: z.uuid(),
         weights: weightsSchema.optional(),

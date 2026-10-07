@@ -33,6 +33,7 @@ import { registerCapacityTools } from "@/features/tasks/capacity.tools";
 import { registerTaskTools } from "@/features/tasks/tasks.tools";
 import { registerTodayTools } from "@/features/today/today.tools";
 import { registerUpdateTools } from "@/features/updates/updates.tools";
+import { registerLifeTools } from "@/features/life/life.tools";
 import { registerStatusTools } from "@/features/status/status.tools";
 import { registerMealTools } from "@/features/pantry/meals.tools";
 import { registerCloseOutTools } from "@/features/closeout/closeout.tools";
@@ -53,6 +54,7 @@ const handler = createMcpHandler(
     tools.area("Tasks and habits", () => registerCapacityTools(server));
     tools.area("Undo mistakes", () => registerUndoTools(server));
     tools.area("Goals and needs", () => registerItemTools(server));
+    tools.area("Life map and timeline", () => registerLifeTools(server));
     tools.area("Learning", () => registerLearningTools(server));
     tools.area("Coaching", () => registerSlipTools(server));
     tools.area("Coaching", () => registerModeTools(server));

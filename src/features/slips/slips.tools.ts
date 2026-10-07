@@ -15,7 +15,8 @@ export function registerSlipTools(server: McpServer) {
         "paddie_accepts: a real reason (sick, emergency, power cut) is accepted; an excuse used to skip the next " +
         "step is not. Also give a short why_category (e.g. 'tired', 'late night', 'forgot') so repeats are caught: " +
         "the same reason for the same habit 3 times in a week is treated as an excuse regardless. Only accepted " +
-        "slips protect a need from the ignored-need XP deduction.",
+        "slips protect a need from the ignored-need XP deduction. Logged against the wrong task, or they did it after " +
+          "all? undo with kind 'slip'.",
       inputSchema: z.object({
         task_id: z.uuid(),
         why: z.string().trim().min(1).describe("Their reason, in their words"),

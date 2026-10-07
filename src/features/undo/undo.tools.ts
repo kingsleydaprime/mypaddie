@@ -4,7 +4,7 @@ import { withMode } from "@/features/mode/mode.repo";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { recentUndoable, undo } from "./undo.repo";
 
-const KINDS = ["task", "fun", "workout", "learning"] as const;
+const KINDS = ["task", "fun", "workout", "learning", "slip"] as const;
 
 export function registerUndoTools(server: McpServer) {
   server.registerTool(
@@ -12,11 +12,13 @@ export function registerUndoTools(server: McpServer) {
     {
       title: "Undo a mistake",
       description:
-        "Undo a mis-tapped or wrong complete_task, log_fun, log_workout or log_learning. Without `id` it changes nothing " +
+        "Undo a mis-tapped or wrong complete_task, log_fun, log_workout, log_learning or log_slip. Without `id` it changes nothing " +
         "and lists what was done in the last 48 hours (optionally only one `kind`): confirm the right one with the user " +
         "by name, then call again with its `kind` and `id`. The XP is taken back (the ledger keeps both the original and " +
         "the reversal), and what it set off is rolled back: the workout log, the fun count, a kept promise, an application " +
         "requirement, practice time. A planned task goes back to pending; something logged after the fact is cancelled. " +
+          "A slip (wrong task, or they did it after all) is removed and its task is pending again — if it was a need " +
+          "whose day is over, the ignored-need deduction then applies, since the slip was what protected it. " +
         "Not for a real slip — that's log_slip — and never to dodge a penalty: deductions can't be undone.",
       inputSchema: z.object({
         kind: z.enum(KINDS).optional(),
