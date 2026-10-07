@@ -20,7 +20,7 @@ import {
 } from "./money.repo";
 import { judgePurchase } from "./purchase";
 
-const amount = z.number().int().positive().describe("Whole units of his currency");
+const amount = z.number().int().positive().describe("Whole units of their currency");
 
 function budgetSummary(b: BudgetContext) {
   const s = b.stage;
@@ -40,11 +40,11 @@ export function registerMoneyTools(server: McpServer) {
     {
       title: "Log transaction",
       description:
-        "Record money in or out. Logging always earns XP, even for a dumb purchase — never shame him for logging. " +
+        "Record money in or out. Logging always earns XP, even for a dumb purchase — never shame them for logging. " +
         "Outflows need a tag: need, want, or unsure; for food and similar, ask 'basic version or the extra?' and " +
         "log two entries (need + want) if it's both. If `flags` comes back non-empty, point out the bad call " +
         "plainly and briefly (firm about the action, funny about the situation), then move on. For income, the " +
-        "reply includes a proposed split — present it and ask him to accept, tweak, or reject (accept_split).",
+        "reply includes a proposed split — present it and ask them to accept, tweak, or reject (accept_split).",
       inputSchema: z.object({
         amount,
         direction: z.enum(["in", "out"]),
@@ -106,7 +106,7 @@ export function registerMoneyTools(server: McpServer) {
     {
       title: "Get money status",
       description:
-        "His balance (real money: opening balance + in − out), the current money stage (audit → no judgement yet; deficit → needs exceed income; surplus → income covers " +
+        "Their balance (real money: opening balance + in − out), the current money stage (audit → no judgement yet; deficit → needs exceed income; surplus → income covers " +
         "needs), bucket balances, and this month's needs. In deficit, includes the plan: income funds the cheapest " +
         "honest version of each need in priority order, plus the gap as one number and the hidden wants inside needs.",
       inputSchema: z.object({}),
@@ -164,7 +164,7 @@ export function registerMoneyTools(server: McpServer) {
     {
       title: "Accept split",
       description:
-        "Move an income entry into the buckets. Omit `amounts` to accept the proposal as-is, or pass his tweaked " +
+        "Move an income entry into the buckets. Omit `amounts` to accept the proposal as-is, or pass their tweaked " +
         "amounts — they must add up to the income exactly. Each income can only be split once.",
       inputSchema: z.object({ transaction_id: z.uuid(), amounts: amounts.optional() }),
     },
@@ -186,8 +186,8 @@ export function registerMoneyTools(server: McpServer) {
     {
       title: "Check purchase",
       description:
-        "The don't-buy-this check, for when he says 'I want to buy X'. You judge two things: is it really a need " +
-        "in disguise, and does it serve one of his goals (give the goal's title, from list_items tier=goal). The " +
+        "The don't-buy-this check, for when the user says 'I want to buy X'. You judge two things: is it really a need " +
+        "in disguise, and does it serve one of their goals (give the goal's title, from list_items tier=goal). The " +
         "engine checks the money. Answer clearly with the verdict: yes, wait 24 hours, or no — and be honest, " +
         "not agreeable. Asking again about the same item after 24 hours can turn a wait into a yes.",
       inputSchema: z.object({
@@ -246,10 +246,10 @@ export function registerMoneyTools(server: McpServer) {
     {
       title: "Set balance",
       description:
-        "Make his balance match what's really in his account(s): 'I have 85,000'. The first time this records " +
-        "his opening balance; later it records a correction for the difference (bank charges, a forgotten spend) " +
-        "— mention the difference so he can think about what wasn't logged. Never counts as income or spending.",
-      inputSchema: z.object({ amount: z.number().int().nonnegative().describe("Whole units actually in his account(s) now") }),
+        "Make their balance match what's really in their account(s): 'I have 85,000'. The first time this records " +
+        "their opening balance; later it records a correction for the difference (bank charges, a forgotten spend) " +
+        "— mention the difference so the user can think about what wasn't logged. Never counts as income or spending.",
+      inputSchema: z.object({ amount: z.number().int().nonnegative().describe("Whole units actually in their account(s) now") }),
     },
     async ({ amount }: { amount: number }, ctx: ToolContext) => {
       try {
@@ -322,8 +322,8 @@ export function registerMoneyTools(server: McpServer) {
     {
       title: "Update purchase check",
       description:
-        "Mark a past purchase check as not_interested (changed his mind — kept on record), interested (wants it " +
-        "again), or bought. Nothing is deleted: it keeps him honest about what he almost bought.",
+        "Mark a past purchase check as not_interested (changed their mind — kept on record), interested (wants it " +
+        "again), or bought. Nothing is deleted: it keeps them honest about what the user almost bought.",
       inputSchema: z.object({ id: z.uuid(), interest: z.enum(["interested", "not_interested", "bought"]) }),
     },
     async ({ id, interest }: { id: string; interest: "interested" | "not_interested" | "bought" }, ctx: ToolContext) => {

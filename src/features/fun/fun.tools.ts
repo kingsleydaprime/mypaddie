@@ -19,9 +19,9 @@ const view = (a: FunActivity) => ({
 
 const fields = {
   notes: z.string().trim().max(500).optional(),
-  cost: z.number().int().min(0).optional().describe("Rough cost in his currency; 0 = free"),
+  cost: z.number().int().min(0).optional().describe("Rough cost in their currency; 0 = free"),
   minutes: z.number().int().min(5).max(1440).optional().describe("Roughly how long it takes"),
-  energy: z.enum(FUN_ENERGY).optional().describe("How much it takes out of him"),
+  energy: z.enum(FUN_ENERGY).optional().describe("How much it takes out of them"),
   company: z.enum(FUN_COMPANY).optional().describe("solo, together (with people), or either"),
 };
 
@@ -31,9 +31,9 @@ export function registerFunTools(server: McpServer) {
     {
       title: "Fun list",
       description:
-        "His fun list, days since he last had any fun, and up to `limit` suggestions that fit right now: free time, " +
+        "Their fun list, days since the user last had any fun, and up to `limit` suggestions that fit right now: free time, " +
         "money (only free fun in a deficit; nothing over what's left for wants) and mood (no high-energy fun on a " +
-        "soft day), least recently done first. Use when he asks for help having fun or a fun life, when his quests " +
+        "soft day), least recently done first. Use when the user asks for help having fun or a fun life, when their quests " +
         "are done, or to fill free time from plan_day. Offer one or two, not the whole list. Rest is part of the game.",
       inputSchema: z.object({
         minutes_free: z.number().int().min(5).max(1440).optional().describe("Only things that fit this much time"),
@@ -64,7 +64,7 @@ export function registerFunTools(server: McpServer) {
     {
       title: "Add fun",
       description:
-        "Add something he enjoys to his fun list (e.g. football with the guys, a movie, the beach, gaming). Ask " +
+        "Add something the user enjoys to their fun list (e.g. football with the guys, a movie, the beach, gaming). Ask " +
         "only for what's unclear; rough cost, time, energy and company make the suggestions better.",
       inputSchema: z.object({ title: z.string().trim().min(1).max(100), ...fields }),
     },
@@ -87,7 +87,7 @@ export function registerFunTools(server: McpServer) {
     {
       title: "Update fun",
       description:
-        "Edit an activity on his fun list (by title), pause it (active=false: kept but not suggested), or remove it. " +
+        "Edit an activity on their fun list (by title), pause it (active=false: kept but not suggested), or remove it. " +
         "Removing keeps past fun on the record.",
       inputSchema: z.object({
         activity: z.string().trim().min(1).describe("Its title (or id)"),
@@ -118,11 +118,11 @@ export function registerFunTools(server: McpServer) {
     {
       title: "Log fun",
       description:
-        "He had fun: record it and pay XP (emotional, plus social with people). Something not on his list yet is " +
+        "The user had fun: record it and pay XP (emotional, plus social with people). Something not on their list yet is " +
         "added to it. If it cost money, also log the spend with log_transaction (as a want). To plan fun for later " +
         "instead, use add_task with fun=<title> so completing it counts.",
       inputSchema: z.object({
-        activity: z.string().trim().min(1).max(100).describe("Title from his list, or something new"),
+        activity: z.string().trim().min(1).max(100).describe("Title from their list, or something new"),
         with_people: z.boolean().optional(),
         minutes: z.number().int().min(5).max(1440).optional(),
       }),

@@ -675,3 +675,16 @@ Amounts stay integers; only display changes. `formatMoney` uses the user's
 currency (narrow symbol: ₦, £, $, GH₵…); browser forms are handed it by their
 page, since there's no request context in the browser. Parsing strips any
 symbol, not just ₦.
+
+### Voice is a setting; Naija is the default
+`profile.voice`: `naija` (the original deadpan narrator with Naija banter) or
+`neutral` (the same coach in plain English). The server instructions describe
+both and `get_today` returns `you` (name, voice), so one MCP server serves
+everyone. Tool descriptions say "the user" / "their" instead of "Kingsley" /
+"his" — "the user" keeps every verb agreeing, which "they" wouldn't have.
+
+### Onboarding gates Home only
+A profile without `onboardedAt` is sent from `/app` to `/welcome` (name, time
+zone — the device's is suggested — currency, voice). Only Home redirects:
+every other page already works on the defaults, and a deep link from a
+notification shouldn't bounce someone into a form.

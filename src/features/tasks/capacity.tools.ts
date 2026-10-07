@@ -17,8 +17,8 @@ export function registerCapacityTools(server: McpServer) {
     {
       title: "Get capacity",
       description:
-        "His daily capacity (hours of tasks a day), any date-range overrides, and how full a given day is " +
-        "(default today). Use when he asks how much is on his plate.",
+        "Their daily capacity (hours of tasks a day), any date-range overrides, and how full a given day is " +
+        "(default today). Use when the user asks how much is on their plate.",
       inputSchema: z.object({ date: z.iso.date().optional().describe("YYYY-MM-DD, Lagos. Default today") }),
       annotations: { readOnlyHint: true },
     },
@@ -47,7 +47,7 @@ export function registerCapacityTools(server: McpServer) {
     {
       title: "Set capacity",
       description:
-        "Change how many hours of tasks fit in a day — only when Kingsley asks to. Without dates, sets the default. " +
+        "Change how many hours of tasks fit in a day — only when the user asks to. Without dates, sets the default. " +
         "With from/to, adds a period that overrides the default on those dates (e.g. exams: 2 hours a day), and " +
         "replaces any existing period with the same label. remove_label deletes a period.",
       inputSchema: z.object({

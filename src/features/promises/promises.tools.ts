@@ -38,10 +38,10 @@ export function registerPromiseTools(server: McpServer) {
     {
       title: "Add promise",
       description:
-        "Record a promise he made: to whom, what, and by when. Listen for them in passing ('I told Ada I'd send the " +
+        "Record a promise the user made: to whom, what, and by when. Listen for them in passing ('I told Ada I'd send the " +
         "notes by Friday') and offer to log them. It goes on Today as a task that turns must-do the day before. Kept " +
         "on its day = +15 XP (character, relationships). Not kept, released or renegotiated by the end of its day = " +
-        "broken: −15, and keeping it later earns back only half. If `dayFull` comes back, his day is full — the promise " +
+        "broken: −15, and keeping it later earns back only half. If `dayFull` comes back, their day is full — the promise " +
         "is still recorded; suggest renegotiating the date or dropping something.",
       inputSchema: z.object({
         person: z.string().trim().min(1).max(100),
@@ -68,7 +68,7 @@ export function registerPromiseTools(server: McpServer) {
       title: "List promises",
       description:
         "Open promises (soonest first, with days left), recently kept/released/broken ones, and `patterns`: people " +
-        "he's broken 2+ promises to in 90 days. Name a pattern plainly, once, and ask what would change it.",
+        "they've broken 2+ promises to in 90 days. Name a pattern plainly, once, and ask what would change it.",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
@@ -90,9 +90,9 @@ export function registerPromiseTools(server: McpServer) {
       title: "Update promise",
       description:
         "One promise (id from list_promises): `kept` (completes its task: full XP on its day, half if late), " +
-        "`released` (they let him off — no penalty if before its day ended), `renegotiate` to a new date (only " +
-        "while its day hasn't ended, and only after he's actually told them — ask), edit person/what/notes, or " +
-        "`remove` if it was logged by mistake. When a promise can't be kept, push him to tell the person before the " +
+        "`released` (they let them off — no penalty if before its day ended), `renegotiate` to a new date (only " +
+        "while its day hasn't ended, and only after they've actually told them — ask), edit person/what/notes, or " +
+        "`remove` if it was logged by mistake. When a promise can't be kept, push them to tell the person before the " +
         "deadline, not after.",
       inputSchema: z.object({
         id: z.uuid(),

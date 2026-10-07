@@ -25,7 +25,7 @@ const fields = {
   person: z.string().trim().optional(),
   location: z.string().trim().optional(),
   notes: z.string().optional(),
-  reminder_note: z.string().trim().max(200).optional().describe("His own words for the notifications, e.g. 'Buy flowers on the way'"),
+  reminder_note: z.string().trim().max(200).optional().describe("Their own words for the notifications, e.g. 'Buy flowers on the way'"),
 };
 
 export function registerEventTools(server: McpServer) {
@@ -38,7 +38,7 @@ export function registerEventTools(server: McpServer) {
         "to *do* are tasks.) Ask whether it's important if unclear: important ones are reminded a week ahead and " +
         "the morning of; all are reminded the evening before and 30 min before. Birthdays/anniversaries repeat " +
         "yearly. For important events that need preparation (a gift, an outfit, travel), pass prep to create a " +
-        "prep task ahead of it. If `clashes` comes back non-empty, tell him what overlaps.",
+        "prep task ahead of it. If `clashes` comes back non-empty, tell them what overlaps.",
       inputSchema: z.object({
         ...fields,
         prep: z

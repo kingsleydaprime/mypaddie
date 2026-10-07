@@ -25,7 +25,7 @@ export function registerIdentityTools(server: McpServer) {
           await withMode(db, new Date(), {
             active,
             versions: data.map(({ id, name, is_active }) => ({ id, name, is_active })),
-            ...(active ? {} : { hint: "No active profile yet. Offer to help him write one." }),
+            ...(active ? {} : { hint: "No active profile yet. Offer to help them write one." }),
           }),
         );
       } catch (error) {
@@ -39,7 +39,7 @@ export function registerIdentityTools(server: McpServer) {
     {
       title: "Save identity",
       description:
-        "Save a new version of the 'Who I'm becoming' profile in his words (e.g. 'this month I'm working on…'). " +
+        "Save a new version of the 'Who I'm becoming' profile in their words (e.g. 'this month I'm working on…'). " +
         "Versions are kept; activate=true makes this the one coached toward.",
       inputSchema: z.object({ name: z.string().trim().min(1), text: z.string().trim().min(1), activate: z.boolean().default(true) }),
     },
@@ -61,7 +61,7 @@ export function registerIdentityTools(server: McpServer) {
       title: "Update identity",
       description:
         "Edit a 'Who I'm becoming' profile in place (default: the active one) — refine wording, add a trait, " +
-        "remove something he's outgrown. Write it in his words, first person. Use save_identity instead when he " +
+        "remove something they've outgrown. Write it in their words, first person. Use save_identity instead when the user " +
         "wants a separate version to switch between (e.g. 'this month I'm working on…').",
       inputSchema: z.object({
         id: z.uuid().optional(),

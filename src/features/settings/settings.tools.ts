@@ -12,7 +12,7 @@ export function registerSettingsTools(server: McpServer) {
     "get_settings",
     {
       title: "Get settings",
-      description: "His schedule settings: quiet hours, morning brief time, evening/morning reminder times, how many days count as 'close' for events, meal times, and the fun nudge (after how many days without fun, and when).",
+      description: "Their schedule settings: quiet hours, morning brief time, evening/morning reminder times, how many days count as 'close' for events, meal times, and the fun nudge (after how many days without fun, and when).",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
@@ -31,7 +31,7 @@ export function registerSettingsTools(server: McpServer) {
     {
       title: "Update settings",
       description:
-        "Change schedule settings — only what he asks to change. Quiet hours may cross midnight (23:00 → 06:30); " +
+        "Change schedule settings — only what the user asks to change. Quiet hours may cross midnight (23:00 → 06:30); " +
         "no nudges arrive inside them. A reminder time inside quiet hours is refused (it would never arrive): " +
         "explain and suggest a time just outside. `meals` replaces the whole list.",
       inputSchema: z.object({

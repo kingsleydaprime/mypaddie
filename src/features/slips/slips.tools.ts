@@ -19,7 +19,7 @@ export function registerSlipTools(server: McpServer) {
         "slips protect a need from the ignored-need XP deduction.",
       inputSchema: z.object({
         task_id: z.uuid(),
-        why: z.string().trim().min(1).describe("His reason, in his words"),
+        why: z.string().trim().min(1).describe("Their reason, in their words"),
         why_category: z.string().trim().min(1).max(40),
         paddie_accepts: z.boolean(),
       }),

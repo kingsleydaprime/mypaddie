@@ -13,7 +13,7 @@ export function registerModeTools(server: McpServer) {
     {
       title: "Set mode",
       description:
-        "Kingsley's override always wins. 'no_mercy' = strictest until he switches it off. 'go_easy' = softest " +
+        "The user's override always wins. 'no_mercy' = strictest until the user switches it off. 'go_easy' = softest " +
         "for the rest of today. 'normal' = clear any override and let the data decide.",
       inputSchema: z.object({ mode: z.enum(["no_mercy", "go_easy", "normal"]) }),
     },

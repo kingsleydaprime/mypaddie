@@ -31,9 +31,9 @@ const loadView = (w: WeekLoad) => ({
 });
 
 const ADVICE =
-  "If the verdict is tight or overloaded, say plainly that his plate is full. Advise — he decides: suggest dropping or " +
-  "pausing from dropCandidates (optional ones first; `enough` marks where dropping gets him back to room) and weigh them " +
-  "against his 'Who I'm becoming' profile — keep what serves it. Never suggest dropping a core commitment.";
+  "If the verdict is tight or overloaded, say plainly that their plate is full. Advise — the user decides: suggest dropping or " +
+  "pausing from dropCandidates (optional ones first; `enough` marks where dropping gets them back to room) and weigh them " +
+  "against their 'Who I'm becoming' profile — keep what serves it. Never suggest dropping a core commitment.";
 
 export function registerCommitmentTools(server: McpServer) {
   server.registerTool(
@@ -41,8 +41,8 @@ export function registerCommitmentTools(server: McpServer) {
     {
       title: "Check load",
       description:
-        "How full his week is: the next 7 days against their capacity, plus unscheduled hours from his jobs and roles. " +
-        "Call it BEFORE he takes on anything sizeable — a new job, role, club, team, big goal, regular commitment — " +
+        "How full their week is: the next 7 days against their capacity, plus unscheduled hours from their jobs and roles. " +
+        "Call it BEFORE the user takes on anything sizeable — a new job, role, club, team, big goal, regular commitment — " +
         `passing adding_hours_per_week. ${ADVICE}`,
       inputSchema: z.object({ adding_hours_per_week: z.number().min(0).max(100).optional() }),
       annotations: { readOnlyHint: true },
@@ -66,14 +66,14 @@ export function registerCommitmentTools(server: McpServer) {
       description:
         "A job (full-time, part-time, freelance, internship), role (volunteer, campus ambassador, academic lead), " +
         "membership (a union, association, church unit like the choir) or team (school ball team). Priority: core " +
-        "(non-negotiable, like his main job), important, or optional. Regular sessions (team training Tue/Thu 16:00, " +
+        "(non-negotiable, like their main job), important, or optional. Regular sessions (team training Tue/Thu 16:00, " +
         "rehearsals, shifts, personal training) become recurring tasks tied to it; unscheduled time (freelance work, " +
         "admin) goes in extra_hours_per_week. One-offs (a competition, an election, a meeting) are add_event with " +
         "`commitment`. For a competition, also offer extra personal training before it (add_task with `commitment`). " +
         `Run check_load first for anything new. The result includes the week's load after adding. ${ADVICE}`,
       inputSchema: z.object({
         kind: z.enum(COMMITMENT_KINDS),
-        title: z.string().trim().min(1).max(120).describe("His role: 'Campus ambassador', 'Striker', 'Backend engineer', 'Member'"),
+        title: z.string().trim().min(1).max(120).describe("Their role: 'Campus ambassador', 'Striker', 'Backend engineer', 'Member'"),
         org: z.string().trim().max(120).optional().describe("'Igbo Students Union', 'Church choir', 'Acme Ltd'"),
         priority: z.enum(COMMITMENT_PRIORITIES).default("important"),
         starts_on: z.iso.date().optional(),
@@ -113,7 +113,7 @@ export function registerCommitmentTools(server: McpServer) {
     "list_commitments",
     {
       title: "List commitments",
-      description: "His jobs, roles, memberships and teams with priority, status and hours a week, plus the week's load.",
+      description: "Their jobs, roles, memberships and teams with priority, status and hours a week, plus the week's load.",
       inputSchema: z.object({ include_ended: z.boolean().default(false) }),
       annotations: { readOnlyHint: true },
     },

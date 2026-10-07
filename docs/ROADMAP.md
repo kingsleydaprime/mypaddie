@@ -90,15 +90,16 @@ which gets a new entry when it changes.
 - [ ] Turn sign-ups on. Google sign-in and/or magic links, with a real email
   provider (e.g. Resend) as custom SMTP. Supabase's built-in sender is
   rate-limited to a few emails an hour, the reason magic links were rejected.
-- [ ] First-run onboarding: display name, time zone, currency, quiet hours,
-  "Who I'm becoming". Seed nothing personal.
+- [x] First-run onboarding (2026-10-08): `/welcome` asks name, time zone
+  (suggests the device's), currency and voice; Settings → You edits them;
+  `update_profile` / `get_profile` for the AI.
 - [x] **Per-user time zone** (2026-10-08): profile setting; every rule reads
   the signed-in user's zone; the nudge job and habit rows run per user.
   Invalid zone → UTC; no zone → Lagos.
 - [x] **Per-user currency** (2026-10-08): whole units, shown in their currency.
-- [ ] Remove "Kingsley / his" from the MCP server instructions
-  (`src/app/api/mcp/route.ts`) and tool descriptions. `get_today` returns the
-  user's display name and the AI uses that.
+- [x] "Kingsley / his" removed from the MCP instructions and every tool
+  description (2026-10-08); `get_today` returns `you` (name, voice) and the
+  instructions describe both voices (Naija banter, the default, or plain English).
 - [ ] Domain: point mypaddie.spectroniqlimited.com at Vercel; update the
   Supabase site URL, redirect URLs and OAuth authorization path.
 

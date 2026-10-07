@@ -10,8 +10,8 @@ export function registerCalendarTools(server: McpServer) {
     {
       title: "Connect calendar",
       description:
-        "Import his Google Calendar (read-only). He needs the 'Secret address in iCal format': Google Calendar → " +
-        "Settings → his calendar → Integrate calendar. Treat that link like a password: don't repeat it back. " +
+        "Import their Google Calendar (read-only). The user needs the 'Secret address in iCal format': Google Calendar → " +
+        "Settings → their calendar → Integrate calendar. Treat that link like a password: don't repeat it back. " +
         "Imported events count for clashes, capacity, reminders and plan_day, and re-sync automatically.",
       inputSchema: z.object({ url: z.url() }),
     },
@@ -30,7 +30,7 @@ export function registerCalendarTools(server: McpServer) {
     "sync_calendar",
     {
       title: "Sync calendar",
-      description: "Pull the latest from his Google Calendar now (it also syncs by itself every 30 minutes when he opens the app).",
+      description: "Pull the latest from their Google Calendar now (it also syncs by itself every 30 minutes when the user opens the app).",
       inputSchema: z.object({}),
     },
     async (_args: Record<string, never>, ctx: ToolContext) => {
@@ -48,7 +48,7 @@ export function registerCalendarTools(server: McpServer) {
     "disconnect_calendar",
     {
       title: "Disconnect calendar",
-      description: "Stop importing his Google Calendar and remove the imported events (his own MyPaddie events stay).",
+      description: "Stop importing their Google Calendar and remove the imported events (their own MyPaddie events stay).",
       inputSchema: z.object({}),
       annotations: { destructiveHint: true },
     },

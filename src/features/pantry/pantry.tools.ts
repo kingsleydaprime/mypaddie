@@ -15,9 +15,9 @@ export function registerPantryTools(server: McpServer) {
       description:
         "Change food stock — a shopping trip, using something up, or a stock-take. delta adds (+) or uses (−); set " +
         "is the exact amount now. Each item keeps one unit (kg, g, l, ml, pieces, tins, cups, packs, bags…); " +
-        "convert to it if he uses another (500g of something stored in kg → 0.5). New items need a unit and a " +
+        "convert to it if the user uses another (500g of something stored in kg → 0.5). New items need a unit and a " +
         "category (grains, protein, vegetables, fruit, spices, oils, drinks, snacks, other). Set low_at for things " +
-        "he never wants to run out of. When he logs a food purchase, offer to add it here too.",
+        "the user never wants to run out of. When the user logs a food purchase, offer to add it here too.",
       inputSchema: z.object({
         changes: z
           .array(
@@ -86,8 +86,8 @@ export function registerPantryTools(server: McpServer) {
     {
       title: "Cook meal",
       description:
-        "Record a meal he cooked and use up its ingredients from the pantry (use the pantry's units). Ingredients " +
-        "he didn't have logged come back as `missing` — that's fine; offer to add them to the pantry next time.",
+        "Record a meal the user cooked and use up its ingredients from the pantry (use the pantry's units). Ingredients " +
+        "the user didn't have logged come back as `missing` — that's fine; offer to add them to the pantry next time.",
       inputSchema: z.object({
         name: z.string().trim().min(1),
         ingredients: z.array(z.object({ name: z.string().trim().min(1), quantity, unit: z.string().trim() })).default([]),

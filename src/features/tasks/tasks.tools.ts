@@ -20,9 +20,9 @@ const reminders = z.array(z.enum(["eve", "morning", "30", "10"])).describe(
 );
 const REFUSALS =
   "If the result is 'clash', say what's already there and when, and ask whether to book it anyway (then retry " +
-  "with force_clash=true) or pick another time. If it's 'over_capacity', his plate for that day is full: say so " +
+  "with force_clash=true) or pick another time. If it's 'over_capacity', their plate for that day is full: say so " +
   "plainly with the numbers, and offer to finish or drop something first, or move it to another day. Do NOT suggest " +
-  "raising capacity to squeeze it in — that's his deliberate setting (set_capacity).";
+  "raising capacity to squeeze it in — that's their deliberate setting (set_capacity).";
 
 export function registerTaskTools(server: McpServer) {
   server.registerTool(
@@ -31,10 +31,10 @@ export function registerTaskTools(server: McpServer) {
       title: "Add task",
       description:
         "Schedule work: a one-off (a chore, an errand) or a recurring habit. Suggest pillar weights that sum to " +
-        "100 (e.g. exercise: physical 50, mental 30, emotional 20) and let Kingsley adjust them. Recurrence is " +
+        "100 (e.g. exercise: physical 50, mental 30, emotional 20) and let the user adjust them. Recurrence is " +
         "FREQ=DAILY or FREQ=WEEKLY;BYDAY=MO,WE,FR. Non-negotiables (daily essentials) get nudged until done. " +
-        "Chores are low XP (about 5); normal tasks about 10. Estimate duration_minutes (he can correct it): it " +
-        "turns a timed task into a block and counts against his daily capacity. For something not urgent now but " +
+        "Chores are low XP (about 5); normal tasks about 10. Estimate duration_minutes (the user can correct it): it " +
+        "turns a timed task into a block and counts against their daily capacity. For something not urgent now but " +
         "that becomes non-negotiable later (replying someone, updating the boss), set becomes_must_do_at. " + REFUSALS,
       inputSchema: z.object({
         title: z.string().trim().min(1),
@@ -48,12 +48,12 @@ export function registerTaskTools(server: McpServer) {
         duration_minutes: z.number().int().min(1).max(1440).optional(),
         reminders: reminders.optional(),
         becomes_must_do_at: z.iso.datetime({ offset: true }).optional().describe("When it turns non-negotiable, e.g. 2026-10-15T09:00:00+01:00"),
-        force_clash: z.boolean().default(false).describe("Only after he confirms a double-booking"),
+        force_clash: z.boolean().default(false).describe("Only after the user confirms a double-booking"),
         skill: z.string().trim().min(1).optional().describe("Completing it logs practice time for this skill (e.g. 'LeetCode 1h' → DSA)"),
         topic: z.string().trim().min(1).max(200).optional().describe("With `skill`: the topic it covers (e.g. a course topic), recorded with the practice time"),
-        fun: z.string().trim().min(1).optional().describe("Planned fun: the title of an activity on his fun list; completing the task counts as doing it"),
+        fun: z.string().trim().min(1).optional().describe("Planned fun: the title of an activity on their fun list; completing the task counts as doing it"),
         commitment: z.string().trim().min(1).optional().describe("The job, role, team or group it's for (title or id from list_commitments), e.g. extra training before a competition"),
-        reminder_note: z.string().trim().max(200).optional().describe("His own words for the notifications, e.g. 'Bring the signed form'"),
+        reminder_note: z.string().trim().max(200).optional().describe("Their own words for the notifications, e.g. 'Bring the signed form'"),
       }),
     },
     async (
@@ -83,7 +83,7 @@ export function registerTaskTools(server: McpServer) {
         const now = new Date();
         const skillId = args.skill ? (await findOrCreateSkill(db, args.skill)).skill.id : null;
         const fun = args.fun ? await findFun(db, args.fun) : null;
-        if (args.fun && !fun) return toolError(`add_task: "${args.fun}" isn't on his fun list — add it with add_fun first`);
+        if (args.fun && !fun) return toolError(`add_task: "${args.fun}" isn't on their fun list — add it with add_fun first`);
         const commitment = args.commitment ? await findCommitment(db, args.commitment) : null;
         if (args.commitment && !commitment) return toolError(`add_task: no single commitment matches "${args.commitment}" — check list_commitments`);
         const outcome = await createTask(
@@ -200,7 +200,7 @@ export function registerTaskTools(server: McpServer) {
       title: "Delete task",
       description:
         "Permanently delete a task added by mistake (a typo, a duplicate). Only works for tasks with no history — " +
-        "no XP earned or lost, no slips. If the result is 'has_history', it's part of his record: use update_task " +
+        "no XP earned or lost, no slips. If the result is 'has_history', it's part of their record: use update_task " +
         "with action 'cancel' (skip it) or 'stop' (end a habit) instead.",
       inputSchema: z.object({ task_id: z.uuid() }),
       annotations: { destructiveHint: true },

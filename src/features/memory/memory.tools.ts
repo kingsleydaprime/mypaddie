@@ -10,7 +10,7 @@ export function registerMemoryTools(server: McpServer) {
     {
       title: "Save memory",
       description:
-        "Store a fact or pattern worth remembering about Kingsley (a preference, a recurring challenge in his own " +
+        "Store a fact or pattern worth remembering about the user (a preference, a recurring challenge in their own " +
         "words, something that worked). Use a short category like 'challenge', 'preference', 'pattern', 'win'.",
       inputSchema: z.object({
         category: z.string().trim().min(1).max(40),

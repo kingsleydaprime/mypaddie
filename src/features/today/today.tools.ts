@@ -17,6 +17,7 @@ import { roomOn } from "@/features/tasks/capacity";
 import { catchUp, loadCapacity, loadDayTasks, loadTasksAroundToday } from "@/features/tasks/tasks.repo";
 import { currentConfig } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
+import { currentProfile } from "@/shared/user-context";
 import { dayKey, formatLocal } from "@/shared/time";
 import { pickFocus, type FocusItem } from "./focus";
 
@@ -50,9 +51,9 @@ export function registerTodayTools(server: McpServer) {
     {
       title: "Get today",
       description:
-        "Call at the start of every chat. Returns the 3 things that matter right now (lead with these and ask Kingsley " +
+        "Call at the start of every chat. Returns the 3 things that matter right now (lead with these and ask the user " +
         "to do one), the rest of today's open tasks, money status, the current coaching mode with the facts " +
-        "behind it, and his 'Who I'm becoming' profile (`becoming`) — measure choices against it all chat. Follow the returned mode. Don't recite stats unless asked.",
+        "behind it, and their 'Who I'm becoming' profile (`becoming`) — measure choices against it all chat. Follow the returned mode. Don't recite stats unless asked.",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: false, idempotentHint: true },
     },
@@ -83,14 +84,17 @@ export function registerTodayTools(server: McpServer) {
         // Fun counts: suggest some once today's quests are done, or when it's been too long.
         const funDue = fun.daysSinceFun !== null && schedule.funEveryDays > 0 && fun.daysSinceFun >= schedule.funEveryDays;
         const questsDone = focus.top.length === 0 && focus.rest.length === 0 && focus.doneToday > 0;
+        const me = currentProfile();
         return ok({
+          // Who you're talking to, and how they want to be talked to.
+          you: { name: me.displayName, voice: me.voice, timeZone: me.timeZone, currency: me.currency, ...(me.onboardedAt ? {} : { setUp: false }) },
           now: formatLocal(now, tz()),
           mode,
           focus: focus.top.map(item),
           rest: focus.rest.map(item),
           doneToday: focus.doneToday,
           money: moneySummary(money),
-          // How full today is, in minutes. Mention only if he's near or over, or asks.
+          // How full today is, in minutes. Mention only if they're near or over, or asks.
           plate: { capacity: room.capacity, committed: room.committed, available: room.available, label: room.label },
           caughtUp,
           // Topics due for review (spaced repetition). Offer one as a short practice, don't list them all.
@@ -103,19 +107,19 @@ export function registerTodayTools(server: McpServer) {
             today: soon.filter((e) => e.daysAway === 0).map((e) => ({ title: e.title, kind: e.kind, at: e.allDay ? "all day" : formatLocal(e.at, tz()) })),
             prepareNow: soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now").map((e) => ({ title: e.title, daysAway: e.daysAway })),
           },
-          // Days since any fun (null = no fun list yet: offer to start one). `ideas` only when he's earned a break or is overdue for one.
+          // Days since any fun (null = no fun list yet: offer to start one). `ideas` only when they've earned a break or is overdue for one.
           fun: {
             daysSince: fun.daysSinceFun,
             ...(funDue || questsDone ? { ideas: fun.suggestions.map((f) => f.title), why: questsDone ? "quests_done" : "overdue" } : {}),
           },
-          // Promises due within 2 days (or with no date). Remind him plainly; if one can't be kept, tell them now.
+          // Promises due within 2 days (or with no date). Remind them plainly; if one can't be kept, tell them now.
           promises: {
             dueSoon: promises.open.filter((p) => p.daysLeft === null || p.daysLeft <= 2).map((p) => ({ id: p.id, person: p.person, what: p.what, daysLeft: p.daysLeft })),
             ...(promises.patterns.length ? { patterns: promises.patterns } : {}),
           },
-          // The week's load. Only raise it when it's tight or overloaded, and before he takes on anything new.
+          // The week's load. Only raise it when it's tight or overloaded, and before the user takes on anything new.
           week: { verdict: week.verdict, percent: Math.round(week.ratio * 100), ...(week.verdict !== "room" ? { dropCandidates: week.dropCandidates.slice(0, 3).map((d) => d.title) } : {}) },
-          // Who he's becoming — coach toward it all chat. Null: offer to help him write one.
+          // Who they're becoming — coach toward it all chat. Null: offer to help them write one.
           becoming: identity ? { name: identity.name, text: identity.text } : null,
         });
       } catch (error) {

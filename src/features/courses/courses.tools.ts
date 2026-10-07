@@ -72,10 +72,10 @@ export function registerCourseTools(server: McpServer) {
     {
       title: "Add course",
       description:
-        "Add a school course. If he pastes or shares a course outline (text or PDF), pull out the code, title, " +
+        "Add a school course. If the user pastes or shares a course outline (text or PDF), pull out the code, title, " +
         "description, lecturer, units, the topics in order (with week numbers if given) and every test, quiz, exam " +
         "and assignment with its date and weight, and send it all in one call — then summarise what you found and " +
-        "ask about anything missing. Without an outline, start with what he tells you; topics can be added later. " +
+        "ask about anything missing. Without an outline, start with what the user tells you; topics can be added later. " +
         "Exams/tests/quizzes become important events; assignments/projects become tasks due on their date that " +
         "turn must-do 2 days before. Study time and topic confidence are tracked under the course (its own academic skill).",
       inputSchema: z.object({
@@ -113,7 +113,7 @@ export function registerCourseTools(server: McpServer) {
     {
       title: "List courses",
       description:
-        "His courses with topic progress (not started / learning / solid, from logged confidence) and the next " +
+        "Their courses with topic progress (not started / learning / solid, from logged confidence) and the next " +
         "assessment. Pass `course` (code or title) for one course in full: every topic with its status and notes, " +
         "and every assessment with dates, weights and scores. Use it before creating study tasks so they name real topics.",
       inputSchema: z.object({
@@ -228,10 +228,10 @@ export function registerCourseTools(server: McpServer) {
     {
       title: "Propose study plan",
       description:
-        "Proposes study sessions for the next days from his courses: first topics an exam/test/quiz in the next two " +
+        "Proposes study sessions for the next days from their courses: first topics an exam/test/quiz in the next two " +
         "weeks covers that aren't solid yet (before the exam, shakiest first), then topics due for review, then the " +
         "next new topics in syllabus order. Fitted into each day's free capacity. Nothing is booked: show it briefly " +
-        "and book what he accepts with accept_study_plan. `unplaced` = exam topics with no room before the exam — " +
+        "and book what the user accepts with accept_study_plan. `unplaced` = exam topics with no room before the exam — " +
         "say so plainly and offer a fix (more capacity that day, shorter sessions, or dropping something).",
       inputSchema: z.object({
         course: z.string().trim().min(1).optional().describe("Only this course"),

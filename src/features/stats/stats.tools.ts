@@ -11,7 +11,7 @@ export function registerStatsTools(server: McpServer) {
       title: "Get stats",
       description:
         "The 11 pillars with XP and levels, XP gained per pillar over the last 7 days, and recent slip patterns. " +
-        "Only call when Kingsley asks about stats or progress — never open a chat with numbers.",
+        "Only call when the user asks about stats or progress — never open a chat with numbers.",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },

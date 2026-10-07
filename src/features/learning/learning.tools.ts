@@ -15,7 +15,7 @@ export function registerLearningTools(server: McpServer) {
       description:
         "Record a learning session: 'did 45 min of DSA, sliding window, 3 problems, still shaky'. A new skill is " +
         "created on first mention — choose its pillar: 'skills' for DSA/LeetCode/coding/craft, 'academic' for " +
-        "coursework and exam prep, or another that fits. Ask how confident he feels (1 shaky – 5 solid) if he " +
+        "coursework and exam prep, or another that fits. Ask how confident the user feels (1 shaky – 5 solid) if the user " +
         "doesn't say: it decides when the topic comes back for review. 1 XP per 5 minutes.",
       inputSchema: z
         .object({
@@ -60,7 +60,7 @@ export function registerLearningTools(server: McpServer) {
     {
       title: "Get learning",
       description:
-        "Progress on what he's learning: per skill, hours (total, last 7 and 30 days), streak, counts (e.g. " +
+        "Progress on what they're learning: per skill, hours (total, last 7 and 30 days), streak, counts (e.g. " +
         "problems solved), topics covered, and topics due for review (spaced repetition by confidence). Use for " +
         "'what have I covered in DSA?', 'what should I review?', or to suggest today's practice.",
       inputSchema: z.object({ skill: z.string().trim().min(1).optional() }),

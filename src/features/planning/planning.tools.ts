@@ -36,7 +36,7 @@ export function registerPlanningTools(server: McpServer) {
             assignments: plan.assignments.map((a) => ({ task_id: a.taskId, time: hhmm(a.start), suggestionOnly: a.suggestionOnly })),
             unplaced: plan.unplaced,
             overCapacity: plan.overCapacity,
-            // An idea from his fun list that fits the free slot (time, money, mood). Offer it, don't insist.
+            // An idea from their fun list that fits the free slot (time, money, mood). Offer it, don't insist.
             funIdea: plan.funIdea,
           }),
         );
@@ -51,7 +51,7 @@ export function registerPlanningTools(server: McpServer) {
     {
       title: "Accept day plan",
       description:
-        "Set the times from plan_day — as proposed, or with his tweaks. Pass the assignments back (task_id + " +
+        "Set the times from plan_day — as proposed, or with their tweaks. Pass the assignments back (task_id + " +
         "HH:MM). Changed times are re-checked for clashes and capacity. Recurring habits are left as they are " +
         "(result 'habit_not_fixed'): changing a habit's time is a separate, deliberate update_task.",
       inputSchema: z.object({

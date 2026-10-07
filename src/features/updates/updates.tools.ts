@@ -17,7 +17,7 @@ export function registerUpdateTools(server: McpServer) {
     {
       title: "Add update",
       description:
-        "Something he owes someone regularly or once: a weekly report to a manager, a progress note to a mentor, a " +
+        "Something the user owes someone regularly or once: a weekly report to a manager, a progress note to a mentor, a " +
         "spreadsheet to keep current. Give recipient, channel, what it covers, an optional format ('3 bullets: done, " +
         "next, blockers'), and a cadence (FREQ=WEEKLY;BYDAY=FR) or a due date. It becomes a task, reminded the " +
         "morning of and 30 minutes before. If the result is clash/over_capacity, offer another time.",
@@ -46,7 +46,7 @@ export function registerUpdateTools(server: McpServer) {
     "list_updates",
     {
       title: "List updates",
-      description: "The updates he owes: recipient, channel, topic, next due, and when he last sent each.",
+      description: "The updates the user owes: recipient, channel, topic, next due, and when the user last sent each.",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
@@ -77,10 +77,10 @@ export function registerUpdateTools(server: McpServer) {
     {
       title: "Draft update",
       description:
-        "Get what he actually did since the last update (completed tasks, learning, workouts, application " +
-        "milestones), then write the update yourself: in his voice, in the given format, for that recipient and " +
+        "Get what the user actually did since the last update (completed tasks, learning, workouts, application " +
+        "milestones), then write the update yourself: in their voice, in the given format, for that recipient and " +
         "channel, using only items relevant to `about` (skip private life stuff for a work update). Never invent " +
-        "work — if the digest is thin or empty, say so and ask what to add. Show the draft; after he sends it, " +
+        "work — if the digest is thin or empty, say so and ask what to add. Show the draft; after the user sends it, " +
         "call mark_update_sent.",
       inputSchema: z.object({ id: z.uuid() }),
       annotations: { readOnlyHint: true },
@@ -112,7 +112,7 @@ export function registerUpdateTools(server: McpServer) {
     "mark_update_sent",
     {
       title: "Mark update sent",
-      description: "He sent it. Logs it (with the text, if given — the next draft starts from here) and completes today's update task.",
+      description: "The user sent it. Logs it (with the text, if given — the next draft starts from here) and completes today's update task.",
       inputSchema: z.object({ id: z.uuid(), content: z.string().max(5000).optional() }),
     },
     async ({ id, content }: { id: string; content?: string }, ctx: ToolContext) => {

@@ -43,7 +43,7 @@ export function registerApplicationTools(server: McpServer) {
     {
       title: "Add application",
       description:
-        "Track something he's applying for — a job, internship, scholarship, fellowship, grant, admission, programme. " +
+        "Track something they're applying for — a job, internship, scholarship, fellowship, grant, admission, programme. " +
         "Give the deadline exactly as published, with its time zone (many aren't Lagos time: '23:59 EST' can be the " +
         "next morning here). Omit the deadline if it's rolling. List the requirements (CV, transcript, 2 references, " +
         "essay…): each becomes a task due on the target date (3 days before the deadline by default) that turns " +
@@ -95,8 +95,8 @@ export function registerApplicationTools(server: McpServer) {
     {
       title: "List applications",
       description:
-        "Everything he's applying for, with urgency (past_target, due_soon, upcoming, rolling, closed, done), the " +
-        "deadline in his time and as published, days to his target date, and what's still missing. Use for " +
+        "Everything they're applying for, with urgency (past_target, due_soon, upcoming, rolling, closed, done), the " +
+        "deadline in their time and as published, days to their target date, and what's still missing. Use for " +
         "'what's due this month?' and 'what am I missing?'.",
       inputSchema: z.object({ include_finished: z.boolean().default(false).describe("Include submitted/closed ones") }),
       annotations: { readOnlyHint: true },

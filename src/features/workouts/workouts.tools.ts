@@ -30,7 +30,7 @@ export function registerWorkoutTools(server: McpServer) {
         "Save a training plan: days (e.g. Push on MO,TH at 18:00 for 60 min) and each day's exercises. With " +
         "activate (default), it replaces the current plan: the old plan's training tasks stop and each new day " +
         "becomes a weekly recurring task — so it shows on Today, gets reminders, and counts against capacity. " +
-        "Days that clash or don't fit come back in `schedule`; tell him which and offer another time.",
+        "Days that clash or don't fit come back in `schedule`; tell them which and offer another time.",
       inputSchema: z.object({
         name: z.string().trim().min(1),
         days: z
@@ -85,8 +85,8 @@ export function registerWorkoutTools(server: McpServer) {
     {
       title: "Get workout",
       description:
-        "The workout planned for a day (default today): each exercise with its target, plus what he did last time " +
-        "(`lastTime`) so he knows what to beat. Nudge for a small progression — one more rep or a bit more weight.",
+        "The workout planned for a day (default today): each exercise with its target, plus what the user did last time " +
+        "(`lastTime`) so the user knows what to beat. Nudge for a small progression — one more rep or a bit more weight.",
       inputSchema: z.object({ date: z.iso.date().optional() }),
       annotations: { readOnlyHint: true },
     },

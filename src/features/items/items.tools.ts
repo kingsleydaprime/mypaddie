@@ -13,9 +13,9 @@ export function registerItemTools(server: McpServer) {
     {
       title: "Add item",
       description:
-        "Add something Kingsley needs, wants, or is working toward. Tiers: need (non-negotiable, funded first), " +
+        "Add something the user needs, wants, or is working toward. Tiers: need (non-negotiable, funded first), " +
         "want, goal (has a target and deadline), wish (no deadline yet, zero guilt), dream (big, broken into goals). " +
-        "For needs, give monthly floor (cheapest honest version) and comfortable (current spend) amounts in his currency " +
+        "For needs, give monthly floor (cheapest honest version) and comfortable (current spend) amounts in their currency " +
         "if money is involved. To schedule the work for an item, follow up with add_task.",
       inputSchema: z.object({
         tier: z.enum(TIERS),
