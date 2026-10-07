@@ -307,13 +307,13 @@ isOneToOne: false
                   ]
                 },"items": {
                   Row: {
-                    "comfortable_amount": number | null,"created_at": string,"deadline": string | null,"floor_amount": number | null,"id": string,"priority": number,"status": Database["public"]['Enums']["item_status"],"target": string | null,"tier": Database["public"]['Enums']["tier"],"title": string,"user_id": string
+                    "comfortable_amount": number | null,"created_at": string,"deadline": string | null,"done_at": string | null,"floor_amount": number | null,"id": string,"priority": number,"status": Database["public"]['Enums']["item_status"],"status_changed_at": string | null,"target": string | null,"tier": Database["public"]['Enums']["tier"],"title": string,"user_id": string
                   }
                   Insert: {
-                    "comfortable_amount"?: number | null,"created_at"?: string,"deadline"?: string | null,"floor_amount"?: number | null,"id"?: string,"priority"?: number,"status"?: Database["public"]['Enums']["item_status"],"target"?: string | null,"tier": Database["public"]['Enums']["tier"],"title": string,"user_id"?: string
+                    "comfortable_amount"?: number | null,"created_at"?: string,"deadline"?: string | null,"done_at"?: string | null,"floor_amount"?: number | null,"id"?: string,"priority"?: number,"status"?: Database["public"]['Enums']["item_status"],"status_changed_at"?: string | null,"target"?: string | null,"tier": Database["public"]['Enums']["tier"],"title": string,"user_id"?: string
                   }
                   Update: {
-                    "comfortable_amount"?: number | null,"created_at"?: string,"deadline"?: string | null,"floor_amount"?: number | null,"id"?: string,"priority"?: number,"status"?: Database["public"]['Enums']["item_status"],"target"?: string | null,"tier"?: Database["public"]['Enums']["tier"],"title"?: string,"user_id"?: string
+                    "comfortable_amount"?: number | null,"created_at"?: string,"deadline"?: string | null,"done_at"?: string | null,"floor_amount"?: number | null,"id"?: string,"priority"?: number,"status"?: Database["public"]['Enums']["item_status"],"status_changed_at"?: string | null,"target"?: string | null,"tier"?: Database["public"]['Enums']["tier"],"title"?: string,"user_id"?: string
                   }
                   Relationships: [
                     
@@ -920,6 +920,9 @@ isOneToOne: false
                            },
 "claim_invite":
 { Args: { "p_code": string,"p_email": string }; Returns: string
+                           },
+"complete_item":
+{ Args: { "p_done_at": string,"p_entries": Json,"p_item_id": string }; Returns: Json
                            },
 "complete_task":
 { Args: { "p_done_at": string,"p_entries": Json,"p_task_id": string }; Returns: Json

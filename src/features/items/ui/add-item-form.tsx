@@ -3,17 +3,29 @@
 import { useActionState, useState } from "react";
 import { currencySymbol } from "@/shared/format";
 import { TIERS, type Tier } from "@/shared/domain";
-import { addItemAction, type AddItemState } from "../items.actions";
+import { addItemAction, updateItemAction, type AddItemState } from "../items.actions";
 import { TIER_INFO } from "../tiers";
 
 const field = "rounded-xl border border-line bg-surface px-4 py-3.5 text-base placeholder:text-muted";
 
-export function AddItemForm({ initialTier, currency }: { initialTier: Tier; currency: string }) {
-  const [tier, setTier] = useState<Tier>(initialTier);
-  const [state, action, pending] = useActionState<AddItemState, FormData>(addItemAction, null);
+export interface EditableItem {
+  id: string;
+  tier: Tier;
+  title: string;
+  target: string | null;
+  deadline: string | null;
+  floorAmount: number | null;
+  comfortableAmount: number | null;
+}
+
+/** Adds a quest, or edits one when `item` is given (same fields; the tier can change too). */
+export function AddItemForm({ initialTier, currency, item }: { initialTier: Tier; currency: string; item?: EditableItem }) {
+  const [tier, setTier] = useState<Tier>(item?.tier ?? initialTier);
+  const [state, action, pending] = useActionState<AddItemState, FormData>(item ? updateItemAction : addItemAction, null);
 
   return (
     <form action={action} className="flex flex-col gap-4">
+      {item && <input type="hidden" name="id" value={item.id} />}
       <fieldset className="flex flex-wrap gap-2">
         <legend className="mb-2 text-sm font-medium text-muted">What kind?</legend>
         {TIERS.map((t) => (
@@ -25,14 +37,14 @@ export function AddItemForm({ initialTier, currency }: { initialTier: Tier; curr
       </fieldset>
       <p className="-mt-2 text-sm text-muted">{TIER_INFO[tier].blurb}</p>
 
-      <input name="title" required placeholder="Name it" className={field} autoFocus />
+      <input name="title" required placeholder="Name it" defaultValue={item?.title} className={field} autoFocus={!item} />
 
       {(tier === "goal" || tier === "dream") && (
         <>
-          <input name="target" placeholder={tier === "goal" ? "What does done look like?" : "What would it look like?"} className={field} />
+          <input name="target" placeholder={tier === "goal" ? "What does done look like?" : "What would it look like?"} defaultValue={item?.target ?? ""} className={field} />
           <label className="flex flex-col gap-1 text-sm text-muted">
             Deadline{tier === "dream" ? " (optional)" : ""}
-            <input name="deadline" type="date" className={field} />
+            <input name="deadline" type="date" defaultValue={item?.deadline?.slice(0, 10) ?? ""} className={field} />
           </label>
         </>
       )}
@@ -41,18 +53,18 @@ export function AddItemForm({ initialTier, currency }: { initialTier: Tier; curr
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-sm text-muted">
             Cheapest honest {currencySymbol(currency)}/mo
-            <input name="floor_amount" inputMode="numeric" placeholder="optional" className={field} />
+            <input name="floor_amount" inputMode="numeric" placeholder="optional" defaultValue={item?.floorAmount ?? ""} className={field} />
           </label>
           <label className="flex flex-col gap-1 text-sm text-muted">
             What you spend now {currencySymbol(currency)}/mo
-            <input name="comfortable_amount" inputMode="numeric" placeholder="optional" className={field} />
+            <input name="comfortable_amount" inputMode="numeric" placeholder="optional" defaultValue={item?.comfortableAmount ?? ""} className={field} />
           </label>
         </div>
       )}
 
       {state?.error && <p className="text-sm text-red" role="alert">{state.error}</p>}
       <button disabled={pending} className="rounded-xl bg-gold px-4 py-3.5 text-base font-semibold text-on-gold disabled:opacity-60">
-        {pending ? "Adding…" : `Add ${TIER_INFO[tier].label.toLowerCase()}`}
+        {item ? (pending ? "Saving…" : "Save") : pending ? "Adding…" : `Add ${TIER_INFO[tier].label.toLowerCase()}`}
       </button>
     </form>
   );

@@ -101,9 +101,30 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [x] Trends: eight lines week by week (sleep, energy, mood, screen time, workouts, study, spending, word kept).
 - [x] Experiments: before vs during on a chosen line, a verdict, and a pattern saved to About me.
 
+## Now: filling the gaps (audit of the tool list, 2026-10-07)
+In build order. Each slice ships tools + app + tests before the next starts.
+- [x] **Items: edit, complete, pause, drop, delete.** Change title, target,
+  deadline, priority, amounts or tier; done pays the blueprint's bonuses
+  (goal 2×, wish +50) that the engine has but nothing called.
+- [ ] **Undo** a mis-tapped complete_task, log_fun, log_workout or learning
+  session; XP reversed in the ledger, not deleted. Edit routines.
+- [ ] **Money guardrails**: per-category spending caps (check_purchase uses
+  them), recurring bills (data, subscriptions) that become tasks and
+  transactions, money owed and lent.
+- [ ] **Daily close-out** (sweep unfinished, ask what slipped and why, set up
+  tomorrow) and `export_data` for the AI.
+- [ ] **Meal plan**: `propose_meals` / `accept_meals` from the pantry, like plan_day.
+- [ ] **Where I am**: a status (with friends, in class, deep work, sleeping)
+  with an end time; classes set it automatically; nudges hold or say "leave
+  now". Phone-free windows (first hours, last hour) as part of it.
+
 ## Later: seeing the whole life
 - [ ] Life map: one view of every area (body, mind, money, people, faith, work, fun) and how each is doing.
-- [ ] Milestones and a life timeline: the big moments, with what came before and after.
+- [ ] Milestones under goals and dreams (3× XP when hit) and a life timeline:
+  the big moments, past and planned, with what came before and after.
+
+Already covered, so not built: spiritual habits (routines + learning log),
+saying no (check_load), sleep (check-ins). The 11th pillar is Academic.
 
 ## Next: MyPaddie for everyone (planned 2026-10-06)
 

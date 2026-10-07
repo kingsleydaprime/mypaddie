@@ -1060,3 +1060,21 @@ of asking for more logging, compare the last 2 weeks with the 4 before (a
 way. Experiments compare the watched line before and during over equal
 windows (at least 7 days before), and refuse to call it with fewer than 3
 logged days on either side. The verdict is the user's; numbers only inform it.
+
+### Items can be edited, finished, paused, dropped and deleted
+An audit of the tool list (2026-10-07) found items were add-and-list only,
+and that the goal (2×) and wish (+50) bonuses existed in the engine but
+nothing ever paid them. `complete_item` now does, in one transaction like
+`complete_task`. An item has no pillar weights of its own, so the bonus goes
+where its tasks' effort went (their weights added up and scaled back to 100);
+with no tasks, the AI asks which pillars it served (the app asks for one).
+The goal bonus is 2× the last finished task's base XP, or 2× 10 with none.
+Done can be reopened for mistakes, and the ledger's existing one-bonus-per-item
+index means finishing again never pays twice. Needs, wants and dreams pay
+nothing for being ticked off (a dream pays through milestones, coming later).
+Delete is only for mistakes: anything with tasks or XP behind it is dropped
+instead, so history stays. Moving a need to another tier clears its amounts
+instead of failing the constraint.
+
+Fixed on the way: the add-quest form failed for needs and goals, because
+fields hidden for a tier aren't in the form data and the schema required them.
