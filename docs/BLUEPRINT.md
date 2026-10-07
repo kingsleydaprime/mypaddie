@@ -4,7 +4,7 @@ Oct 5, 2026 · updated Oct 16, 2026 to match what's built · @Kingsley Ihemeland
 
 > **Public version.** The system design is complete; personal details (real figures, habits, wishes, the identity profile) have been replaced with generic examples. The real ones live in the app's own database, not in this repo.
 
-> **Status (Oct 16, 2026).** The four-day build is done, and MyPaddie is now open to anyone at mypaddie.spectroniqlimited.com: sign-up (invite-only is one switch away), per-user time zone, currency and voice, Free/Plus/Pro plans (nothing charged yet), one-URL AI connection, and the extras that came after (learning, workouts, pantry, events, applications, updates, Google Calendar import, fun, courses and timetables, commitments with role history, promises, people, about me, library, lists, reviews, themes, achievements, routines, decisions). 104 MCP tools. The reasoning behind each choice is in [DECISIONS.md](../DECISIONS.md); what's next, including a multi-user version, is in [ROADMAP.md](ROADMAP.md).
+> **Status (Oct 17, 2026).** The four-day build is done, and MyPaddie is now open to anyone at mypaddie.spectroniqlimited.com: sign-up (invite-only is one switch away), per-user time zone, currency and voice, Free/Plus/Pro plans (nothing charged yet), one-URL AI connection, and the extras that came after (learning, workouts, pantry, events, applications, updates, Google Calendar import, fun, courses and timetables, commitments with role history, promises, people, about me, library, lists, reviews, themes, achievements, routines, decisions, values, trends and experiments). 109 MCP tools. The reasoning behind each choice is in [DECISIONS.md](../DECISIONS.md); what's next, including a multi-user version, is in [ROADMAP.md](ROADMAP.md).
 
 ## Vision and principles
 
@@ -259,6 +259,8 @@ These were added after the four-day plan, each because a real day needed it.
 - **Library, favourites and lists.** Books, films, series, music, podcasts and games; your favourite things; and any list you like, ticked off with a percentage. A bucket-list tick pays +50, like a wish coming true.
 - **Reviews and themes.** Weekly, monthly, quarterly and yearly reviews written from what actually happened, with the questions that matter (what did I avoid? what drained me? what changes next?). Year and month themes — "Month of Mercies" — with what to focus on and what this season says no to.
 - **Achievements, routines, decisions.** Achievements earned from what you've done (a 30-day streak, first savings, 100 workouts), recorded once with the date. Routines show on Today as one item with the next step. Decisions come back for review: did it work?
+- **Values.** What you stand on, in order, in your own words. The AI weighs big choices (a job, a purchase, a new commitment) against them and names a clash once — it never moralises. Monthly and longer reviews ask: did I live my values?
+- **Trends and experiments.** A check-in is any of energy, mood, sleep and screen time, merged through the day. Trends draw them week by week next to exercise, study, spending and promises kept, with which way each is heading. An experiment changes one thing for a while ("no phone after 10pm for 2 weeks"), compares the line it watches before and during, and asks for a verdict; what helped can become a pattern in About me.
 - **Fun list.** Things you enjoy, with rough cost, time, energy and company. "Did it" pays XP (emotional, plus social with people). Suggestions skip what you can't afford (only free fun in a deficit), what doesn't fit the gap, and high-energy fun on a soft day, and favour what you haven't done in a while. Free time in Plan my day comes with an idea.
 - **Courses.** Code, title, lecturer, units, target grade, the syllabus (topics, with weeks) and assessments. Share an outline and the AI fills it all in. Exams and tests become important events; assignments become tasks that turn must-do 2 days before. Each topic is to start, learning or solid, from the confidence you give after studying it. Paddie proposes study sessions (exam prep first, then reviews due, then new topics) that fit your daily capacity, and books the ones you accept. It can also create study tasks directly.
 - **Commitments.** Jobs (full-time, part-time, freelance, internship), roles (volunteer, campus ambassador, academic lead), memberships (a students' union, the church choir) and teams. Each has a priority (core, important, optional); its regular sessions (team training, rehearsals, personal training) are recurring tasks, and competitions or meetings are events tied to it. Pausing or ending one gives the time back.
@@ -319,7 +321,9 @@ Added since the first schema:
 
 | Table | Purpose |
 | --- | --- |
-| checkins | Daily energy (1–5), which drives soft mode |
+| checkins | Daily energy (1–5, drives soft mode), mood (1–5), sleep hours, screen minutes — each optional |
+| life\_values | Their values in order, with why |
+| experiments | change, question, metric, starts\_on, ends\_on, status, conclusion, result |
 | skills, learning\_sessions | The learning log |
 | workout\_plans, workout\_days, workout\_exercises, workout\_logs, workout\_entries | Training plans and what was actually lifted |
 | pantry\_items, meals | Stock and meal history |
@@ -345,7 +349,7 @@ A single `export_all` function dumps every table to JSON so your data is never t
 
 ## MCP tool list
 
-The connector exposes 104 tools — `what_can_paddie_do` lists them all, grouped, with the user's plan. Each one returns the current mode, so the AI always knows how strict to be.
+The connector exposes 109 tools — `what_can_paddie_do` lists them all, grouped, with the user's plan. Each one returns the current mode, so the AI always knows how strict to be.
 
 | Area | Tools |
 | --- | --- |

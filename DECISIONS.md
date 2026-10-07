@@ -1045,3 +1045,18 @@ consent test now approves a second app on Pro through the real button.
 ### Only the pressed button spins
 In a form with several submit buttons (Deny / Allow) `SubmitButton` spins only
 the one whose name/value was submitted; the others just go disabled.
+
+### Values, trends and experiments
+Values are a short ranked list in the user's words, replaced as a whole (they
+get edited together). They ride along in `get_today`; the tool text tells the
+AI to name a clash with a big choice once and never preach, and to help name
+values by asking rather than suggesting. Check-ins grew mood, sleep and
+screen time; energy became optional (a check-in must say something), and
+logging merges into the day so sleep in the morning and mood at night don't
+overwrite each other. Mode and reviews ignore days without energy. Trends
+reuse data that's already there (workouts, study, spending, promises) instead
+of asking for more logging, compare the last 2 weeks with the 4 before (a
+5% / 0.1 dead zone counts as steady), and say whether the move is the better
+way. Experiments compare the watched line before and during over equal
+windows (at least 7 days before), and refuse to call it with fewer than 3
+logged days on either side. The verdict is the user's; numbers only inform it.

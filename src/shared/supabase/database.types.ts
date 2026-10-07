@@ -71,13 +71,13 @@ isOneToOne: false
                   ]
                 },"checkins": {
                   Row: {
-                    "created_at": string,"day": string,"energy": number,"id": string,"note": string | null,"user_id": string
+                    "created_at": string,"day": string,"energy": number | null,"id": string,"mood": number | null,"note": string | null,"screen_minutes": number | null,"sleep_hours": number | null,"user_id": string
                   }
                   Insert: {
-                    "created_at"?: string,"day": string,"energy": number,"id"?: string,"note"?: string | null,"user_id"?: string
+                    "created_at"?: string,"day": string,"energy"?: number | null,"id"?: string,"mood"?: number | null,"note"?: string | null,"screen_minutes"?: number | null,"sleep_hours"?: number | null,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"day"?: string,"energy"?: number,"id"?: string,"note"?: string | null,"user_id"?: string
+                    "created_at"?: string,"day"?: string,"energy"?: number | null,"id"?: string,"mood"?: number | null,"note"?: string | null,"screen_minutes"?: number | null,"sleep_hours"?: number | null,"user_id"?: string
                   }
                   Relationships: [
                     
@@ -221,6 +221,25 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"experiments": {
+                  Row: {
+                    "change": string,"conclusion": string | null,"created_at": string,"ends_on": string,"id": string,"metric": string | null,"question": string | null,"result": string | null,"starts_on": string,"status": string,"task_id": string | null,"user_id": string
+                  }
+                  Insert: {
+                    "change": string,"conclusion"?: string | null,"created_at"?: string,"ends_on": string,"id"?: string,"metric"?: string | null,"question"?: string | null,"result"?: string | null,"starts_on": string,"status"?: string,"task_id"?: string | null,"user_id"?: string
+                  }
+                  Update: {
+                    "change"?: string,"conclusion"?: string | null,"created_at"?: string,"ends_on"?: string,"id"?: string,"metric"?: string | null,"question"?: string | null,"result"?: string | null,"starts_on"?: string,"status"?: string,"task_id"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "experiments_task_id_user_id_fkey"
+      columns: ["task_id","user_id"]
+isOneToOne: false
+      referencedRelation: "tasks"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
                 },"favorites": {
                   Row: {
                     "category": string,"created_at": string,"id": string,"note": string | null,"user_id": string,"value": string
@@ -317,6 +336,19 @@ isOneToOne: false
       referencedRelation: "skills"
       referencedColumns: ["id","user_id"]
     }
+                  ]
+                },"life_values": {
+                  Row: {
+                    "created_at": string,"id": string,"position": number,"user_id": string,"value": string,"why": string | null
+                  }
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"position"?: number,"user_id"?: string,"value": string,"why"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"position"?: number,"user_id"?: string,"value"?: string,"why"?: string | null
+                  }
+                  Relationships: [
+                    
                   ]
                 },"list_items": {
                   Row: {

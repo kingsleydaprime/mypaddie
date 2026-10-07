@@ -21,7 +21,8 @@ export async function loadMode(db: Db, now: Date, config = currentConfig()): Pro
 
   const [slipsRes, checkinRes, overrideRes, pastNeeds] = await Promise.all([
     db.from("slips").select("task_id, at, tasks(item_id)").gte("at", since),
-    db.from("checkins").select("day, energy").eq("day", dayKey(now, config.timeZone)),
+    // Only check-ins that rated energy decide a soft day (sleep or mood alone don't).
+    db.from("checkins").select("day, energy").eq("day", dayKey(now, config.timeZone)).not("energy", "is", null),
     db.from("settings").select("value").eq("key", OVERRIDE_KEY).maybeSingle(),
     loadOpenPastNeeds(db, now, config),
   ]);
@@ -45,7 +46,7 @@ export async function loadMode(db: Db, now: Date, config = currentConfig()): Pro
       now,
       slips,
       ignoredNeeds,
-      checkins: checkinRes.data ?? [],
+      checkins: (checkinRes.data ?? []).filter((c): c is { day: string; energy: number } => c.energy !== null),
       override: parseOverride(overrideRes.data?.value),
     },
     config,

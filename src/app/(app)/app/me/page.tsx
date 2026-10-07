@@ -3,6 +3,8 @@ import { requireDb } from "@/shared/supabase/session";
 
 const CARDS = [
   { href: "/app/growth", title: "Growth", body: "Year and month themes, weekly to yearly reviews, decisions — and achievements." },
+  { href: "/app/me/values", title: "Values", body: "What you stand on, in order. Paddie weighs big choices against them." },
+  { href: "/app/stats/trends", title: "Trends and experiments", body: "Sleep, mood, screen time and more over the weeks — and small experiments to see what helps." },
   { href: "/app/people", title: "People", body: "Who matters, what they are to you, and who you're due to check on." },
   { href: "/app/me/about", title: "About me", body: "Strengths, weak spots, patterns, triggers, habits — and what you're healing from." },
   { href: "/app/lists", title: "Lists", body: "Your bucket list, and any other list you want — ticked off, with progress." },

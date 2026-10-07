@@ -23,7 +23,11 @@ export default async function ReviewPage({ searchParams }: PageProps<"/app/growt
     d.slips.length ? `Slips: ${d.slips.map((s) => `${s.task} (${s.why})`).join("; ")}` : null,
     d.money.in || d.money.out ? `Money: in ${formatMoney(d.money.in)}, out ${formatMoney(d.money.out)}${d.money.wants ? ` (${formatMoney(d.money.wants)} on wants)` : ""}` : null,
     d.bucketListDone.length ? `Bucket list: ${d.bucketListDone.join(", ")} 🎉` : null,
-    d.energy ? `Energy averaged ${d.energy.average}/5` : null,
+    d.checkins.energy ? `Energy averaged ${d.checkins.energy.average}/5` : null,
+    d.checkins.mood ? `Mood averaged ${d.checkins.mood.average}/5` : null,
+    d.checkins.sleepHours ? `Slept ${d.checkins.sleepHours.average}h a night on average` : null,
+    d.checkins.screenHours ? `Screen time ${d.checkins.screenHours.average}h a day on average` : null,
+    d.values.length ? `Your values: ${d.values.join(", ")}` : null,
   ].filter(Boolean);
   return (
     <div className="flex flex-col gap-5">

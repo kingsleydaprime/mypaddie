@@ -15,6 +15,8 @@ import type { Db } from "@/shared/supabase/token-client";
 import { dayKey, localTimeOf } from "@/shared/time";
 import { pickFocus, type FocusItem } from "../focus";
 import { DoneButton } from "./done-button";
+import { loadCheckin } from "@/features/metrics/metrics.repo";
+import { CheckinForm } from "@/features/metrics/ui/checkin-form";
 
 /** The current user's time zone (read per call, never at import). */
 const tz = () => currentConfig().timeZone;
@@ -60,9 +62,9 @@ export async function TodayScreen({ db }: { db: Db }) {
   await applyBrokenPromises(db, now);
   // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
   await syncCalendar(db, now).catch(() => null);
-  const [tasks, mode, events, learning, schedule, themes, owed, earned] = await Promise.all([
+  const [tasks, mode, events, learning, schedule, themes, owed, earned, checkin] = await Promise.all([
     loadTasksAroundToday(db, now), loadMode(db, now), loadUpcomingEvents(db), loadLearning(db, now), loadSchedule(db),
-    currentThemes(db, now), owedReviews(db, now), checkAchievements(db, now),
+    currentThemes(db, now), owedReviews(db, now), checkAchievements(db, now), loadCheckin(db, dayKey(now, tz())),
   ]);
   const review = learning
     .filter((l) => l.skill.status === "active")
@@ -138,6 +140,13 @@ export async function TodayScreen({ db }: { db: Db }) {
           {review.slice(0, 2).join(", ")}
           {review.length > 2 && ` +${review.length - 2}`}
         </p>
+      )}
+
+      {!checkin && (
+        <details className="rounded-2xl border border-line bg-surface p-4">
+          <summary className="cursor-pointer text-sm font-medium">How are you today? <span className="text-muted">Energy, mood, sleep — 10 seconds</span></summary>
+          <div className="mt-3"><CheckinForm current={null} /></div>
+        </details>
       )}
 
       {focus.doneToday > 0 && <p className="text-center text-sm text-muted">{focus.doneToday} done today.</p>}

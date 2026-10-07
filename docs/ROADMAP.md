@@ -95,6 +95,16 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [x] Decision log with review dates.
 - [x] Pointer, hover and press effects; saving spinners on one-tap buttons; page loading screens.
 
+## Done: values, trends, experiments (2026-10-17)
+- [x] Values: ranked, in their words; in every chat; weighed against big choices; a review question.
+- [x] Check-ins add mood, sleep and screen time (each optional, merged through the day).
+- [x] Trends: eight lines week by week (sleep, energy, mood, screen time, workouts, study, spending, word kept).
+- [x] Experiments: before vs during on a chosen line, a verdict, and a pattern saved to About me.
+
+## Later: seeing the whole life
+- [ ] Life map: one view of every area (body, mind, money, people, faith, work, fun) and how each is doing.
+- [ ] Milestones and a life timeline: the big moments, with what came before and after.
+
 ## Next: MyPaddie for everyone (planned 2026-10-06)
 
 Anyone signs up, connects their AI, and gets their own Paddie, hosted at

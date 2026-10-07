@@ -1,9 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { currentConfig } from "@/shared/config";
+import { logCheckin } from "@/features/metrics/metrics.repo";
 import type { Json } from "@/shared/supabase/database.types";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
-import { dayKey } from "@/shared/time";
 import { goEasyOverride, noMercyOverride } from "./mode";
 import { withMode } from "./mode.repo";
 
@@ -42,19 +41,35 @@ export function registerModeTools(server: McpServer) {
     {
       title: "Log check-in",
       description:
-        "Record today's energy from 1 (empty) to 5 (great), with an optional note. Energy of 2 or less is a " +
-        "low-HP day: the mode goes soft and recovery steps get smaller. A rough day is not slacking. " +
-        "Logging again today replaces the earlier entry.",
-      inputSchema: z.object({ energy: z.number().int().min(1).max(5), note: z.string().optional() }),
+        "Record how today is going — any of: energy 1 (empty) to 5 (great), hours slept, mood 1 (awful) to 5 (great), " +
+        "screen time (hours or minutes), and a note. Logging again merges: only what's given changes. `date` (YYYY-MM-DD) " +
+        "for another day, e.g. last night's sleep logged the next morning goes on the day they woke up (today). Energy " +
+        "of 2 or less is a low-HP day: the mode goes soft and recovery steps get smaller. A rough day is not slacking.",
+      inputSchema: z.object({
+        energy: z.number().int().min(1).max(5).optional(),
+        sleep_hours: z.number().min(0).max(24).optional(),
+        mood: z.number().int().min(1).max(5).optional(),
+        screen_time_hours: z.number().min(0).max(24).optional(),
+        screen_time_minutes: z.number().int().min(0).max(1440).optional(),
+        note: z.string().max(1000).optional(),
+        date: z.iso.date().optional(),
+      }),
     },
-    async ({ energy, note }: { energy: number; note?: string }, ctx: ToolContext) => {
+    async (
+      args: { energy?: number; sleep_hours?: number; mood?: number; screen_time_hours?: number; screen_time_minutes?: number; note?: string; date?: string },
+      ctx: ToolContext,
+    ) => {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const day = dayKey(now, currentConfig().timeZone);
-        const { error } = await db.from("checkins").upsert({ day, energy, note: note ?? null }, { onConflict: "user_id,day" });
-        if (error) return toolError(`log_checkin failed: ${error.message}`);
-        return ok(await withMode(db, now, { day, energy }));
+        const screen = args.screen_time_minutes ?? (args.screen_time_hours !== undefined ? Math.round(args.screen_time_hours * 60) : undefined);
+        const saved = await logCheckin(
+          db,
+          { date: args.date, energy: args.energy, sleepHours: args.sleep_hours !== undefined ? Math.round(args.sleep_hours * 10) / 10 : undefined, mood: args.mood, screenMinutes: screen, note: args.note },
+          now,
+        );
+        if (saved.result === "nothing_to_log") return toolError("log_checkin needs at least one of energy, sleep_hours, mood, screen time or note.");
+        return ok(await withMode(db, now, { ...saved }));
       } catch (error) {
         return toolError(`log_checkin failed: ${(error as Error).message}`);
       }

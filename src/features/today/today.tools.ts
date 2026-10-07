@@ -1,6 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { currentThemes, owedReviews } from "@/features/reviews/reviews.repo";
 import { loadDecisions } from "@/features/decisions/decisions.repo";
+import { dueExperiments } from "@/features/metrics/metrics.repo";
+import { loadValues } from "@/features/values/values.repo";
 import { checkAchievements } from "@/features/achievements/achievements.repo";
 import { z } from "zod";
 import { upcoming } from "@/features/events/events";
@@ -71,7 +73,7 @@ export function registerTodayTools(server: McpServer) {
         const caughtUp = { ...(await catchUp(db, now)), brokenPromises: await applyBrokenPromises(db, now) };
         // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
         await syncCalendar(db, now).catch(() => null);
-        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun, promises, week, people, self, themes, owed, earned, decisions] = await Promise.all([
+        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun, promises, week, people, self, themes, owed, earned, decisions, values, experimentsDue] = await Promise.all([
           loadTasksAroundToday(db, now),
           loadMode(db, now),
           loadMoneyStage(db, now),
@@ -90,6 +92,8 @@ export function registerTodayTools(server: McpServer) {
           owedReviews(db, now),
           checkAchievements(db, now),
           loadDecisions(db, now),
+          loadValues(db),
+          dueExperiments(db, now),
         ]);
         const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
         const room = roomOn(dayKey(now, tz()), dayTasks, capacity, now, undefined, dayEndsAt(schedule));
@@ -148,6 +152,11 @@ export function registerTodayTools(server: McpServer) {
           ...(earned.length ? { newAchievements: earned.map((a) => ({ title: a.title, description: a.description, ...(a.detail ? { for: a.detail } : {}) })) } : {}),
           // Decisions due for a look back: ask how it turned out (review_decision).
           ...(decisions.some((d) => d.dueForReview) ? { decisionsToReview: decisions.filter((d) => d.dueForReview).map((d) => ({ id: d.id, decision: d.decision, expected: d.expected })) } : {}),
+          // Experiments that have run their course: ask how it went, show list_experiments' numbers, then finish_experiment.
+          ...(experimentsDue.length ? { experimentsToFinish: experimentsDue.map((e) => ({ id: e.id, change: e.change, question: e.question, metric: e.metric })) } : {}),
+          // Their values, most important first. Weigh big choices against them quietly; name a clash once, never moralise.
+          // Empty: when a big decision comes up, it's a good moment to offer to name them (set_values).
+          values: values.map((v) => (v.why ? { value: v.value, why: v.why } : { value: v.value })),
           // What they know about themselves that should shape advice: patterns, triggers, weak spots, habits to break,
           // what they're healing from. Use it gently and specifically ("you tend to…"), never to shame.
           ...(self.length ? { knowThem: self } : {}),

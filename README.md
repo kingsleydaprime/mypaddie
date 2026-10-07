@@ -23,6 +23,7 @@ You talk to it through Claude or ChatGPT (it's an [MCP](https://modelcontextprot
 - **About me**: strengths, weak spots, patterns, triggers, habits, what you're healing from — so advice fits *you* ("you tend to overcommit before exams…").
 - **Library, favourites and lists**: books, films, music; your favourite things; and any list you like, ticked off with progress — your bucket list pays +50 XP a tick.
 - **Reviews, themes, achievements**: weekly to yearly reviews from the facts, year and month themes with focus and not-now, achievements recorded as you earn them, routines as one item on Today, and a decision log that asks later whether it worked.
+- **Values, trends, experiments**: your values in order (weighed against big choices), check-ins with mood, sleep and screen time, weekly trends across eight lines, and small experiments that compare before and during.
 - **Google Calendar import** (read-only, via the private iCal feed) so real meetings count.
 
 ## Architecture

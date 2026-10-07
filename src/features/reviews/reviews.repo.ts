@@ -1,3 +1,4 @@
+import { loadValues } from "@/features/values/values.repo";
 import { currentConfig } from "@/shared/config";
 import type { Json } from "@/shared/supabase/database.types";
 import type { Db } from "@/shared/supabase/token-client";
@@ -59,7 +60,7 @@ export async function reviewDigest(db: Db, period: ReviewPeriod, day: string) {
   const from = zonedInstant(p.start, "00:00", tz()).toISOString();
   const to = zonedInstant(addDays(p.end, 1), "00:00", tz()).toISOString();
   const prev = periodOf(period, addDays(p.start, -1));
-  const [done, xp, slips, promises, money, learning, workouts, contacts, ticks, achievements, checkins, previous, themes, decisions] = await Promise.all([
+  const [done, xp, slips, promises, money, learning, workouts, contacts, ticks, achievements, checkins, previous, themes, decisions, values] = await Promise.all([
     db.from("tasks").select("title, series_id").eq("status", "done").gte("done_at", from).lt("done_at", to),
     db.from("xp_log").select("pillar, amount, reason").gte("at", from).lt("at", to),
     db.from("slips").select("why, at, tasks(title)").gte("at", from).lt("at", to),
@@ -70,10 +71,11 @@ export async function reviewDigest(db: Db, period: ReviewPeriod, day: string) {
     db.from("people_contacts").select("people(name)").gte("at", from).lt("at", to),
     db.from("list_items").select("text, lists(title)").gte("done_at", from).lt("done_at", to),
     db.from("achievements").select("key, detail").gte("earned_at", from).lt("earned_at", to),
-    db.from("checkins").select("energy").gte("day", p.start).lte("day", p.end),
+    db.from("checkins").select("energy, sleep_hours, mood, screen_minutes").gte("day", p.start).lte("day", p.end),
     db.from("reviews").select("answers").eq("period", period).eq("starts_on", prev.start).maybeSingle(),
     loadThemes(db),
     db.from("decisions").select("decision").gte("decided_on", p.start).lte("decided_on", p.end),
+    loadValues(db),
   ]);
 
   const tally = <T>(rows: T[], key: (r: T) => string) => {
@@ -85,7 +87,11 @@ export async function reviewDigest(db: Db, period: ReviewPeriod, day: string) {
   const byPillar = new Map<string, number>();
   for (const r of xpRows) byPillar.set(r.pillar, (byPillar.get(r.pillar) ?? 0) + r.amount);
   const tx = money.data ?? [];
-  const energy = (checkins.data ?? []).map((c) => c.energy);
+  const average = (xs: (number | null)[]) => {
+    const n = xs.filter((x): x is number => x !== null);
+    return n.length ? { average: Math.round((10 * n.reduce((a, b) => a + b, 0)) / n.length) / 10, days: n.length } : null;
+  };
+  const days = checkins.data ?? [];
   const theme = themesFor(themes, p.start);
 
   return {
@@ -115,7 +121,14 @@ export async function reviewDigest(db: Db, period: ReviewPeriod, day: string) {
     peopleTalkedTo: tally(contacts.data ?? [], (c) => (c.people as { name: string } | null)?.name ?? "someone").map((p) => p.name),
     bucketListDone: (ticks.data ?? []).map((t) => t.text),
     achievements: (achievements.data ?? []).map((a) => a.key),
-    energy: energy.length ? { average: Math.round((10 * energy.reduce((a, b) => a + b, 0)) / energy.length) / 10, checkins: energy.length } : null,
+    // Averages over the days they logged; get_trends shows how these compare with before.
+    checkins: {
+      energy: average(days.map((c) => c.energy)),
+      sleepHours: average(days.map((c) => c.sleep_hours)),
+      mood: average(days.map((c) => c.mood)),
+      screenHours: average(days.map((c) => (c.screen_minutes === null ? null : c.screen_minutes / 60))),
+    },
+    values: values.map((v) => v.value),
     decisions: (decisions.data ?? []).map((d) => d.decision),
     questions: QUESTIONS[period],
   };

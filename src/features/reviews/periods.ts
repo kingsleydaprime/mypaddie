@@ -84,6 +84,7 @@ export const QUESTIONS: Record<ReviewPeriod, { key: string; q: string }[]> = (()
     { key: "proud", q: `What am I proudest of this ${span}?` },
     { key: "theme", q: `Did I live this ${span}'s theme? Where did I drift?` },
     ...week.slice(1, 6),
+    { key: "values", q: "Did I live my values? Where did I trade one away?" },
     { key: "people", q: "Who mattered, and who did I neglect?" },
     { key: "change", q: `What carries into the next ${span}, and what stays behind?` },
   ];

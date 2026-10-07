@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Db } from "@/shared/supabase/token-client";
 import { loadLearning } from "@/features/learning/learning.repo";
 import { loadTraining } from "@/features/workouts/workouts.repo";
@@ -22,6 +23,11 @@ export async function StatsScreen({ db }: { db: Db }) {
           {weekXp} this week
         </p>
       </header>
+
+      <Link href="/app/stats/trends" className="rounded-2xl border border-line bg-surface p-4">
+        <span className="font-semibold">Trends and experiments <span className="text-gold">›</span></span>
+        <span className="block text-sm text-muted">Sleep, mood, screen time, study, spending and your word — week by week.</span>
+      </Link>
 
       <ul className="flex flex-col gap-3">
         {ranked.map((p) => (
