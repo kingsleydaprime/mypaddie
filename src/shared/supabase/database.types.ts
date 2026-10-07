@@ -196,6 +196,19 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"invites": {
+                  Row: {
+                    "code": string,"created_at": string,"created_by": string,"email": string | null,"expires_at": string,"id": string,"note": string | null,"revoked_at": string | null,"used_at": string | null,"used_by": string | null
+                  }
+                  Insert: {
+                    "code": string,"created_at"?: string,"created_by"?: string,"email"?: string | null,"expires_at"?: string,"id"?: string,"note"?: string | null,"revoked_at"?: string | null,"used_at"?: string | null,"used_by"?: string | null
+                  }
+                  Update: {
+                    "code"?: string,"created_at"?: string,"created_by"?: string,"email"?: string | null,"expires_at"?: string,"id"?: string,"note"?: string | null,"revoked_at"?: string | null,"used_at"?: string | null,"used_by"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"items": {
                   Row: {
                     "comfortable_amount": number | null,"created_at": string,"deadline": string | null,"floor_amount": number | null,"id": string,"priority": number,"status": Database["public"]['Enums']["item_status"],"target": string | null,"tier": Database["public"]['Enums']["tier"],"title": string,"user_id": string
@@ -639,8 +652,19 @@ isOneToOne: false
 "cook_meal":
 { Args: { "p_at": string,"p_ingredients": Json,"p_name": string,"p_notes": string }; Returns: Json
                            },
+"create_invite":
+{ Args: { "p_email"?: string,"p_note"?: string }; Returns: {
+              "code": string,"invites_left": number
+            }[]
+                           },
 "export_all":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"hook_before_user_created":
+{ Args: { "event": Json }; Returns: Json
+                           },
+"invites_left":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "record_learning":
 { Args: { "p_at": string,"p_confidence": number,"p_count": number,"p_minutes": number,"p_notes": string,"p_skill_id": string,"p_topic": string,"p_unit": string,"p_xp": Json }; Returns: string

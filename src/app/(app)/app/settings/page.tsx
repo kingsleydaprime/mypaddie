@@ -6,6 +6,8 @@ import { ProfileEditor } from "@/features/identity/ui/profile-editor";
 import { NudgeToggle } from "@/features/push/ui/nudge-toggle";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { SettingsForm } from "@/features/settings/ui/settings-form";
+import { loadInvites } from "@/features/invites/invites.repo";
+import { InvitePanel } from "@/features/invites/ui/invite-panel";
 import { ProfileForm } from "@/features/profile/ui/profile-form";
 import { requireDb } from "@/shared/supabase/session";
 import { currentProfile } from "@/shared/user-context";
@@ -18,7 +20,7 @@ const CHATS = [
 
 export default async function SettingsPage() {
   const db = await requireDb("/app/settings");
-  const [versions, schedule, calendar, claims] = await Promise.all([listIdentities(db), loadSchedule(db), calendarStatus(db), db.auth.getClaims()]);
+  const [versions, schedule, calendar, claims, invites] = await Promise.all([listIdentities(db), loadSchedule(db), calendarStatus(db), db.auth.getClaims(), loadInvites(db, new Date())]);
   const email = claims.data?.claims.email;
   const profile = currentProfile();
 
@@ -38,6 +40,7 @@ export default async function SettingsPage() {
       <NudgeToggle />
       <SettingsForm schedule={schedule} />
       <CalendarSettings status={calendar} />
+      {(invites.left > 0 || invites.invites.length > 0) && <InvitePanel invites={invites.invites} left={invites.left} />}
 
       <section className="flex flex-col gap-2">
         <h2 className="font-bold">Talk to Paddie</h2>

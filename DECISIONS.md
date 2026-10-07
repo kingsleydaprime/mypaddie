@@ -688,3 +688,31 @@ A profile without `onboardedAt` is sent from `/app` to `/welcome` (name, time
 zone — the device's is suggested — currency, voice). Only Home redirects:
 every other page already works on the defaults, and a deep link from a
 notification shouldn't bounce someone into a form.
+
+## 2026-10-09 — Multi-user, part 2: invite-only sign-up
+
+### The gate is Supabase's "Before User Created" hook
+It runs for every way an account can be created — password, email link,
+Google — and can refuse with a message, so no sign-up path can skip it and
+there's still no admin key. `public.hook_before_user_created` admits a sign-up
+with a valid invite code (sent as user metadata `invite_code`) or an email
+that was invited; everyone else gets "MyPaddie is invite-only for now". A
+trigger on `auth.users` marks the invite used once the account exists.
+Signing in to an existing account never touches it.
+
+### Codes, optionally tied to an email
+Google sign-up can't carry a code, so an invite can name an email: that email
+gets in by any method, no code needed. An email-bound code only works for that
+email. Codes are 8 characters without look-alikes (no 0/O, 1/I/L), not
+case-sensitive, used once, valid 30 days, revocable while unused.
+
+### Invites are handed out deliberately
+`create_invite()` checks a per-user allowance (`private.invite_allowances`, no
+row = 0): the clients can't insert invites directly. Revoking an unused
+invite gives the slot back. Opening up later is one UPDATE (give everyone an
+allowance) or turning the hook off.
+
+### Accepted race
+Two people signing up with the same open code at the same instant could both
+pass the hook before the trigger marks it used. Harmless at this scale (one
+extra account you invited anyway); tied-to-email invites don't have it.

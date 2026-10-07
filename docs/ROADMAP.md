@@ -87,6 +87,8 @@ work is around it. Each phase reverses a "one user" call in DECISIONS.md,
 which gets a new entry when it changes.
 
 ### Phase 1: sign-up and onboarding
+- [x] **Invite codes** (2026-10-09): the sign-up hook admits only a valid code
+  or an invited email; allowances per user; Settings → Invite someone.
 - [ ] Turn sign-ups on. Google sign-in and/or magic links, with a real email
   provider (e.g. Resend) as custom SMTP. Supabase's built-in sender is
   rate-limited to a few emails an hour, the reason magic links were rejected.
