@@ -1,4 +1,4 @@
-import { signOut } from "@/app/login/sign-out";
+import { signOut } from "@/features/auth/sign-out";
 import { calendarStatus } from "@/features/calendar/calendar.repo";
 import { CalendarSettings } from "@/features/calendar/ui/calendar-settings";
 import { listIdentities } from "@/features/identity/identity.repo";

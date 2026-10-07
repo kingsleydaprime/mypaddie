@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { formatMoney } from "@/shared/format";
-import { FEATURE_LABEL, LIMIT_LABEL, LIMITED, PLAN_INFO, PLANS, priceFor, type PlanId } from "../plans";
+import { FEATURE_LABEL, limitText, LIMITED, PLAN_INFO, PLANS, priceFor, type PlanId } from "../plans";
 import { choosePlanAction, type ChooseState } from "../plans.actions";
 
 export function PlanPicker({ current, currency, period: initialPeriod, student: initialStudent, paymentsEnabled }: {
@@ -40,14 +40,14 @@ export function PlanPicker({ current, currency, period: initialPeriod, student: 
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="text-lg font-bold">{p.name}</h2>
               <p className="text-right">
-                <span className="text-xl font-bold">{price === 0 ? "Free" : formatMoney(price, currency)}</span>
-                {price > 0 && <span className="text-sm text-muted"> / {period === "monthly" ? "month" : "year"}</span>}
+                <span className="text-xl font-bold">{formatMoney(price, currency)}</span>
+                <span className="text-sm text-muted"> / {period === "monthly" ? "month" : "year"}</span>
               </p>
             </div>
             <p className="-mt-2 text-sm text-muted">{p.tagline}</p>
             <ul className="flex flex-col gap-1 text-sm">
               {LIMITED.map((l) => (
-                <li key={l}>{p.limits[l] === null ? "Unlimited" : p.limits[l]} {LIMIT_LABEL[l]}</li>
+                <li key={l}>{limitText(l, p.limits[l])}</li>
               ))}
               {p.features.map((f) => (
                 <li key={f}>✓ {FEATURE_LABEL[f]}{p.comingSoon?.includes(f) ? " (coming soon)" : ""}</li>

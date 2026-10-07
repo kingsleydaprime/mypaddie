@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { assertFeature, assertWithinLimit, billingCurrency, cheapestWith, hasFeature, PLAN_INFO, PlanLimitError, priceFor } from "./plans";
+import { limitText, assertFeature, assertWithinLimit, billingCurrency, cheapestWith, hasFeature, PLAN_INFO, PlanLimitError, priceFor } from "./plans";
 
 describe("plans", () => {
   test("each tier includes everything below it", () => {
@@ -28,7 +28,7 @@ describe("limits", () => {
     } catch (e) {
       expect(e).toBeInstanceOf(PlanLimitError);
       expect((e as PlanLimitError).upgradeTo).toBe("plus");
-      expect((e as Error).message).toContain("Free allows 1 AI apps connected");
+      expect((e as Error).message).toContain("Free allows 1 AI app connected");
       expect((e as Error).message).toContain("Settings → Plan");
     }
   });
@@ -54,5 +54,14 @@ describe("prices", () => {
     expect(priceFor("pro", "NGN", "yearly", true)).toBe(75_000);
     expect(billingCurrency("NGN")).toBe("NGN");
     expect(billingCurrency("GHS")).toBe("USD");
+  });
+});
+
+describe("limitText", () => {
+  test("singular, plural, unlimited", () => {
+    expect(limitText("courses", 1)).toBe("1 course");
+    expect(limitText("courses", 3)).toBe("3 courses");
+    expect(limitText("aiApps", null)).toBe("Unlimited AI apps connected");
+    expect(limitText("commitments", 1)).toBe("1 job, role or team");
   });
 });

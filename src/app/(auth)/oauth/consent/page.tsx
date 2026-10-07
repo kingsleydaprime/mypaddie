@@ -34,7 +34,7 @@ export default async function ConsentPage({ searchParams }: PageProps<"/oauth/co
   const rules = room.ok ? consentRules(dest) : { canApprove: false, mustConfirm: false };
   const app = dest.kind === "known" ? dest.app : data.client.name;
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-5 px-4 py-8">
+    <>
       <h1 className="text-2xl font-semibold">Connect {app} to MyPaddie?</h1>
       <p>
         It will be able to read and change your MyPaddie data — tasks, XP, money, promises and notes — as{" "}
@@ -86,10 +86,10 @@ export default async function ConsentPage({ searchParams }: PageProps<"/oauth/co
           )}
         </div>
       </form>
-    </main>
+    </>
   );
 }
 
 function Message({ text }: { text: string }) {
-  return <main className="mx-auto flex min-h-dvh max-w-sm items-center px-4"><p>{text}</p></main>;
+  return <p>{text}</p>;
 }

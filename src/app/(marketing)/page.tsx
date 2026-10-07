@@ -3,32 +3,50 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "MyPaddie — the 3 things that matter right now",
-  description: "A private life coach that runs your day like a game and keeps you honest about your time, habits and money.",
+  description:
+    "A life coach that lives in the AI you already use. It runs your day like a game, keeps your habits, money and promises honest, and knows when to push and when to go easy.",
 };
+
+const STEPS = [
+  { n: "1", title: "Make your account", body: "A minute: your name, time zone, currency, and how you like to be talked to." },
+  { n: "2", title: "Connect your AI", body: "Paste one link into Claude or ChatGPT. Paddie now knows your day, every chat." },
+  { n: "3", title: "Ask “what's today?”", body: "Three things that matter, nudges on your phone, and a coach who notices when you slip." },
+];
 
 const FEATURES = [
   { title: "Three things, not thirty", body: "Today shows only what matters right now. Everything else is one tap away — never pushed at you." },
   { title: "Firm, then kind", body: "Strict when you keep slipping, soft on a rough day, and your override always wins. A reason is accepted; an excuse isn't." },
-  { title: "Effort earns XP", body: "Eleven pillars, weighted XP, late still counts. Only ignoring a need costs you." },
-  { title: "Honest about money", body: "A 30-day audit, then the real gap. It tells you to wait 24 hours, or simply no — and still rewards you for logging." },
+  { title: "Effort earns XP", body: "Eleven pillars, weighted XP, and late still counts. Only ignoring a need costs you." },
+  { title: "Honest about money", body: "A 30-day audit, then the real gap. It'll tell you to wait 24 hours — or just no — and still reward you for logging." },
+  { title: "“You've got a lot on your plate”", body: "Jobs, roles, clubs and teams, weighed against your week. Before you say yes to more, Paddie tells you what to drop." },
+  { title: "Promises you keep", body: "Who you promised, what and by when. Tell them in time and nothing's lost; break it and it costs you." },
+  { title: "School, sorted", body: "Your courses, topics and exams. Paddie plans study around what's coming and what's still shaky." },
+  { title: "Fun counts", body: "A list of what you enjoy, suggested when you've earned a break — and a nudge when it's been too long." },
   { title: "Never overbooked", body: "A daily capacity you set, clash checks for meetings, and reminders that climb: the night before, the morning of, 30 minutes, 10." },
-  { title: "Deadlines that don't lie", body: "Applications keep their own time zone, so '23:59 EST' never quietly becomes a deadline you've already missed." },
 ];
 
-export default function MarketingPage() {
+export default async function MarketingPage({ searchParams }: PageProps<"/">) {
+  const { deleted } = await searchParams;
   return (
     <>
+      {deleted === "1" && (
+        <p className="mx-auto mt-2 max-w-5xl px-5 text-sm" role="status">
+          <span className="block rounded-2xl border border-line bg-surface px-4 py-3">Your account and everything in it have been deleted. Take care.</span>
+        </p>
+      )}
+
       <section className="mx-auto max-w-5xl px-5 pt-10 pb-16 sm:pt-20">
-        <p className="text-sm font-semibold uppercase tracking-widest text-gold">A private life coach</p>
+        <p className="text-sm font-semibold tracking-widest text-gold uppercase">Your paddy for life</p>
         <h1 className="mt-3 max-w-3xl text-4xl leading-tight font-bold sm:text-6xl">Here are the 3 things that matter right now. Do one.</h1>
         <p className="mt-5 max-w-2xl text-lg text-muted">
-          MyPaddie runs your day like a game, knows when to be strict or soft, and keeps you honest about your time, habits and money.
-          Talk to it in Claude, ChatGPT or Gemini; glance at it on your phone.
+          MyPaddie is a life coach that lives in the AI you already use. It runs your day like a game, keeps your habits, money and
+          promises honest, and knows when to push and when to go easy.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link href="/app" className="rounded-full bg-gold px-6 py-3 font-semibold text-on-gold">Open MyPaddie</Link>
+          <Link href="/signup" className="rounded-full bg-gold px-6 py-3 font-semibold text-on-gold">Start free</Link>
           <a href="#how" className="rounded-full border border-line px-6 py-3 font-semibold">How it works</a>
         </div>
+        <p className="mt-3 text-sm text-muted">Free to start. Works with Claude and ChatGPT.</p>
       </section>
 
       <section className="mx-auto max-w-5xl px-5 pb-16">
@@ -42,6 +60,19 @@ export default function MarketingPage() {
       </section>
 
       <section id="how" className="mx-auto max-w-5xl scroll-mt-6 px-5 pb-16">
+        <h2 className="text-2xl font-bold sm:text-3xl">How it works</h2>
+        <ol className="mt-6 grid gap-4 sm:grid-cols-3">
+          {STEPS.map((s) => (
+            <li key={s.n} className="rounded-2xl border border-line bg-surface p-5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gold font-bold text-on-gold" aria-hidden>{s.n}</span>
+              <h3 className="mt-3 font-semibold">{s.title}</h3>
+              <p className="mt-1 text-sm text-muted">{s.body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-5 pb-16">
         <h2 className="text-2xl font-bold sm:text-3xl">What it does</h2>
         <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
@@ -53,18 +84,31 @@ export default function MarketingPage() {
         </ul>
       </section>
 
-      <section className="mx-auto max-w-5xl px-5 pb-20">
+      <section className="mx-auto max-w-5xl px-5 pb-16">
         <div className="grid gap-6 rounded-3xl border border-line bg-surface p-6 sm:grid-cols-2 sm:p-8">
           <div>
             <h2 className="text-2xl font-bold">Yours, and only yours</h2>
-            <p className="mt-3 text-muted">Built for one person. Your data lives in your own database and exports in one call.</p>
+            <p className="mt-3 text-muted">Your life is in here — your money, your habits, the people you&apos;ve made promises to. It stays yours.</p>
           </div>
           <ul className="flex flex-col gap-2 text-sm">
-            <li><span className="text-gold">●</span> The AI signs in as you — every query is limited to your rows by the database itself.</li>
-            <li><span className="text-gold">●</span> No admin key exists anywhere in the app.</li>
-            <li><span className="text-gold">●</span> Works with any AI that speaks MCP: Claude, ChatGPT, Gemini.</li>
-            <li><span className="text-gold">●</span> Read-only calendar import; nothing is ever sent anywhere else.</li>
+            <li><span className="text-gold">●</span> The database locks every row to your account. There&apos;s no master key that can read everyone&apos;s.</li>
+            <li><span className="text-gold">●</span> Your AI signs in as you, and only sees what you could.</li>
+            <li><span className="text-gold">●</span> Download everything, or delete your account, any time.</li>
+            <li><span className="text-gold">●</span> No ads, no selling your data, no training AI on it.</li>
           </ul>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-5 pb-20">
+        <div className="flex flex-col items-start gap-4 rounded-3xl bg-gold p-6 text-on-gold sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div>
+            <h2 className="text-2xl font-bold">Start free. Upgrade when it earns it.</h2>
+            <p className="mt-1 opacity-80">Free covers your day, XP, money and nudges. Plus and Pro lift the caps.</p>
+          </div>
+          <div className="flex gap-3">
+            <Link href="/signup" className="rounded-full bg-on-gold px-5 py-2.5 font-semibold text-gold">Get started</Link>
+            <Link href="/pricing" className="rounded-full border border-current px-5 py-2.5 font-semibold">Pricing</Link>
+          </div>
         </div>
       </section>
     </>

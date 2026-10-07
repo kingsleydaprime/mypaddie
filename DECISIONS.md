@@ -844,3 +844,27 @@ Written to match what the app actually does (processors, no master key, the
 rights you can exercise from Settings), naming the NDPA complaint route.
 Drafts — to be reviewed before strangers sign up. Contact address in
 `src/shared/legal/legal.ts`.
+
+## 2026-10-12 — Public pages and the (auth) group
+
+### Auth pages share one layout, URLs unchanged
+`/login`, `/signup`, `/reset-password`, `/welcome`, `/auth/*` and
+`/oauth/consent` live in the `(auth)` route group with one layout: the mark
+back home, a centred column, Privacy and Terms. A route group doesn't change
+URLs, so Supabase's redirect URLs, the email templates and Claude's consent
+path all still point at the same places. `signOut` moved to
+`src/features/auth/sign-out.ts` (the settings page imported it from a route
+folder).
+
+### Pricing reads the same plans.ts the app enforces
+The public pricing table renders `PLAN_INFO` and `priceFor()`, so the price
+on the website and the limit in the app can't disagree. Limits are worded with
+`limitText()` ("1 course", "3 courses"), which also fixes the plan-limit
+messages.
+
+### Marketing copy says what it is now
+Home: the hook, how it works in three steps (account → connect your AI → ask
+"what's today?"), what it does (including load, promises, school, fun), the
+privacy promise, and a pricing band. About: the "paddy" idea and the
+principles from the blueprint, with Spectroniq Limited as the face — no
+personal details on public pages. Checked at 390 px in headless Firefox.

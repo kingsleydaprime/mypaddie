@@ -58,14 +58,19 @@ export const PLAN_INFO: Record<PlanId, PlanInfo> = {
 export const STUDENT_DISCOUNT = 0.5;
 export const TRIAL_DAYS = 14;
 
-export const LIMIT_LABEL: Record<Limited, string> = {
-  aiApps: "AI apps connected",
-  habits: "habits (repeating tasks)",
-  courses: "courses",
-  commitments: "jobs, roles and teams",
-  applications: "open applications",
-  funActivities: "fun list items",
+const LIMIT_NOUN: Record<Limited, [one: string, many: string]> = {
+  aiApps: ["AI app connected", "AI apps connected"],
+  habits: ["habit (repeating task)", "habits (repeating tasks)"],
+  courses: ["course", "courses"],
+  commitments: ["job, role or team", "jobs, roles and teams"],
+  applications: ["open application", "open applications"],
+  funActivities: ["fun list item", "fun list items"],
 };
+
+/** "1 course", "3 courses", "Unlimited courses". */
+export function limitText(limited: Limited, n: number | null): string {
+  return n === null ? `Unlimited ${LIMIT_NOUN[limited][1]}` : `${n} ${LIMIT_NOUN[limited][n === 1 ? 0 : 1]}`;
+}
 
 export const FEATURE_LABEL: Record<Feature, string> = {
   calendarImport: "Google Calendar import",
@@ -110,7 +115,7 @@ export function assertWithinLimit(plan: PlanId, limited: Limited, current: numbe
   const limit = PLAN_INFO[plan].limits[limited];
   if (limit === null || current < limit) return;
   const to = cheapestWith({ limited, count: current });
-  throw new PlanLimitError(plan, to, `${PLAN_INFO[plan].name} allows ${limit} ${LIMIT_LABEL[limited]}, and you have ${current}. ${PLAN_INFO[to].name} has room for more — upgrade in Settings → Plan, or remove one first.`);
+  throw new PlanLimitError(plan, to, `${PLAN_INFO[plan].name} allows ${limitText(limited, limit)}, and you have ${current}. ${PLAN_INFO[to].name} has room for more — upgrade in Settings → Plan, or remove one first.`);
 }
 
 /** Price for a choice; students pay half. Yearly is 10 months. */
