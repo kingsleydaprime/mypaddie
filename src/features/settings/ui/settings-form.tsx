@@ -30,6 +30,11 @@ export function SettingsForm({ schedule }: { schedule: Schedule }) {
           <span className="text-muted">Events count as close within (days)</span>
           <input type="number" name="eventCloseDays" min={1} max={60} defaultValue={schedule.eventCloseDays} required className={`${field} w-20`} />
         </label>
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span className="text-muted">Nudge me after this many days without fun (0 = off)</span>
+          <input type="number" name="funEveryDays" min={0} max={60} defaultValue={schedule.funEveryDays} required className={`${field} w-20`} />
+        </label>
+        <Time name="funAt" label="Fun nudge at" value={schedule.funAt} />
         <p className="text-xs text-muted">
           Meals: {schedule.meals.map((m) => `${m.name} ${m.at}`).join(" · ")} — change these by asking Paddie.
         </p>

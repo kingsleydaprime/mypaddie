@@ -1,6 +1,6 @@
 /** One nudge as decided by the database (private.collect_nudges). */
 export interface Nudge {
-  kind: "nudge" | "checkin" | "brief" | "headsup" | "reminder" | "event" | "application";
+  kind: "nudge" | "checkin" | "brief" | "headsup" | "reminder" | "event" | "application" | "fun";
   level: number;
   title: string | null;
   items: string[] | null;
@@ -45,6 +45,17 @@ function defaultCopy(n: Nudge): NotificationCopy {
       body: items.length > 0 ? `${items.join(" · ")}. Pick one.` : "Nothing scheduled. Suspicious, but fine. Go live.",
       url: "/app",
       tag: "brief",
+    };
+  }
+
+  if (n.kind === "fun") {
+    const ideas = n.items ?? [];
+    const days = n.days ?? 7;
+    return {
+      title: `${days} days without fun`,
+      body: ideas.length ? `Paddie prescribes: ${ideas.join(", ")}. Pick one. Doctor's orders.` : "Rest is part of the game. Go do something you enjoy.",
+      url: "/app/fun",
+      tag: "fun",
     };
   }
 

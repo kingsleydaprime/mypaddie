@@ -65,14 +65,21 @@ export async function QuestsScreen({ db, tier }: { db: Db; tier: Tier | null }) 
     <div className="flex flex-col gap-5">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Quests</h1>
-        <div className="flex gap-2">
-          <Link href="/app/applications" className="rounded-xl border border-line px-3 py-2.5 text-sm font-medium">Applications</Link>
-          <Link href="/app/updates" className="rounded-xl border border-line px-3 py-2.5 text-sm font-medium">Updates</Link>
-          <Link href={`/app/quests/new${tier ? `?tier=${tier}` : ""}`} className="rounded-xl bg-gold px-4 py-2.5 font-semibold text-on-gold">
-            + Add
-          </Link>
-        </div>
+        <Link href={`/app/quests/new${tier ? `?tier=${tier}` : ""}`} className="rounded-xl bg-gold px-4 py-2.5 font-semibold text-on-gold">
+          + Add
+        </Link>
       </header>
+
+      <nav className="-mx-4 flex gap-2 overflow-x-auto px-4" aria-label="More">
+        {[
+          ["/app/courses", "Courses"],
+          ["/app/fun", "Fun list"],
+          ["/app/applications", "Applications"],
+          ["/app/updates", "Updates"],
+        ].map(([href, label]) => (
+          <Link key={href} href={href} className="shrink-0 rounded-xl border border-line px-3 py-2.5 text-sm font-medium">{label}</Link>
+        ))}
+      </nav>
 
       <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="Filter by tier">
         <Chip href="/app/quests" active={tier === null}>All</Chip>

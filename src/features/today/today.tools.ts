@@ -3,6 +3,7 @@ import { z } from "zod";
 import { upcoming } from "@/features/events/events";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
 import { syncCalendar } from "@/features/calendar/calendar.repo";
+import { loadFunPicture } from "@/features/fun/fun.repo";
 import { loadActiveIdentity } from "@/features/identity/identity.repo";
 import { loadLearning } from "@/features/learning/learning.repo";
 import { dayEndsAt } from "@/features/settings/schedule";
@@ -59,7 +60,7 @@ export function registerTodayTools(server: McpServer) {
         const caughtUp = await catchUp(db, now);
         // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
         await syncCalendar(db, now).catch(() => null);
-        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule] = await Promise.all([
+        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun] = await Promise.all([
           loadTasksAroundToday(db, now),
           loadMode(db, now),
           loadMoneyStage(db, now),
@@ -69,10 +70,14 @@ export function registerTodayTools(server: McpServer) {
           loadUpcomingEvents(db),
           loadLearning(db, now),
           loadSchedule(db),
+          loadFunPicture(db, now),
         ]);
         const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
         const room = roomOn(dayKey(now, tz), dayTasks, capacity, now, undefined, dayEndsAt(schedule));
         const focus = pickFocus(tasks, now);
+        // Fun counts: suggest some once today's quests are done, or when it's been too long.
+        const funDue = fun.daysSinceFun !== null && schedule.funEveryDays > 0 && fun.daysSinceFun >= schedule.funEveryDays;
+        const questsDone = focus.top.length === 0 && focus.rest.length === 0 && focus.doneToday > 0;
         return ok({
           now: formatLocal(now, tz),
           mode,
@@ -92,6 +97,11 @@ export function registerTodayTools(server: McpServer) {
           events: {
             today: soon.filter((e) => e.daysAway === 0).map((e) => ({ title: e.title, kind: e.kind, at: e.allDay ? "all day" : formatLocal(e.at, tz) })),
             prepareNow: soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now").map((e) => ({ title: e.title, daysAway: e.daysAway })),
+          },
+          // Days since any fun (null = no fun list yet: offer to start one). `ideas` only when he's earned a break or is overdue for one.
+          fun: {
+            daysSince: fun.daysSinceFun,
+            ...(funDue || questsDone ? { ideas: fun.suggestions.map((f) => f.title), why: questsDone ? "quests_done" : "overdue" } : {}),
           },
           // Who he's becoming — coach toward it all chat. Null: offer to help him write one.
           becoming: identity ? { name: identity.name, text: identity.text } : null,

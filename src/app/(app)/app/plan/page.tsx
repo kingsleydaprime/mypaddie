@@ -2,6 +2,7 @@ import Link from "next/link";
 import { proposeDay } from "@/features/planning/planning.repo";
 import { AcceptPlan } from "@/features/planning/ui/accept-plan";
 import { DEFAULT_CONFIG } from "@/shared/config";
+import { formatNaira } from "@/shared/format";
 import { requireDb } from "@/shared/supabase/session";
 import { dayKey, localTimeOf } from "@/shared/time";
 
@@ -32,7 +33,10 @@ export default async function PlanPage() {
         {plan.slots.map((s, i) => (
           <li key={i} className={`rounded-xl border border-line border-l-4 bg-surface px-4 py-2.5 ${STYLE[s.kind] ?? ""}`}>
             <span className="text-sm text-muted">{localTimeOf(s.start, tz)}–{localTimeOf(s.end, tz)}</span>
-            <p className={`font-medium ${s.kind === "free" ? "text-green" : ""}`}>{s.title}</p>
+            <p className={`font-medium ${s.kind === "free" ? "text-gold" : ""}`}>{s.title}</p>
+            {s.kind === "free" && plan.funIdea && (
+              <Link href="/app/fun" className="text-sm text-muted">Idea: {plan.funIdea.title}{plan.funIdea.cost > 0 ? ` (${formatNaira(plan.funIdea.cost)})` : " (free)"} ›</Link>
+            )}
           </li>
         ))}
       </ol>

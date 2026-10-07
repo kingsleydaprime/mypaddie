@@ -12,7 +12,7 @@ export function registerSettingsTools(server: McpServer) {
     "get_settings",
     {
       title: "Get settings",
-      description: "His schedule settings: quiet hours, morning brief time, evening/morning reminder times, how many days count as 'close' for events, and meal times.",
+      description: "His schedule settings: quiet hours, morning brief time, evening/morning reminder times, how many days count as 'close' for events, meal times, and the fun nudge (after how many days without fun, and when).",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
@@ -42,10 +42,12 @@ export function registerSettingsTools(server: McpServer) {
         morning_at: time.optional().describe("Morning-of reminders"),
         event_close_days: z.number().int().min(1).max(60).optional(),
         meals: z.array(mealSchema).max(6).optional(),
+        fun_every_days: z.number().int().min(0).max(60).optional().describe("Nudge after this many days without fun; 0 = off"),
+        fun_at: time.optional().describe("When the fun nudge arrives"),
       }),
     },
     async (
-      args: { quiet_start?: string; quiet_end?: string; brief_at?: string; evening_at?: string; morning_at?: string; event_close_days?: number; meals?: z.infer<typeof mealSchema>[] },
+      args: { quiet_start?: string; quiet_end?: string; brief_at?: string; evening_at?: string; morning_at?: string; event_close_days?: number; meals?: z.infer<typeof mealSchema>[]; fun_every_days?: number; fun_at?: string },
       ctx: ToolContext,
     ) => {
       try {
@@ -58,6 +60,8 @@ export function registerSettingsTools(server: McpServer) {
           ...(args.morning_at ? { morningAt: args.morning_at } : {}),
           ...(args.event_close_days ? { eventCloseDays: args.event_close_days } : {}),
           ...(args.meals ? { meals: args.meals } : {}),
+          ...(args.fun_every_days !== undefined ? { funEveryDays: args.fun_every_days } : {}),
+          ...(args.fun_at ? { funAt: args.fun_at } : {}),
         };
         const result = await updateSchedule(db, change);
         if (!result.ok) return toolError(`update_settings: ${result.error}`);

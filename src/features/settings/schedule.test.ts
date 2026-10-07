@@ -57,3 +57,22 @@ describe("applyScheduleChange", () => {
     expect(applyScheduleChange(DEFAULT_SCHEDULE, { eventCloseDays: 0 }).ok).toBe(false);
   });
 });
+
+describe("fun nudge settings", () => {
+  test("defaults: after 7 days without fun, at 17:00", () => {
+    expect(readSchedule(null)).toMatchObject({ funEveryDays: 7, funAt: "17:00" });
+  });
+  test("0 turns it off; negative or huge is refused", () => {
+    expect(applyScheduleChange(DEFAULT_SCHEDULE, { funEveryDays: 0 }).ok).toBe(true);
+    expect(applyScheduleChange(DEFAULT_SCHEDULE, { funEveryDays: -1 }).ok).toBe(false);
+    expect(applyScheduleChange(DEFAULT_SCHEDULE, { funEveryDays: 61 }).ok).toBe(false);
+  });
+  test("a fun nudge inside quiet hours is refused: it would never arrive", () => {
+    const r = applyScheduleChange(DEFAULT_SCHEDULE, { funAt: "23:00" });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("fun nudge");
+  });
+  test("an older saved schedule without the fun fields gets the defaults", () => {
+    expect(readSchedule({ quietStart: "23:00" })).toMatchObject({ quietStart: "23:00", funEveryDays: 7, funAt: "17:00" });
+  });
+});

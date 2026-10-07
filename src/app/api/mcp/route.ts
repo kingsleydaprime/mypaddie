@@ -1,7 +1,9 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { registerApplicationTools } from "@/features/applications/applications.tools";
 import { registerCalendarTools } from "@/features/calendar/calendar.tools";
+import { registerCourseTools } from "@/features/courses/courses.tools";
 import { registerEventTools } from "@/features/events/events.tools";
+import { registerFunTools } from "@/features/fun/fun.tools";
 import { registerIdentityTools } from "@/features/identity/identity.tools";
 import { registerItemTools } from "@/features/items/items.tools";
 import { registerLearningTools } from "@/features/learning/learning.tools";
@@ -41,6 +43,8 @@ const handler = createMcpHandler(
     registerApplicationTools(server);
     registerUpdateTools(server);
     registerCalendarTools(server);
+    registerFunTools(server);
+    registerCourseTools(server);
   },
   {
     serverInfo: { name: "mypaddie", version: "1.0.0" },

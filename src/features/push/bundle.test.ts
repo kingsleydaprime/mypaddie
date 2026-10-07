@@ -67,3 +67,11 @@ describe("planNotifications", () => {
     expect(out[0]!.copy.title).toBe("Coming up");
   });
 });
+
+describe("fun nudges", () => {
+  test("never bundled with overdue work", () => {
+    const fun: OutgoingNudge = { ...phone, kind: "fun", level: 1, title: null, items: ["Movie"], days: 8 };
+    const out = planNotifications([nudge("A"), nudge("B"), nudge("C"), fun]);
+    expect(out.map((n) => n.copy.tag)).toEqual(["bundle-overdue", "fun"]);
+  });
+});

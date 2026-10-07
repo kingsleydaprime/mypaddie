@@ -1,7 +1,7 @@
 import { DEFAULT_CONFIG, type EngineConfig } from "@/shared/config";
 import { dayKey, daysBetween, localTimeOf, zonedInstant } from "@/shared/time";
 
-export const EVENT_KINDS = ["meeting", "social", "birthday", "anniversary", "wedding", "appointment", "deadline", "other"] as const;
+export const EVENT_KINDS = ["meeting", "social", "birthday", "anniversary", "wedding", "appointment", "deadline", "exam", "other"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
 /** Within this many days, an event is "close". */

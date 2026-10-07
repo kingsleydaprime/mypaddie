@@ -1,4 +1,5 @@
 import { eventBlocksOn } from "@/features/events/events.repo";
+import { loadFunPicture } from "@/features/fun/fun.repo";
 import { DEFAULT_DURATION, roomOn } from "@/features/tasks/capacity";
 import { projectedOccurrences } from "@/features/tasks/recurrence";
 import { loadCapacity, loadDayTasks, loadSeriesTemplates, updateTask } from "@/features/tasks/tasks.repo";
@@ -94,8 +95,15 @@ export async function proposeDay(db: Db, day: string, now: Date) {
 
   const plan = planDay({ day, now, fixed, flexible, meals: schedule.meals, window: { start: schedule.quietEnd, end: dayEndsAt(schedule) } });
   const habitIds = new Set(flexible.filter((f) => f.habit).map((f) => f.id));
+
+  // Free time gets an idea from his fun list that fits the gap (time, money, mood).
+  const free = plan.slots.find((s) => s.kind === "free");
+  const funIdea = free
+    ? (await loadFunPicture(db, now, { minutesFree: Math.round((free.end.getTime() - free.start.getTime()) / 60_000), limit: 1 })).suggestions[0] ?? null
+    : null;
   return {
     ...plan,
+    funIdea: funIdea ? { title: funIdea.title, cost: funIdea.cost, minutes: funIdea.minutes } : null,
     // Habit rows are suggested but not written (see acceptDay).
     assignments: plan.assignments.map((a) => ({ ...a, suggestionOnly: habitIds.has(a.taskId) })),
     overCapacity,

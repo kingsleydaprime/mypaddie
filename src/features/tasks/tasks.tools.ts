@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
 import { PILLARS } from "@/shared/domain";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
+import { findFun } from "@/features/fun/fun.repo";
 import { findOrCreateSkill } from "@/features/learning/learning.repo";
 import { completeTask, createTask, deleteTask, updateTask } from "./tasks.repo";
 
@@ -48,6 +49,8 @@ export function registerTaskTools(server: McpServer) {
         becomes_must_do_at: z.iso.datetime({ offset: true }).optional().describe("When it turns non-negotiable, e.g. 2026-10-15T09:00:00+01:00"),
         force_clash: z.boolean().default(false).describe("Only after he confirms a double-booking"),
         skill: z.string().trim().min(1).optional().describe("Completing it logs practice time for this skill (e.g. 'LeetCode 1h' → DSA)"),
+        topic: z.string().trim().min(1).max(200).optional().describe("With `skill`: the topic it covers (e.g. a course topic), recorded with the practice time"),
+        fun: z.string().trim().min(1).optional().describe("Planned fun: the title of an activity on his fun list; completing the task counts as doing it"),
         reminder_note: z.string().trim().max(200).optional().describe("His own words for the notifications, e.g. 'Bring the signed form'"),
       }),
     },
@@ -66,6 +69,8 @@ export function registerTaskTools(server: McpServer) {
         becomes_must_do_at?: string;
         force_clash: boolean;
         skill?: string;
+        topic?: string;
+        fun?: string;
         reminder_note?: string;
       },
       ctx: ToolContext,
@@ -74,6 +79,8 @@ export function registerTaskTools(server: McpServer) {
         const db = dbFrom(ctx);
         const now = new Date();
         const skillId = args.skill ? (await findOrCreateSkill(db, args.skill)).skill.id : null;
+        const fun = args.fun ? await findFun(db, args.fun) : null;
+        if (args.fun && !fun) return toolError(`add_task: "${args.fun}" isn't on his fun list — add it with add_fun first`);
         const outcome = await createTask(
           db,
           {
@@ -90,6 +97,8 @@ export function registerTaskTools(server: McpServer) {
             mustFrom: args.becomes_must_do_at ? new Date(args.becomes_must_do_at) : null,
             forceClash: args.force_clash,
             skillId,
+            topic: args.topic ?? null,
+            funActivityId: fun?.id ?? null,
             reminderNote: args.reminder_note,
           },
           now,
@@ -206,15 +215,20 @@ export function registerTaskTools(server: McpServer) {
       title: "Complete task",
       description:
         "Mark a task done and award its weighted XP. Late completions still earn reduced XP, so encourage doing it " +
-        "late over not at all. Safe to retry: a task can't pay twice. Use the task id from get_today.",
-      inputSchema: z.object({ task_id: z.uuid().describe("Task id from get_today") }),
+        "late over not at all. Safe to retry: a task can't pay twice. Use the task id from get_today. For a study " +
+        "task (one with a topic), ask how solid the topic feels now (1–5) and pass it as `confidence`: it decides " +
+        "when the topic comes back for review.",
+      inputSchema: z.object({
+        task_id: z.uuid().describe("Task id from get_today"),
+        confidence: z.number().int().min(1).max(5).optional().describe("Study tasks: how solid the topic feels now, 1 shaky – 5 solid"),
+      }),
       annotations: { readOnlyHint: false, idempotentHint: true, destructiveHint: false },
     },
-    async ({ task_id }: { task_id: string }, ctx: ToolContext) => {
+    async ({ task_id, confidence }: { task_id: string; confidence?: number }, ctx: ToolContext) => {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        return ok(await withMode(db, now, { ...(await completeTask(db, task_id, now)) }));
+        return ok(await withMode(db, now, { ...(await completeTask(db, task_id, now, undefined, { confidence })) }));
       } catch (error) {
         return toolError(`complete_task failed: ${(error as Error).message}`);
       }

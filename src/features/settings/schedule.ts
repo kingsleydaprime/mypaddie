@@ -20,6 +20,10 @@ export const scheduleSchema = z.object({
   /** Within this many days an event is "close". */
   eventCloseDays: z.number().int().min(1).max(60),
   meals: z.array(mealSchema).max(6),
+  /** Nudge after this many days without fun; 0 = never. */
+  funEveryDays: z.number().int().min(0).max(60),
+  /** When the fun nudge arrives. */
+  funAt: time,
 });
 
 export type Schedule = z.infer<typeof scheduleSchema>;
@@ -37,6 +41,8 @@ export const DEFAULT_SCHEDULE: Schedule = {
     { name: "Lunch", at: "13:00", minutes: 30 },
     { name: "Dinner", at: "19:00", minutes: 40 },
   ],
+  funEveryDays: 7,
+  funAt: "17:00",
 };
 
 /** Is a local "HH:MM" inside quiet hours? Handles windows that cross midnight. */
@@ -76,7 +82,7 @@ export function applyScheduleChange(current: Schedule, change: ScheduleChange): 
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "invalid setting" };
   const next = { ...current, ...parsed.data };
   if (next.quietStart === next.quietEnd) return { ok: false, error: "quiet hours can't start and end at the same time" };
-  for (const [label, t] of [["morning brief", next.briefAt], ["evening reminder", next.eveningAt], ["morning reminder", next.morningAt]] as const) {
+  for (const [label, t] of [["morning brief", next.briefAt], ["evening reminder", next.eveningAt], ["morning reminder", next.morningAt], ["fun nudge", next.funAt]] as const) {
     if (isQuiet(t, next)) return { ok: false, error: `the ${label} at ${t} falls inside quiet hours (${next.quietStart}–${next.quietEnd}), so it would never arrive` };
   }
   return { ok: true, schedule: next };

@@ -16,6 +16,8 @@ export async function saveSettingsAction(_prev: SettingsState, form: FormData): 
     eveningAt: get("eveningAt"),
     morningAt: get("morningAt"),
     eventCloseDays: Number(get("eventCloseDays")),
+    funEveryDays: Number(get("funEveryDays")),
+    funAt: get("funAt"),
   });
   if (!result.ok) return { error: result.error };
   revalidatePath("/app/settings");

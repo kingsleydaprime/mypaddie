@@ -56,6 +56,18 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [x] Dead push subscriptions pruned by the nudge job.
 - [x] Habits counted on every day they occur (capacity, clashes, planning).
 
+## Done: fun and school (2026-10-06)
+- [x] **Fun list**: activities with cost, time, energy and company; "did it" pays
+  XP; suggestions that fit time, money and mood; an idea in Plan my day's free
+  time; a nudge after N days without fun (default 7, at 17:00, at most every 3
+  days). Quests → Fun list.
+- [x] **Courses**: code, lecturer, units, target grade, syllabus topics with
+  weeks, assessments (exams → events, assignments → tasks); topic status from
+  study confidence; `propose_study_plan` / `accept_study_plan`, and study tasks
+  Paddie can create directly. Quests → Courses.
+- [x] Fixed: habits lost their duration, reminders and skill link after the
+  first day; `export_all` missed every table added after Day 1.
+
 ## Next: MyPaddie for everyone (planned 2026-10-06)
 
 Anyone signs up, connects their AI, and gets their own Paddie, hosted at
@@ -119,6 +131,11 @@ which gets a new entry when it changes.
 - Two-way calendar sync (needs Google OAuth + verification).
 - Undo an income split, so split income can be voided.
 - Push for calendar events imported only on app open: sync from the scheduler too.
+
+## Ideas for later (fun and school)
+- Grade estimate from assessment weights and scores ("you need 62% on the final for an A").
+- Fun with specific friends: link fun to people/events ("haven't seen the guys in 3 weeks").
+- A weekly "study week" push on Sunday evening with the proposed plan.
 
 ## Known gaps
 - Voiding income that's already been split into buckets (needs a split undo).

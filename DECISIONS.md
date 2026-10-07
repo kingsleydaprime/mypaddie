@@ -514,3 +514,78 @@ Quests · Money · Home (raised, centre) · Stats · Settings. "Paddie" became
 Settings: profile ("Who I'm becoming", edited by him — edit in place, save as
 a new version, or switch), nudges, schedule, Google Calendar, chat links,
 sign out. The AI reads the same profile every chat but doesn't own it.
+
+## 2026-10-06 — Fun list and courses
+
+### Fun is its own list, not wishes or memories
+A wish is something not done yet ("learn to drive"); fun is a menu you come
+back to. Memories are free text, which can't be filtered by "free", "fits 90
+minutes" or "low energy". So `fun_activities` holds a title, rough cost,
+minutes, energy and company, plus `times_done` / `last_done_at`.
+
+### Doing fun is a task, like an unplanned workout
+`log_fun` creates an undated task and completes it on the spot, so XP flows
+through the one idempotent path (10 base: emotional 50 / social 50 with
+people, emotional 70 / mental 30 alone). An undated task skips the capacity
+check — the fun already happened. Planned fun is a task with
+`fun_activity_id`; completing it marks the activity done. Removing an activity
+keeps its tasks (and XP) and clears the link. Something not on the list yet is
+added to it when logged, so the list grows from real life.
+
+### Suggestions fit money, mood and time; least recent first
+Excluded: longer than the free gap; anything that costs money in a deficit;
+more than what's left for wants (no limit during the audit — it has no
+budgets); high energy on a soft day. Then least recently done first (variety),
+cheaper first on a tie; on a soft day low-energy leads. Used by `list_fun`,
+`get_today` (ideas only once today's quests are done or fun is overdue — never
+pushed otherwise), the free slot of `plan_day`, and the Fun page.
+
+### The fun nudge: after N days, at most every 3 days
+Schedule settings `funEveryDays` (default 7, 0 = off) and `funAt` (17:00,
+refused inside quiet hours like every reminder). Its own collector beside the
+others, never bundled. "Days without fun" counts from the latest fun, or from
+when the list was started — a new list shouldn't read as "forever". At most one
+every 3 days: fun reminders that nag become another chore.
+
+### A course is an academic skill with a syllabus
+`courses` points at a skill (one each), so study time, topic confidence and
+spaced repetition reuse the learning log instead of a second system. Topic
+status is derived, not stored: never practised = to start, confidence ≥ 4 =
+solid, otherwise learning (studied but never rated is *not* solid). Topics
+match learning sessions by title, case-insensitively.
+
+### Exams are events, assignments are tasks
+Sat in person (exam, test, quiz, presentation, lab) → an important event of
+the new kind `exam`: it blocks time, clashes are reported, the event reminder
+ladder applies. Handed in (assignment, project) → a task due on the day that
+turns must-do 2 days before, like an application requirement. Marking an
+assignment done completes its task (XP). Moving a date replaces the event or
+task; done work is never touched.
+
+### Study plans: proposal first, but Paddie may book directly
+`propose_study_plan` → `accept_study_plan`, like `plan_day`. Order: topics an
+exam/test/quiz in the next 14 days covers that aren't solid (before it,
+sooner exam and shakier topic first), then reviews due in the window, then new
+topics in syllabus order (one per course per day). Each topic once; at most
+`max_per_day` sessions and never more than the day's free capacity. Exam topics
+that can't fit before the exam are returned as `unplaced` so the AI says so.
+Topics already booked as open study tasks aren't proposed again. Kingsley is
+also fine with Paddie creating study tasks itself: `add_task` takes `skill` +
+`topic`, and `complete_task` takes `confidence` so the topic's review date
+updates.
+
+### Outlines: the AI reads them; the app takes pasted lines
+A shared outline (text or PDF) is parsed by the AI into one `add_course` call.
+The app's form takes topics one per line and keeps "Week 3: …" as the week.
+
+### Fixed: habits lost their details after the first day
+`spawn_occurrence` still copied only the Day 1 columns, so a habit's later
+days lost their duration (a training block became a deadline and paid half
+XP when logged after its start), reminders, skill link and reminder note.
+Found while adding `topic` and `fun_activity_id`; it now copies all of them
+(not `must_from`, which is one moment). Pinned by pgTAP.
+
+### Fixed: export_all only exported the first twelve tables
+It listed the Day 1 tables by hand, so learning, workouts, events,
+applications and the rest were missing from "your data is never trapped". It
+now walks every public table with a `user_id`, still as the caller (RLS).

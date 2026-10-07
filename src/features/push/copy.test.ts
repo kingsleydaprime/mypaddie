@@ -79,3 +79,15 @@ describe("copyFor", () => {
     expect(copyFor({ kind: "application", level: 5, title: "Job Y", items: [], due: null }).body).toBe("Everything's ready — submit early.");
   });
 });
+
+describe("fun nudge", () => {
+  test("says how long it's been and prescribes from his list", () => {
+    const c = copyFor({ kind: "fun", level: 1, title: null, items: ["Movie night", "Beach"], days: 9 });
+    expect(c.title).toBe("9 days without fun");
+    expect(c.body).toContain("Movie night, Beach");
+    expect(c.url).toBe("/app/fun");
+  });
+  test("no ideas listed: still an invitation, not a crash", () => {
+    expect(copyFor({ kind: "fun", level: 1, title: null, items: null }).body).toContain("Rest is part of the game");
+  });
+});

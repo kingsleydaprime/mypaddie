@@ -26,7 +26,7 @@ const LOOKBACK_DAYS = 14;
 const SERIES_LOOKBACK_DAYS = 60;
 
 const TASK_COLUMNS =
-  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, item_id, items(tier), task_pillars(pillar, weight)";
+  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, fun_activity_id, topic, item_id, items(tier), task_pillars(pillar, weight)";
 
 type TaskRow = {
   id: string;
@@ -39,6 +39,8 @@ type TaskRow = {
   must_from: string | null;
   duration_minutes: number | null;
   skill_id: string | null;
+  fun_activity_id: string | null;
+  topic: string | null;
   item_id: string | null;
   items: { tier: Tier } | null;
   task_pillars: PillarWeight[];
@@ -182,11 +184,15 @@ export async function catchUp(db: Db, now: Date, config = DEFAULT_CONFIG): Promi
 }
 
 export type CompleteResult =
-  | { result: "completed"; xp: number; late: boolean; title: string; practiceLogged?: { minutes: number } }
+  | { result: "completed"; xp: number; late: boolean; title: string; practiceLogged?: { minutes: number; topic: string | null }; funLogged?: boolean }
   | { result: "already_done" | "cancelled" | "not_found"; title: string | null };
 
-/** Marks a task done and pays its weighted XP, atomically and at most once. */
-export async function completeTask(db: Db, taskId: string, now: Date, config = DEFAULT_CONFIG): Promise<CompleteResult> {
+/**
+ * Marks a task done and pays its weighted XP, atomically and at most once.
+ * `confidence` (1–5) rates a study task's topic afterwards; it sets when the
+ * topic comes back for review.
+ */
+export async function completeTask(db: Db, taskId: string, now: Date, config = DEFAULT_CONFIG, opts: { confidence?: number | null } = {}): Promise<CompleteResult> {
   const { data, error } = await db.from("tasks").select(TASK_COLUMNS).eq("id", taskId).returns<TaskRow[]>().maybeSingle();
   if (error) fail("loading the task", error);
   if (!data) return { result: "not_found", title: null };
@@ -212,24 +218,35 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = D
   await db.from("application_requirements").update({ done: true }).eq("task_id", taskId);
 
   // Practice for a skill: record the time. No XP here — the task just paid it.
-  let practiceLogged: { minutes: number } | undefined;
+  let practiceLogged: { minutes: number; topic: string | null } | undefined;
   if (data.skill_id) {
     const minutes = data.duration_minutes ?? DEFAULT_DURATION;
     const { error: practiceError } = await db.rpc("record_learning", {
       p_skill_id: data.skill_id,
-      p_topic: null as unknown as string,
+      p_topic: data.topic as string,
       p_minutes: minutes,
       p_count: null as unknown as number,
       p_unit: null as unknown as string,
-      p_confidence: null as unknown as number,
+      p_confidence: (opts.confidence ?? null) as number,
       p_notes: `From task: ${task.title}`,
       p_at: now.toISOString(),
       p_xp: [] as unknown as Json,
     });
-    if (!practiceError) practiceLogged = { minutes };
+    if (!practiceError) practiceLogged = { minutes, topic: data.topic };
+  }
+
+  // A fun activity: it happened. Feeds "days since fun" and the variety in suggestions.
+  let funLogged = false;
+  if (data.fun_activity_id) {
+    const { data: fun } = await db.from("fun_activities").select("times_done").eq("id", data.fun_activity_id).maybeSingle();
+    if (fun) {
+      await db.from("fun_activities").update({ times_done: fun.times_done + 1, last_done_at: now.toISOString() }).eq("id", data.fun_activity_id);
+      funLogged = true;
+    }
   }
   return {
     ...(practiceLogged ? { practiceLogged } : {}),
+    ...(funLogged ? { funLogged } : {}),
     result: "completed",
     xp: entries.reduce((sum, e) => sum + e.amount, 0),
     late: isLate(timed, now),
@@ -356,6 +373,10 @@ export interface NewTask {
   skillId?: string | null;
   /** His own words for this task's notifications. */
   reminderNote?: string | null;
+  /** Doing it counts as doing this fun activity. */
+  funActivityId?: string | null;
+  /** The topic a study task covers (recorded with the practice time). */
+  topic?: string | null;
 }
 
 export type Reminder = "eve" | "morning" | "30" | "10";
@@ -415,6 +436,8 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = DEFA
       must_from: task.mustFrom?.toISOString() ?? null,
       skill_id: task.skillId ?? null,
       reminder_note: task.reminderNote?.trim() || null,
+      fun_activity_id: task.funActivityId ?? null,
+      topic: task.topic?.trim() || null,
     })
     .select("id, title, due_at, recurrence")
     .single();

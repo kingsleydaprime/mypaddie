@@ -4,7 +4,7 @@ Oct 5, 2026 · updated Oct 6, 2026 to match what's built · @Kingsley Ihemelandu
 
 > **Public version.** The system design is complete; personal details (real figures, habits, wishes, the identity profile) have been replaced with generic examples. The real ones live in the app's own database, not in this repo.
 
-> **Status (Oct 6, 2026).** The four-day build is done: rules engine, MCP connector (61 tools), phone app, push notifications, and the extras that came after (learning, workouts, pantry, events, applications, updates, Google Calendar import). The reasoning behind each choice is in [DECISIONS.md](../DECISIONS.md); what's next, including a multi-user version, is in [ROADMAP.md](ROADMAP.md).
+> **Status (Oct 6, 2026).** The four-day build is done: rules engine, MCP connector (68 tools), phone app, push notifications, and the extras that came after (learning, workouts, pantry, events, applications, updates, Google Calendar import, a fun list and courses). The reasoning behind each choice is in [DECISIONS.md](../DECISIONS.md); what's next, including a multi-user version, is in [ROADMAP.md](ROADMAP.md).
 
 ## Vision and principles
 
@@ -82,7 +82,8 @@ Paddie runs your day in a loop: brief you, check in, escalate on the non-negotia
 - **Time blocks and capacity.** Tasks can have a time and duration. A day has a capacity (default 6h, with date-range periods such as exam weeks); a task that would overflow it is refused. Clashes are reported and can be overridden on purpose.
 - **Plan my day** (`plan_day`) proposes a timeline: fixed blocks, meals near their usual time, tasks by priority, chores batched after the work, free time in the biggest gap. Nothing changes until you accept it.
 - **Meals** come from the pantry: stock with units and low levels, a shopping list, meal ideas from what's in stock, and cooking that uses ingredients up.
-- **Schedule settings** (quiet hours, brief time, reminder times, meals) are per user and validated as a whole, so a reminder can't be set inside quiet hours.
+- **Schedule settings** (quiet hours, brief time, reminder times, meals, the fun nudge) are per user and validated as a whole, so a reminder can't be set inside quiet hours.
+- **Fun counts, for real.** Once today's quests are done, or after 7 days without fun (editable; 0 = off), paddie suggests something from your fun list that fits your free time, money and mood. The nudge comes at 17:00 at most every 3 days, so it never becomes a chore.
 
 ### Phone-free windows
 
@@ -250,6 +251,8 @@ These were added after the four-day plan, each because a real day needed it.
 - **Applications.** Deadlines kept in their own time zone, a target date (default 3 days early), requirements that become tasks, a pipeline, and their own reminder ladder.
 - **Updates owed.** Regular updates to people (recipient, channel, topic, format, cadence); `draft_update` writes from what you actually did since the last one, never padded.
 - **Google Calendar import.** Read-only, through the calendar's private iCal link (no Google sign-in needed). Synced when Today loads; your own flags survive a re-sync.
+- **Fun list.** Things you enjoy, with rough cost, time, energy and company. "Did it" pays XP (emotional, plus social with people). Suggestions skip what you can't afford (only free fun in a deficit), what doesn't fit the gap, and high-energy fun on a soft day, and favour what you haven't done in a while. Free time in Plan my day comes with an idea.
+- **Courses.** Code, title, lecturer, units, target grade, the syllabus (topics, with weeks) and assessments. Share an outline and the AI fills it all in. Exams and tests become important events; assignments become tasks that turn must-do 2 days before. Each topic is to start, learning or solid, from the confidence you give after studying it. Paddie proposes study sessions (exam prep first, then reviews due, then new topics) that fit your daily capacity, and books the ones you accept. It can also create study tasks directly.
 
 ## Architecture
 
@@ -268,11 +271,11 @@ The AI chat calls the MCP server and the phone app calls the app API, but both g
 - **Hosting:** one Next.js app on Vercel serves the MCP server (`/api/mcp`), the phone app (`/app`) and a public landing page (`/`).
 - **Security:** the AI signs in *as you* through Supabase Auth's OAuth 2.1 server (PKCE, a hand-registered client per AI app). No admin key exists anywhere in the app: every query runs under row-level security. The push route has no database access; the database decides who to nudge and calls it with a shared secret.
 - **Portability:** the same MCP server works with any AI that supports MCP connectors.
-- **Rules are pure functions:** plain data in, plain data out, no clock (`now` is always passed in). Tested with ~370 unit tests plus pgTAP suites for the database.
+- **Rules are pure functions:** plain data in, plain data out, no clock (`now` is always passed in). Tested with ~430 unit tests plus pgTAP suites for the database.
 
 ## Data schema
 
-The database has 29 tables, all in Postgres (Supabase), and every row belongs to you through row-level security.
+The database has 33 tables, all in Postgres (Supabase), and every row belongs to you through row-level security.
 
 | Table | Key fields | Purpose |
 | --- | --- | --- |
@@ -301,20 +304,22 @@ Added since the first schema:
 | applications, application\_requirements | Applications and their checklists |
 | updates, update\_log | Updates owed and when each was sent |
 | push\_subscriptions | Devices that receive nudges |
+| fun\_activities | The fun list: cost, minutes, energy, company, times done, last done |
+| courses, course\_topics, course\_assessments | Courses (each with its own academic skill), their syllabus, and tests/exams/assignments linked to events or tasks |
 | private.nudges | Every nudge sent, so none repeat (not reachable from the API) |
 
-Tasks also gained a title, base XP, duration, `must_from`, a reminder note and an optional skill link; items gained priority and floor/comfortable amounts; transactions gained void and split markers. The rules that matter are enforced by the database itself: composite `(id, user_id)` foreign keys so a row can't point at someone else's, a commit-time check that weights sum to 100, and a read-only XP ledger.
+Tasks also gained a title, base XP, duration, `must_from`, a reminder note, an optional skill link, a topic (study tasks) and a fun-activity link; items gained priority and floor/comfortable amounts; transactions gained void and split markers. The rules that matter are enforced by the database itself: composite `(id, user_id)` foreign keys so a row can't point at someone else's, a commit-time check that weights sum to 100, and a read-only XP ledger.
 
 A single `export_all` function dumps every table to JSON so your data is never trapped.
 
 ## MCP tool list
 
-The connector exposes 61 tools. Each one returns the current mode, so the AI always knows how strict to be.
+The connector exposes 68 tools. Each one returns the current mode, so the AI always knows how strict to be.
 
 | Area | Tools |
 | --- | --- |
 | Today | get\_today: the top 3, non-negotiables, overdue, money status, mode, review topics, the "Who I'm becoming" profile |
-| Tasks | add\_task, update\_task, complete\_task (weighted XP, late handling), delete\_task (mistakes only) |
+| Tasks | add\_task (optionally linked to a skill + topic, or a fun activity), update\_task, complete\_task (weighted XP, late handling, topic confidence), delete\_task (mistakes only) |
 | Capacity | get\_capacity, set\_capacity |
 | Planning | plan\_day, accept\_day\_plan |
 | Items | add\_item (with suggested pillar weights), list\_items |
@@ -331,6 +336,8 @@ The connector exposes 61 tools. Each one returns the current mode, so the AI alw
 | Updates | add\_update, list\_updates, change\_update, draft\_update, mark\_update\_sent |
 | Calendar | connect\_calendar, sync\_calendar, disconnect\_calendar |
 | Settings | get\_settings, update\_settings |
+| Fun | list\_fun (with suggestions that fit now), add\_fun, update\_fun, log\_fun |
+| Courses | add\_course (from an outline), list\_courses, update\_course, update\_assessment, propose\_study\_plan, accept\_study\_plan |
 
 Authentication is OAuth 2.1 with PKCE. It never runs authless, because it returns your money and personal data.
 
@@ -340,7 +347,7 @@ The app is designed phone-first as an installable web app (PWA) on Android, with
 
 | Tab | What's on it |
 | --- | --- |
-| Quests | Needs, wants, goals, wishes and dreams, with tier filters and an add button. Applications and Updates live here |
+| Quests | Needs, wants, goals, wishes and dreams, with tier filters and an add button. Courses, Fun list, Applications and Updates live here |
 | Money | Balance card, current stage, buckets, the gap in deficit mode, quick log, history with void and edit, purchase checks. Pantry lives here |
 | Home (centre) | The 3 things that matter right now, with a button to do one. Everything else is one tap away, plus Plan my day, Events and today's workout |
 | Stats | The eleven pillars and levels, learning and training. The numbers live here, behind a tap, and are never pushed at you on Home |

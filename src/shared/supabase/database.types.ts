@@ -69,6 +69,75 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"course_assessments": {
+                  Row: {
+                    "course_id": string,"created_at": string,"done": boolean,"due_at": string | null,"event_id": string | null,"id": string,"kind": string,"score": string | null,"task_id": string | null,"title": string,"topics": (string)[],"user_id": string,"weight_pct": number | null
+                  }
+                  Insert: {
+                    "course_id": string,"created_at"?: string,"done"?: boolean,"due_at"?: string | null,"event_id"?: string | null,"id"?: string,"kind": string,"score"?: string | null,"task_id"?: string | null,"title": string,"topics"?: (string)[],"user_id"?: string,"weight_pct"?: number | null
+                  }
+                  Update: {
+                    "course_id"?: string,"created_at"?: string,"done"?: boolean,"due_at"?: string | null,"event_id"?: string | null,"id"?: string,"kind"?: string,"score"?: string | null,"task_id"?: string | null,"title"?: string,"topics"?: (string)[],"user_id"?: string,"weight_pct"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "course_assessments_course_id_user_id_fkey"
+      columns: ["course_id","user_id"]
+isOneToOne: false
+      referencedRelation: "courses"
+      referencedColumns: ["id","user_id"]
+    },{
+      foreignKeyName: "course_assessments_event_id_user_id_fkey"
+      columns: ["event_id","user_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id","user_id"]
+    },{
+      foreignKeyName: "course_assessments_task_id_user_id_fkey"
+      columns: ["task_id","user_id"]
+isOneToOne: false
+      referencedRelation: "tasks"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"course_topics": {
+                  Row: {
+                    "course_id": string,"id": string,"notes": string | null,"position": number,"title": string,"user_id": string,"week": number | null
+                  }
+                  Insert: {
+                    "course_id": string,"id"?: string,"notes"?: string | null,"position"?: number,"title": string,"user_id"?: string,"week"?: number | null
+                  }
+                  Update: {
+                    "course_id"?: string,"id"?: string,"notes"?: string | null,"position"?: number,"title"?: string,"user_id"?: string,"week"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "course_topics_course_id_user_id_fkey"
+      columns: ["course_id","user_id"]
+isOneToOne: false
+      referencedRelation: "courses"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"courses": {
+                  Row: {
+                    "code": string | null,"created_at": string,"description": string | null,"id": string,"lecturer": string | null,"semester": string | null,"skill_id": string,"status": string,"target_grade": string | null,"title": string,"units": number | null,"user_id": string
+                  }
+                  Insert: {
+                    "code"?: string | null,"created_at"?: string,"description"?: string | null,"id"?: string,"lecturer"?: string | null,"semester"?: string | null,"skill_id": string,"status"?: string,"target_grade"?: string | null,"title": string,"units"?: number | null,"user_id"?: string
+                  }
+                  Update: {
+                    "code"?: string | null,"created_at"?: string,"description"?: string | null,"id"?: string,"lecturer"?: string | null,"semester"?: string | null,"skill_id"?: string,"status"?: string,"target_grade"?: string | null,"title"?: string,"units"?: number | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "courses_skill_id_user_id_fkey"
+      columns: ["skill_id","user_id"]
+isOneToOne: false
+      referencedRelation: "skills"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
                 },"events": {
                   Row: {
                     "all_day": boolean,"created_at": string,"ends_at": string | null,"external_uid": string | null,"id": string,"important": boolean,"kind": string,"location": string | null,"notes": string | null,"person": string | null,"reminder_note": string | null,"source": string,"starts_at": string,"status": string,"title": string,"user_id": string,"yearly": boolean
@@ -78,6 +147,19 @@ isOneToOne: false
                   }
                   Update: {
                     "all_day"?: boolean,"created_at"?: string,"ends_at"?: string | null,"external_uid"?: string | null,"id"?: string,"important"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"reminder_note"?: string | null,"source"?: string,"starts_at"?: string,"status"?: string,"title"?: string,"user_id"?: string,"yearly"?: boolean
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"fun_activities": {
+                  Row: {
+                    "active": boolean,"company": string,"cost": number,"created_at": string,"energy": string,"id": string,"last_done_at": string | null,"minutes": number | null,"notes": string | null,"times_done": number,"title": string,"user_id": string
+                  }
+                  Insert: {
+                    "active"?: boolean,"company"?: string,"cost"?: number,"created_at"?: string,"energy"?: string,"id"?: string,"last_done_at"?: string | null,"minutes"?: number | null,"notes"?: string | null,"times_done"?: number,"title": string,"user_id"?: string
+                  }
+                  Update: {
+                    "active"?: boolean,"company"?: string,"cost"?: number,"created_at"?: string,"energy"?: string,"id"?: string,"last_done_at"?: string | null,"minutes"?: number | null,"notes"?: string | null,"times_done"?: number,"title"?: string,"user_id"?: string
                   }
                   Relationships: [
                     
@@ -277,16 +359,22 @@ isOneToOne: false
                   ]
                 },"tasks": {
                   Row: {
-                    "base_xp": number,"created_at": string,"done_at": string | null,"due_at": string | null,"duration_minutes": number | null,"id": string,"is_non_negotiable": boolean,"item_id": string | null,"must_from": string | null,"occurs_on": string | null,"recurrence": string | null,"reminder_note": string | null,"reminders": (string)[] | null,"series_id": string | null,"skill_id": string | null,"status": Database["public"]['Enums']["task_status"],"title": string,"user_id": string
+                    "base_xp": number,"created_at": string,"done_at": string | null,"due_at": string | null,"duration_minutes": number | null,"fun_activity_id": string | null,"id": string,"is_non_negotiable": boolean,"item_id": string | null,"must_from": string | null,"occurs_on": string | null,"recurrence": string | null,"reminder_note": string | null,"reminders": (string)[] | null,"series_id": string | null,"skill_id": string | null,"status": Database["public"]['Enums']["task_status"],"title": string,"topic": string | null,"user_id": string
                   }
                   Insert: {
-                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminder_note"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title": string,"user_id"?: string
+                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"fun_activity_id"?: string | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminder_note"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title": string,"topic"?: string | null,"user_id"?: string
                   }
                   Update: {
-                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminder_note"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"user_id"?: string
+                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"fun_activity_id"?: string | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminder_note"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"topic"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "tasks_fun_activity_id_user_id_fkey"
+      columns: ["fun_activity_id","user_id"]
+isOneToOne: false
+      referencedRelation: "fun_activities"
+      referencedColumns: ["id","user_id"]
+    },{
       foreignKeyName: "tasks_item_id_user_id_fkey"
       columns: ["item_id","user_id"]
 isOneToOne: false

@@ -35,6 +35,8 @@ export function registerPlanningTools(server: McpServer) {
             assignments: plan.assignments.map((a) => ({ task_id: a.taskId, time: hhmm(a.start), suggestionOnly: a.suggestionOnly })),
             unplaced: plan.unplaced,
             overCapacity: plan.overCapacity,
+            // An idea from his fun list that fits the free slot (time, money, mood). Offer it, don't insist.
+            funIdea: plan.funIdea,
           }),
         );
       } catch (error) {
