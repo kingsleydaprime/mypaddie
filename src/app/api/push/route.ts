@@ -23,6 +23,7 @@ const body = z.object({
       person: z.string().nullable().optional(),
       days: z.number().int().nullable().optional(),
       note: z.string().nullable().optional(),
+      summary: z.object({ done: z.number().int(), slipped: z.number().int(), xp: z.number().int(), tomorrow: z.number().int() }).nullable().optional(),
     }),
   ),
 });

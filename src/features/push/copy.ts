@@ -13,6 +13,8 @@ export interface Nudge {
   days?: number | null;
   /** His own words for this task/event, if he set any. */
   note?: string | null;
+  /** Close-out only: the day in numbers; `tomorrow` = how many things are on tomorrow (items holds the first three). */
+  summary?: { done: number; slipped: number; xp: number; tomorrow: number } | null;
 }
 
 export interface NotificationCopy {
@@ -59,6 +61,19 @@ function defaultCopy(n: Nudge): NotificationCopy {
   if (n.kind === "close_out") {
     // Level carries how many things are still open.
     const open = n.level;
+    const s = n.summary;
+    if (s) {
+      const day = [`${s.done} done`, s.slipped ? `${s.slipped} slipped` : null, open ? `${open} open` : null].filter(Boolean).join(", ");
+      const next = n.items ?? [];
+      const more = s.tomorrow - next.length;
+      const tomorrow = next.length ? `Tomorrow: ${next.join(", ")}${more > 0 ? ` +${more} more` : ""}.` : "Tomorrow's clear so far.";
+      return {
+        title: `Today: ${day} · ${s.xp >= 0 ? "+" : ""}${s.xp} XP`,
+        body: `${open === 0 ? "Name one win." : `Move, drop or own the open one${open === 1 ? "" : "s"}.`} ${tomorrow}`,
+        url: "/app/close",
+        tag: "close-out",
+      };
+    }
     return {
       title: "Close out the day",
       body: open === 0

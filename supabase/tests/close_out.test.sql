@@ -8,7 +8,7 @@ create function pg_temp.at(t timestamptz) returns text language sql as $$
   select coalesce(string_agg(n->>'level', ','), '')
   from jsonb_array_elements(private.collect_close_out_nudges(t)) n where n->>'endpoint' like 'https://co.example/%'
 $$;
-select plan(13);
+select plan(14);
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'c@example.com'),
   ('22222222-2222-2222-2222-222222222222', 'idle@example.com');
@@ -57,6 +57,22 @@ insert into public.tasks (user_id, title, occurs_on, series_id, recurrence) valu
   ('22222222-2222-2222-2222-222222222222', 'Pray', '2026-10-17', gen_random_uuid(), 'FREQ=DAILY');
 select is((select string_agg(n->>'level', ',') from jsonb_array_elements(private.collect_close_out_nudges('2026-10-17 21:30+01')) n
   where n->>'endpoint' = 'https://co.example/b'), '1', 'an untimed habit due today counts');
+
+-- The push carries the day's numbers and tomorrow's first three (Mon 19 Oct).
+insert into public.tasks (user_id, title, due_at, status, done_at) values
+  ('11111111-1111-1111-1111-111111111111', 'Laundry', '2026-10-19 10:00+01', 'done', '2026-10-19 10:30+01');
+insert into public.xp_log (user_id, pillar, amount, reason, at) values ('11111111-1111-1111-1111-111111111111', 'physical', 10, 'completion', '2026-10-19 10:30+01');
+insert into public.tasks (user_id, title, due_at, is_non_negotiable) values
+  ('11111111-1111-1111-1111-111111111111', 'Standup', '2026-10-20 09:00+01', true),
+  ('11111111-1111-1111-1111-111111111111', 'Read', '2026-10-20 23:59+01', false);
+-- A daily habit whose last row is from Saturday: tomorrow comes from its rule.
+insert into public.tasks (user_id, title, due_at, recurrence, series_id, occurs_on) values
+  ('11111111-1111-1111-1111-111111111111', 'Pray', '2026-10-17 06:00+01', 'FREQ=DAILY', gen_random_uuid(), '2026-10-17');
+select is(
+  (select (n->'summary')::text || ' ' || (n->'items')::text from jsonb_array_elements(private.collect_close_out_nudges('2026-10-19 21:30+01')) n
+    where n->>'endpoint' = 'https://co.example/a'),
+  '{"xp": 10, "done": 1, "slipped": 0, "tomorrow": 3} ["09:00 Standup", "06:00 Pray", "Read"]',
+  'done, XP and tomorrow: must-dos first, then by time, then any time; habits from their rule');
 
 select * from finish();
 rollback;

@@ -1282,3 +1282,14 @@ would have turned a weekly study group into a class that silences Paddie. So
 classes now carry `tasks.is_class`, set only by set_timetable, copied by
 `spawn_occurrence`, and backfilled exactly (only the timetable had set
 `course_id` on repeating rows). A class stays locked to its course in the app.
+
+### The close-out push is the evening summary
+Rather than a fourth evening push, the close-out (21:30) carries the summary:
+"Today: 4 done, 1 slipped, 2 open · +35 XP" and "Tomorrow: 09:00 Standup,
+06:00 Pray, Read +2 more". The numbers come from the same day the user lives
+in (their time zone): tasks done, slips, and net XP (undos already net out in
+the ledger). Tomorrow lists must-dos first, then by time, then any-time — and
+includes habits worked out from their repeat rule, because the nightly job
+only creates today's rows. A push without a summary (sent by an older job)
+still gets the old wording, so the database and the site can deploy in either
+order.

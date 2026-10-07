@@ -121,3 +121,24 @@ describe("leave nudge", () => {
     expect(c.body).toContain("Standup starts soon");
   });
 });
+
+describe("close-out summary", () => {
+  const n = (level: number, summary: { done: number; slipped: number; xp: number; tomorrow: number }, items: string[]) =>
+    copyFor({ kind: "close_out", level, title: null, items, summary });
+  test("the day in numbers, what to do, and tomorrow", () => {
+    const c = n(2, { done: 4, slipped: 1, xp: 35, tomorrow: 5 }, ["09:00 Standup", "06:00 Pray", "Read"]);
+    expect(c.title).toBe("Today: 4 done, 1 slipped, 2 open · +35 XP");
+    expect(c.body).toBe("Move, drop or own the open ones. Tomorrow: 09:00 Standup, 06:00 Pray, Read +2 more.");
+    expect(c.url).toBe("/app/close");
+  });
+  test("everything done, tomorrow clear", () => {
+    const c = n(0, { done: 3, slipped: 0, xp: 20, tomorrow: 0 }, []);
+    expect(c.title).toBe("Today: 3 done · +20 XP");
+    expect(c.body).toBe("Name one win. Tomorrow's clear so far.");
+  });
+  test("one open, a day that lost XP", () => {
+    const c = n(1, { done: 0, slipped: 0, xp: -5, tomorrow: 1 }, ["Gym"]);
+    expect(c.title).toBe("Today: 0 done, 1 open · -5 XP");
+    expect(c.body).toBe("Move, drop or own the open one. Tomorrow: Gym.");
+  });
+});
