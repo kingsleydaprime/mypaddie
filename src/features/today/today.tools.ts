@@ -3,7 +3,9 @@ import { z } from "zod";
 import { upcoming } from "@/features/events/events";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
 import { syncCalendar } from "@/features/calendar/calendar.repo";
+import { loadWeekLoad } from "@/features/commitments/commitments.repo";
 import { loadFunPicture } from "@/features/fun/fun.repo";
+import { applyBrokenPromises, loadPromisePicture } from "@/features/promises/promises.repo";
 import { loadActiveIdentity } from "@/features/identity/identity.repo";
 import { loadLearning } from "@/features/learning/learning.repo";
 import { dayEndsAt } from "@/features/settings/schedule";
@@ -57,10 +59,10 @@ export function registerTodayTools(server: McpServer) {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const caughtUp = await catchUp(db, now);
+        const caughtUp = { ...(await catchUp(db, now)), brokenPromises: await applyBrokenPromises(db, now) };
         // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
         await syncCalendar(db, now).catch(() => null);
-        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun] = await Promise.all([
+        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun, promises, week] = await Promise.all([
           loadTasksAroundToday(db, now),
           loadMode(db, now),
           loadMoneyStage(db, now),
@@ -71,6 +73,8 @@ export function registerTodayTools(server: McpServer) {
           loadLearning(db, now),
           loadSchedule(db),
           loadFunPicture(db, now),
+          loadPromisePicture(db, now),
+          loadWeekLoad(db, now),
         ]);
         const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
         const room = roomOn(dayKey(now, tz), dayTasks, capacity, now, undefined, dayEndsAt(schedule));
@@ -103,6 +107,13 @@ export function registerTodayTools(server: McpServer) {
             daysSince: fun.daysSinceFun,
             ...(funDue || questsDone ? { ideas: fun.suggestions.map((f) => f.title), why: questsDone ? "quests_done" : "overdue" } : {}),
           },
+          // Promises due within 2 days (or with no date). Remind him plainly; if one can't be kept, tell them now.
+          promises: {
+            dueSoon: promises.open.filter((p) => p.daysLeft === null || p.daysLeft <= 2).map((p) => ({ id: p.id, person: p.person, what: p.what, daysLeft: p.daysLeft })),
+            ...(promises.patterns.length ? { patterns: promises.patterns } : {}),
+          },
+          // The week's load. Only raise it when it's tight or overloaded, and before he takes on anything new.
+          week: { verdict: week.verdict, percent: Math.round(week.ratio * 100), ...(week.verdict !== "room" ? { dropCandidates: week.dropCandidates.slice(0, 3).map((d) => d.title) } : {}) },
           // Who he's becoming — coach toward it all chat. Null: offer to help him write one.
           becoming: identity ? { name: identity.name, text: identity.text } : null,
         });

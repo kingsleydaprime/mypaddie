@@ -4,7 +4,7 @@ Oct 5, 2026 · updated Oct 6, 2026 to match what's built · @Kingsley Ihemelandu
 
 > **Public version.** The system design is complete; personal details (real figures, habits, wishes, the identity profile) have been replaced with generic examples. The real ones live in the app's own database, not in this repo.
 
-> **Status (Oct 6, 2026).** The four-day build is done: rules engine, MCP connector (68 tools), phone app, push notifications, and the extras that came after (learning, workouts, pantry, events, applications, updates, Google Calendar import, a fun list and courses). The reasoning behind each choice is in [DECISIONS.md](../DECISIONS.md); what's next, including a multi-user version, is in [ROADMAP.md](ROADMAP.md).
+> **Status (Oct 6, 2026).** The four-day build is done: rules engine, MCP connector (75 tools), phone app, push notifications, and the extras that came after (learning, workouts, pantry, events, applications, updates, Google Calendar import, a fun list, courses, commitments and promises). The reasoning behind each choice is in [DECISIONS.md](../DECISIONS.md); what's next, including a multi-user version, is in [ROADMAP.md](ROADMAP.md).
 
 ## Vision and principles
 
@@ -57,6 +57,7 @@ XP is whole numbers, split by largest remainder, so the parts always add up to t
 - Wishes never deduct.
 - Bonuses: goal completion 2×, dream milestone 3×, a wish happening +50.
 - Learning sessions earn 1 XP per 5 minutes to the skill's pillar.
+- Promises: kept on their day +15 (Character, Relationships). Broken (not kept, released or renegotiated by the end of the day) −15; keeping it afterwards earns back half, so about −50% net.
 
 Every gain and deduction is an append-only ledger entry, and the same completion can never pay twice.
 
@@ -253,6 +254,9 @@ These were added after the four-day plan, each because a real day needed it.
 - **Google Calendar import.** Read-only, through the calendar's private iCal link (no Google sign-in needed). Synced when Today loads; your own flags survive a re-sync.
 - **Fun list.** Things you enjoy, with rough cost, time, energy and company. "Did it" pays XP (emotional, plus social with people). Suggestions skip what you can't afford (only free fun in a deficit), what doesn't fit the gap, and high-energy fun on a soft day, and favour what you haven't done in a while. Free time in Plan my day comes with an idea.
 - **Courses.** Code, title, lecturer, units, target grade, the syllabus (topics, with weeks) and assessments. Share an outline and the AI fills it all in. Exams and tests become important events; assignments become tasks that turn must-do 2 days before. Each topic is to start, learning or solid, from the confidence you give after studying it. Paddie proposes study sessions (exam prep first, then reviews due, then new topics) that fit your daily capacity, and books the ones you accept. It can also create study tasks directly.
+- **Commitments.** Jobs (full-time, part-time, freelance, internship), roles (volunteer, campus ambassador, academic lead), memberships (a students' union, the church choir) and teams. Each has a priority (core, important, optional); its regular sessions (team training, rehearsals, personal training) are recurring tasks, and competitions or meetings are events tied to it. Pausing or ending one gives the time back.
+- **Weekly load.** The next 7 days plus unscheduled hours against the week's capacity: room, tight (80%+) or overloaded (over 100%). Before you take on something new, paddie checks, and if your plate is full it says so and suggests what to pause (optional first, never core), measured against "Who I'm becoming". Advice only; you decide.
+- **Promises.** Who, what, by when. On Today, a must-do from the day before. Tell them in time and move the date, or they let you off, and nothing is lost; patterns ("two broken promises to the same person") are named.
 
 ## Architecture
 
@@ -271,11 +275,11 @@ The AI chat calls the MCP server and the phone app calls the app API, but both g
 - **Hosting:** one Next.js app on Vercel serves the MCP server (`/api/mcp`), the phone app (`/app`) and a public landing page (`/`).
 - **Security:** the AI signs in *as you* through Supabase Auth's OAuth 2.1 server (PKCE, a hand-registered client per AI app). No admin key exists anywhere in the app: every query runs under row-level security. The push route has no database access; the database decides who to nudge and calls it with a shared secret.
 - **Portability:** the same MCP server works with any AI that supports MCP connectors.
-- **Rules are pure functions:** plain data in, plain data out, no clock (`now` is always passed in). Tested with ~430 unit tests plus pgTAP suites for the database.
+- **Rules are pure functions:** plain data in, plain data out, no clock (`now` is always passed in). Tested with ~460 unit tests plus pgTAP suites for the database.
 
 ## Data schema
 
-The database has 33 tables, all in Postgres (Supabase), and every row belongs to you through row-level security.
+The database has 35 tables, all in Postgres (Supabase), and every row belongs to you through row-level security.
 
 | Table | Key fields | Purpose |
 | --- | --- | --- |
@@ -305,6 +309,8 @@ Added since the first schema:
 | updates, update\_log | Updates owed and when each was sent |
 | push\_subscriptions | Devices that receive nudges |
 | fun\_activities | The fun list: cost, minutes, energy, company, times done, last done |
+| commitments | Jobs, roles, memberships and teams: kind, role, org, priority, status, unscheduled hours; tasks and events link to them |
+| promises | To whom, what, by when, status (open, kept, released, broken), renegotiations, its task |
 | courses, course\_topics, course\_assessments | Courses (each with its own academic skill), their syllabus, and tests/exams/assignments linked to events or tasks |
 | private.nudges | Every nudge sent, so none repeat (not reachable from the API) |
 
@@ -314,7 +320,7 @@ A single `export_all` function dumps every table to JSON so your data is never t
 
 ## MCP tool list
 
-The connector exposes 68 tools. Each one returns the current mode, so the AI always knows how strict to be.
+The connector exposes 75 tools. Each one returns the current mode, so the AI always knows how strict to be.
 
 | Area | Tools |
 | --- | --- |
@@ -337,6 +343,8 @@ The connector exposes 68 tools. Each one returns the current mode, so the AI alw
 | Calendar | connect\_calendar, sync\_calendar, disconnect\_calendar |
 | Settings | get\_settings, update\_settings |
 | Fun | list\_fun (with suggestions that fit now), add\_fun, update\_fun, log\_fun |
+| Commitments | add\_commitment (with regular sessions), list\_commitments, update\_commitment, check\_load (before taking on more) |
+| Promises | add\_promise, list\_promises, update\_promise (kept, released, renegotiate) |
 | Courses | add\_course (from an outline), list\_courses, update\_course, update\_assessment, propose\_study\_plan, accept\_study\_plan |
 
 Authentication is OAuth 2.1 with PKCE. It never runs authless, because it returns your money and personal data.
@@ -347,7 +355,7 @@ The app is designed phone-first as an installable web app (PWA) on Android, with
 
 | Tab | What's on it |
 | --- | --- |
-| Quests | Needs, wants, goals, wishes and dreams, with tier filters and an add button. Courses, Fun list, Applications and Updates live here |
+| Quests | Needs, wants, goals, wishes and dreams, with tier filters and an add button. Commitments, Promises, Courses, Fun list, Applications and Updates live here |
 | Money | Balance card, current stage, buckets, the gap in deficit mode, quick log, history with void and edit, purchase checks. Pantry lives here |
 | Home (centre) | The 3 things that matter right now, with a button to do one. Everything else is one tap away, plus Plan my day, Events and today's workout |
 | Stats | The eleven pillars and levels, learning and training. The numbers live here, behind a tap, and are never pushed at you on Home |

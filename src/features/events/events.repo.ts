@@ -66,6 +66,7 @@ export interface NewEvent {
   location?: string | null;
   notes?: string | null;
   reminderNote?: string | null;
+  commitmentId?: string | null;
 }
 
 export async function insertEvent(db: Db, e: NewEvent) {
@@ -83,6 +84,7 @@ export async function insertEvent(db: Db, e: NewEvent) {
       location: e.location ?? null,
       notes: e.notes ?? null,
       reminder_note: e.reminderNote?.trim() || null,
+      commitment_id: e.commitmentId ?? null,
     })
     .select(COLUMNS)
     .single();

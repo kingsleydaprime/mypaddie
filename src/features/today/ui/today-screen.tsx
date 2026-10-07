@@ -1,4 +1,5 @@
 import { syncCalendar } from "@/features/calendar/calendar.repo";
+import { applyBrokenPromises } from "@/features/promises/promises.repo";
 import { upcoming } from "@/features/events/events";
 import Link from "next/link";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
@@ -50,6 +51,7 @@ function Row({ item, now, big }: { item: FocusItem; now: Date; big?: boolean }) 
 export async function TodayScreen({ db }: { db: Db }) {
   const now = new Date();
   await catchUp(db, now);
+  await applyBrokenPromises(db, now);
   // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
   await syncCalendar(db, now).catch(() => null);
   const [tasks, mode, events, learning, schedule] = await Promise.all([loadTasksAroundToday(db, now), loadMode(db, now), loadUpcomingEvents(db), loadLearning(db, now), loadSchedule(db)]);

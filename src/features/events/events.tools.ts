@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import { findCommitment } from "@/features/commitments/commitments.repo";
 import { withMode } from "@/features/mode/mode.repo";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { DEFAULT_CONFIG } from "@/shared/config";
@@ -42,19 +43,23 @@ export function registerEventTools(server: McpServer) {
         prep: z
           .object({ days_before: z.number().int().min(1).max(90), title: z.string().trim().min(1).optional(), duration_minutes: z.number().int().min(5).max(600).optional() })
           .optional(),
+        commitment: z.string().trim().min(1).optional().describe("The job, role, team or group it's for (title or id from list_commitments): a competition, election, meeting"),
       }),
     },
     async (
       args: {
         title: string; kind: EventKind; date: string; start_time?: string; end_time?: string; important: boolean; yearly?: boolean;
         person?: string; location?: string; notes?: string; reminder_note?: string; prep?: { days_before: number; title?: string; duration_minutes?: number };
+        commitment?: string;
       },
       ctx: ToolContext,
     ) => {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const created = await addEvent(db, args, now);
+        const commitment = args.commitment ? await findCommitment(db, args.commitment) : null;
+        if (args.commitment && !commitment) return toolError(`add_event: no single commitment matches "${args.commitment}" — check list_commitments`);
+        const created = await addEvent(db, { ...args, commitment_id: commitment?.id ?? null }, now);
         if ("error" in created) return toolError(`add_event: ${created.error}`);
         return ok(await withMode(db, now, { ...created }));
       } catch (error) {

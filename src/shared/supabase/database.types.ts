@@ -69,6 +69,19 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"commitments": {
+                  Row: {
+                    "created_at": string,"ends_on": string | null,"extra_minutes_per_week": number,"id": string,"kind": string,"notes": string | null,"org": string | null,"priority": string,"starts_on": string | null,"status": string,"title": string,"user_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"ends_on"?: string | null,"extra_minutes_per_week"?: number,"id"?: string,"kind"?: string,"notes"?: string | null,"org"?: string | null,"priority"?: string,"starts_on"?: string | null,"status"?: string,"title": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"ends_on"?: string | null,"extra_minutes_per_week"?: number,"id"?: string,"kind"?: string,"notes"?: string | null,"org"?: string | null,"priority"?: string,"starts_on"?: string | null,"status"?: string,"title"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"course_assessments": {
                   Row: {
                     "course_id": string,"created_at": string,"done": boolean,"due_at": string | null,"event_id": string | null,"id": string,"kind": string,"score": string | null,"task_id": string | null,"title": string,"topics": (string)[],"user_id": string,"weight_pct": number | null
@@ -140,16 +153,22 @@ isOneToOne: false
                   ]
                 },"events": {
                   Row: {
-                    "all_day": boolean,"created_at": string,"ends_at": string | null,"external_uid": string | null,"id": string,"important": boolean,"kind": string,"location": string | null,"notes": string | null,"person": string | null,"reminder_note": string | null,"source": string,"starts_at": string,"status": string,"title": string,"user_id": string,"yearly": boolean
+                    "all_day": boolean,"commitment_id": string | null,"created_at": string,"ends_at": string | null,"external_uid": string | null,"id": string,"important": boolean,"kind": string,"location": string | null,"notes": string | null,"person": string | null,"reminder_note": string | null,"source": string,"starts_at": string,"status": string,"title": string,"user_id": string,"yearly": boolean
                   }
                   Insert: {
-                    "all_day"?: boolean,"created_at"?: string,"ends_at"?: string | null,"external_uid"?: string | null,"id"?: string,"important"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"reminder_note"?: string | null,"source"?: string,"starts_at": string,"status"?: string,"title": string,"user_id"?: string,"yearly"?: boolean
+                    "all_day"?: boolean,"commitment_id"?: string | null,"created_at"?: string,"ends_at"?: string | null,"external_uid"?: string | null,"id"?: string,"important"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"reminder_note"?: string | null,"source"?: string,"starts_at": string,"status"?: string,"title": string,"user_id"?: string,"yearly"?: boolean
                   }
                   Update: {
-                    "all_day"?: boolean,"created_at"?: string,"ends_at"?: string | null,"external_uid"?: string | null,"id"?: string,"important"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"reminder_note"?: string | null,"source"?: string,"starts_at"?: string,"status"?: string,"title"?: string,"user_id"?: string,"yearly"?: boolean
+                    "all_day"?: boolean,"commitment_id"?: string | null,"created_at"?: string,"ends_at"?: string | null,"external_uid"?: string | null,"id"?: string,"important"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"reminder_note"?: string | null,"source"?: string,"starts_at"?: string,"status"?: string,"title"?: string,"user_id"?: string,"yearly"?: boolean
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "events_commitment_id_user_id_fkey"
+      columns: ["commitment_id","user_id"]
+isOneToOne: false
+      referencedRelation: "commitments"
+      referencedColumns: ["id","user_id"]
+    }
                   ]
                 },"fun_activities": {
                   Row: {
@@ -261,6 +280,25 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"promises": {
+                  Row: {
+                    "created_at": string,"due_at": string | null,"id": string,"kept_at": string | null,"made_at": string,"notes": string | null,"person": string,"released_at": string | null,"renegotiations": number,"status": string,"task_id": string | null,"user_id": string,"what": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"due_at"?: string | null,"id"?: string,"kept_at"?: string | null,"made_at"?: string,"notes"?: string | null,"person": string,"released_at"?: string | null,"renegotiations"?: number,"status"?: string,"task_id"?: string | null,"user_id"?: string,"what": string
+                  }
+                  Update: {
+                    "created_at"?: string,"due_at"?: string | null,"id"?: string,"kept_at"?: string | null,"made_at"?: string,"notes"?: string | null,"person"?: string,"released_at"?: string | null,"renegotiations"?: number,"status"?: string,"task_id"?: string | null,"user_id"?: string,"what"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "promises_task_id_user_id_fkey"
+      columns: ["task_id","user_id"]
+isOneToOne: false
+      referencedRelation: "tasks"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
                 },"purchase_checks": {
                   Row: {
                     "decided_at": string,"id": string,"interest": string,"interest_changed_at": string | null,"item": string,"price": number,"reasons": NonNullable<Json>,"user_id": string,"verdict": Database["public"]['Enums']["purchase_verdict"]
@@ -359,16 +397,22 @@ isOneToOne: false
                   ]
                 },"tasks": {
                   Row: {
-                    "base_xp": number,"created_at": string,"done_at": string | null,"due_at": string | null,"duration_minutes": number | null,"fun_activity_id": string | null,"id": string,"is_non_negotiable": boolean,"item_id": string | null,"must_from": string | null,"occurs_on": string | null,"recurrence": string | null,"reminder_note": string | null,"reminders": (string)[] | null,"series_id": string | null,"skill_id": string | null,"status": Database["public"]['Enums']["task_status"],"title": string,"topic": string | null,"user_id": string
+                    "base_xp": number,"commitment_id": string | null,"created_at": string,"done_at": string | null,"due_at": string | null,"duration_minutes": number | null,"fun_activity_id": string | null,"id": string,"is_non_negotiable": boolean,"item_id": string | null,"must_from": string | null,"occurs_on": string | null,"recurrence": string | null,"reminder_note": string | null,"reminders": (string)[] | null,"series_id": string | null,"skill_id": string | null,"status": Database["public"]['Enums']["task_status"],"title": string,"topic": string | null,"user_id": string
                   }
                   Insert: {
-                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"fun_activity_id"?: string | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminder_note"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title": string,"topic"?: string | null,"user_id"?: string
+                    "base_xp"?: number,"commitment_id"?: string | null,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"fun_activity_id"?: string | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminder_note"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title": string,"topic"?: string | null,"user_id"?: string
                   }
                   Update: {
-                    "base_xp"?: number,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"fun_activity_id"?: string | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminder_note"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"topic"?: string | null,"user_id"?: string
+                    "base_xp"?: number,"commitment_id"?: string | null,"created_at"?: string,"done_at"?: string | null,"due_at"?: string | null,"duration_minutes"?: number | null,"fun_activity_id"?: string | null,"id"?: string,"is_non_negotiable"?: boolean,"item_id"?: string | null,"must_from"?: string | null,"occurs_on"?: string | null,"recurrence"?: string | null,"reminder_note"?: string | null,"reminders"?: (string)[] | null,"series_id"?: string | null,"skill_id"?: string | null,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"topic"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "tasks_commitment_id_user_id_fkey"
+      columns: ["commitment_id","user_id"]
+isOneToOne: false
+      referencedRelation: "commitments"
+      referencedColumns: ["id","user_id"]
+    },{
       foreignKeyName: "tasks_fun_activity_id_user_id_fkey"
       columns: ["fun_activity_id","user_id"]
 isOneToOne: false
@@ -630,7 +674,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "bucket_name": "needs"|"buffer"|"savings"|"wants"|"flexible","item_status": "active"|"done"|"paused"|"dropped","mode": "curious"|"strict"|"soft"|"strictest"|"softest","money_direction": "in"|"out","money_tag": "need"|"want"|"unsure","pillar": "spiritual"|"mental"|"physical"|"financial"|"emotional"|"social"|"character"|"skills"|"creativity"|"relationships"|"academic","purchase_verdict": "yes"|"wait_24h"|"no","spend_level": "floor"|"comfortable","task_status": "pending"|"done"|"skipped"|"cancelled","tier": "need"|"want"|"goal"|"wish"|"dream","xp_reason": "completion"|"late_completion"|"ignored_need"|"goal_completion"|"wish_fulfilled"|"dream_milestone"|"transaction_logged"|"learning"
+            "bucket_name": "needs"|"buffer"|"savings"|"wants"|"flexible","item_status": "active"|"done"|"paused"|"dropped","mode": "curious"|"strict"|"soft"|"strictest"|"softest","money_direction": "in"|"out","money_tag": "need"|"want"|"unsure","pillar": "spiritual"|"mental"|"physical"|"financial"|"emotional"|"social"|"character"|"skills"|"creativity"|"relationships"|"academic","purchase_verdict": "yes"|"wait_24h"|"no","spend_level": "floor"|"comfortable","task_status": "pending"|"done"|"skipped"|"cancelled","tier": "need"|"want"|"goal"|"wish"|"dream","xp_reason": "completion"|"late_completion"|"ignored_need"|"goal_completion"|"wish_fulfilled"|"dream_milestone"|"transaction_logged"|"learning"|"broken_promise"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -746,7 +790,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "bucket_name": ["needs", "buffer", "savings", "wants", "flexible"],"item_status": ["active", "done", "paused", "dropped"],"mode": ["curious", "strict", "soft", "strictest", "softest"],"money_direction": ["in", "out"],"money_tag": ["need", "want", "unsure"],"pillar": ["spiritual", "mental", "physical", "financial", "emotional", "social", "character", "skills", "creativity", "relationships", "academic"],"purchase_verdict": ["yes", "wait_24h", "no"],"spend_level": ["floor", "comfortable"],"task_status": ["pending", "done", "skipped", "cancelled"],"tier": ["need", "want", "goal", "wish", "dream"],"xp_reason": ["completion", "late_completion", "ignored_need", "goal_completion", "wish_fulfilled", "dream_milestone", "transaction_logged", "learning"]
+            "bucket_name": ["needs", "buffer", "savings", "wants", "flexible"],"item_status": ["active", "done", "paused", "dropped"],"mode": ["curious", "strict", "soft", "strictest", "softest"],"money_direction": ["in", "out"],"money_tag": ["need", "want", "unsure"],"pillar": ["spiritual", "mental", "physical", "financial", "emotional", "social", "character", "skills", "creativity", "relationships", "academic"],"purchase_verdict": ["yes", "wait_24h", "no"],"spend_level": ["floor", "comfortable"],"task_status": ["pending", "done", "skipped", "cancelled"],"tier": ["need", "want", "goal", "wish", "dream"],"xp_reason": ["completion", "late_completion", "ignored_need", "goal_completion", "wish_fulfilled", "dream_milestone", "transaction_logged", "learning", "broken_promise"]
           }
         }
 } as const

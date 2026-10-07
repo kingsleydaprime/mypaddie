@@ -68,6 +68,15 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [x] Fixed: habits lost their duration, reminders and skill link after the
   first day; `export_all` missed every table added after Day 1.
 
+## Done: commitments and promises (2026-10-07)
+- [x] **Commitments**: jobs, roles, memberships, teams; priority; regular
+  sessions as recurring tasks; competitions/meetings as linked events; pause
+  or end to free the time. Quests → Commitments.
+- [x] **Weekly load**: room / tight / overloaded with drop advice, checked
+  before taking on more (`check_load`); shown on the Commitments page.
+- [x] **Promises**: tracked with a task; −15 when broken, half back if kept
+  late; renegotiate or release in time. Quests → Promises.
+
 ## Next: MyPaddie for everyone (planned 2026-10-06)
 
 Anyone signs up, connects their AI, and gets their own Paddie, hosted at
@@ -136,6 +145,11 @@ which gets a new entry when it changes.
 - Grade estimate from assessment weights and scores ("you need 62% on the final for an A").
 - Fun with specific friends: link fun to people/events ("haven't seen the guys in 3 weeks").
 - A weekly "study week" push on Sunday evening with the proposed plan.
+
+## Ideas for later (commitments and promises)
+- Competition prep plan: "final in 10 days" → proposed personal training sessions, like study plans.
+- Promise nudge wording of its own ("tell them now if you can't") instead of the generic task reminder.
+- Resuming a paused commitment brings its old sessions back.
 
 ## Known gaps
 - Voiding income that's already been split into buckets (needs a split undo).

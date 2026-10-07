@@ -216,6 +216,9 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = D
 
   // A task that was an application requirement ticks it off.
   await db.from("application_requirements").update({ done: true }).eq("task_id", taskId);
+  // A promise's task: the promise is kept (kept late still records when — see promises.ts).
+  await db.from("promises").update({ status: "kept", kept_at: now.toISOString() }).eq("task_id", taskId).eq("status", "open");
+  await db.from("promises").update({ kept_at: now.toISOString() }).eq("task_id", taskId).eq("status", "broken").is("kept_at", null);
 
   // Practice for a skill: record the time. No XP here — the task just paid it.
   let practiceLogged: { minutes: number; topic: string | null } | undefined;
@@ -377,6 +380,8 @@ export interface NewTask {
   funActivityId?: string | null;
   /** The topic a study task covers (recorded with the practice time). */
   topic?: string | null;
+  /** The job, role, team or group it's for. */
+  commitmentId?: string | null;
 }
 
 export type Reminder = "eve" | "morning" | "30" | "10";
@@ -438,6 +443,7 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = DEFA
       reminder_note: task.reminderNote?.trim() || null,
       fun_activity_id: task.funActivityId ?? null,
       topic: task.topic?.trim() || null,
+      commitment_id: task.commitmentId ?? null,
     })
     .select("id, title, due_at, recurrence")
     .single();
@@ -471,6 +477,7 @@ export interface TaskChanges {
   forceClash?: boolean;
   skillId?: string | null;
   reminderNote?: string | null;
+  commitmentId?: string | null;
 }
 
 export type UpdateResult =
@@ -582,6 +589,7 @@ export async function updateTask(
     if (changes.mustFrom !== undefined) patch.must_from = changes.mustFrom?.toISOString() ?? null;
     if (changes.skillId !== undefined) patch.skill_id = changes.skillId;
     if (changes.reminderNote !== undefined) patch.reminder_note = changes.reminderNote?.trim() || null;
+    if (changes.commitmentId !== undefined) patch.commitment_id = changes.commitmentId;
     if (moves) patch.due_at = newDueAt(row);
     if (Object.keys(patch).length > 0) {
       const { error: e } = await db.from("tasks").update(patch).eq("id", row.id);

@@ -589,3 +589,47 @@ Found while adding `topic` and `fun_activity_id`; it now copies all of them
 It listed the Day 1 tables by hand, so learning, workouts, events,
 applications and the rest were missing from "your data is never trapped". It
 now walks every public table with a `user_id`, still as the caller (RLS).
+
+## 2026-10-07 — Commitments, weekly load, promises
+
+### Commitments group what they put on the calendar
+A job, role, membership or team is a `commitments` row (kind, role, org,
+priority core / important / optional, status). Its regular sessions —
+team training, rehearsals, shifts, personal training — are recurring tasks
+with `commitment_id`, so they block time, get reminders and pay XP for
+showing up (default pillars by kind; a session can override, e.g. choir →
+spiritual). One-offs — a competition, an election — are events with
+`commitment_id`. Pausing or ending a commitment stops its sessions and
+cancels its open tasks so the time comes back; past sessions stay as history.
+
+### Weekly load: advice, not a refusal
+Daily capacity stays a hard limit. The week is advice: the next 7 days'
+scheduled minutes (from the days themselves, so it agrees with the daily
+check — habits projected, events included) plus each commitment's
+unscheduled estimate (`extra_minutes_per_week`, for freelance work and admin),
+against the 7 days' capacity. Room below 80 %, tight up to 100 %, overloaded
+above. When it isn't room — now, or after a proposed addition
+(`check_load(adding_hours_per_week)`) — it lists what to drop: optional before
+important, biggest relief first, core never; `enough` marks where dropping gets
+back to room. The AI weighs those against "Who I'm becoming"; he decides.
+Kingsley chose advice over a hard stop. Hours come from both the scheduled
+sessions and his estimate, as he asked.
+
+### Promises cost XP when broken; keeping late earns back half
+A promise (person, what, due) is carried by a task: Today, reminders,
+must-do from the morning before. Kept on its day: +15 (character 60 /
+relationships 40). Not kept, released or renegotiated by the end of its day:
+broken, −15 (the full amount, `brokenPromisePenalty` = 1), charged once against
+its task by the same catch-up that charges ignored needs. Its task stays open:
+keeping it afterwards pays the usual late half (+8), so broken-then-kept nets
+about −50 % — Kingsley's rule. Renegotiating (a new date, after telling them)
+only works while the day hasn't ended; "they let me off" in time costs
+nothing. Kept late before catch-up ran still counts as broken: the rule looks
+at when it was kept, not when the app noticed. Two or more broken promises to
+the same person in 90 days is surfaced as a pattern.
+
+### A promise is recorded even when its day is full
+Capacity refuses new work on a full day, but a promise already exists. If its
+day is full the task goes on undated (still a must-do from the day before)
+and the full day is reported — a reason to renegotiate or drop something, not
+to lose track of the promise.

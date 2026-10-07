@@ -72,6 +72,8 @@ export async function QuestsScreen({ db, tier }: { db: Db; tier: Tier | null }) 
 
       <nav className="-mx-4 flex gap-2 overflow-x-auto px-4" aria-label="More">
         {[
+          ["/app/commitments", "Commitments"],
+          ["/app/promises", "Promises"],
           ["/app/courses", "Courses"],
           ["/app/fun", "Fun list"],
           ["/app/applications", "Applications"],

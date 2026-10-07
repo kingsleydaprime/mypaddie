@@ -14,6 +14,8 @@ You talk to it through Claude, ChatGPT or Gemini (it's an [MCP](https://modelcon
 - **Nudges**: escalating reminders for must-dos, a reminder ladder (evening before → morning → 30 → 10 min), event and application deadlines — decided in Postgres every minute, respecting your quiet hours.
 - **Money**: a 30-day audit, then deficit or surplus from real numbers; a 50/30/20 waterfall proposal for income; a "don't buy this" check; bad spends flagged but never penalised.
 - **Learning, workouts, pantry, events, applications, updates**: spaced-repetition review by confidence, personal bests, meal ideas from what's in stock, birthdays that repeat, deadlines kept in their own time zone, and "draft my update" from what you actually did.
+- **Commitments and load**: jobs, roles, groups and teams with their trainings and meetings; "your plate is full — pause this?" before you take on more.
+- **Promises**: who, what, by when. Kept on time earns XP; broken costs it, and keeping it late only earns back half.
 - **Fun list**: things you enjoy, suggested when you've earned a break or gone too long without one — only what fits your free time, money and mood. "Did it" pays XP.
 - **Courses**: syllabus topics (to start / learning / solid), exams as events, assignments as tasks, and study sessions proposed from what's coming up and what's shaky. Paste an outline and the AI fills it in.
 - **Google Calendar import** (read-only, via the private iCal feed) so real meetings count.
@@ -41,7 +43,7 @@ Next.js 16 · TypeScript · Supabase (Postgres 17, Auth, Vault, pg_cron, pg_net)
 ## Testing
 
 ```bash
-bun run test              # ~430 unit tests: the rules engine, with fixed clocks
+bun run test              # ~460 unit tests: the rules engine, with fixed clocks
 bun run typecheck && bun run lint
 bun run db:test           # pgTAP: RLS, constraints, functions, the nudge scheduler
 bun run db:test:hosted    # the same pgTAP suites against the real project — always rolled back

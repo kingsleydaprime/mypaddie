@@ -11,6 +11,8 @@ export interface EngineConfig {
     lateMultiplier: number;
     /** Share of base XP deducted when a need is ignored. */
     ignoredNeedPenalty: number;
+    /** Share of a promise's XP deducted when it's broken (not kept, released or renegotiated in time). */
+    brokenPromisePenalty: number;
     goalCompletionMultiplier: number;
     dreamMilestoneMultiplier: number;
     wishBonus: number;
@@ -47,6 +49,7 @@ export const DEFAULT_CONFIG: EngineConfig = {
   xp: {
     lateMultiplier: 0.5,
     ignoredNeedPenalty: 0.5,
+    brokenPromisePenalty: 1,
     goalCompletionMultiplier: 2,
     dreamMilestoneMultiplier: 3,
     wishBonus: 50,

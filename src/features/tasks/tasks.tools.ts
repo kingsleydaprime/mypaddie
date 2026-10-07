@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
 import { PILLARS } from "@/shared/domain";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
+import { findCommitment } from "@/features/commitments/commitments.repo";
 import { findFun } from "@/features/fun/fun.repo";
 import { findOrCreateSkill } from "@/features/learning/learning.repo";
 import { completeTask, createTask, deleteTask, updateTask } from "./tasks.repo";
@@ -51,6 +52,7 @@ export function registerTaskTools(server: McpServer) {
         skill: z.string().trim().min(1).optional().describe("Completing it logs practice time for this skill (e.g. 'LeetCode 1h' → DSA)"),
         topic: z.string().trim().min(1).max(200).optional().describe("With `skill`: the topic it covers (e.g. a course topic), recorded with the practice time"),
         fun: z.string().trim().min(1).optional().describe("Planned fun: the title of an activity on his fun list; completing the task counts as doing it"),
+        commitment: z.string().trim().min(1).optional().describe("The job, role, team or group it's for (title or id from list_commitments), e.g. extra training before a competition"),
         reminder_note: z.string().trim().max(200).optional().describe("His own words for the notifications, e.g. 'Bring the signed form'"),
       }),
     },
@@ -71,6 +73,7 @@ export function registerTaskTools(server: McpServer) {
         skill?: string;
         topic?: string;
         fun?: string;
+        commitment?: string;
         reminder_note?: string;
       },
       ctx: ToolContext,
@@ -81,6 +84,8 @@ export function registerTaskTools(server: McpServer) {
         const skillId = args.skill ? (await findOrCreateSkill(db, args.skill)).skill.id : null;
         const fun = args.fun ? await findFun(db, args.fun) : null;
         if (args.fun && !fun) return toolError(`add_task: "${args.fun}" isn't on his fun list — add it with add_fun first`);
+        const commitment = args.commitment ? await findCommitment(db, args.commitment) : null;
+        if (args.commitment && !commitment) return toolError(`add_task: no single commitment matches "${args.commitment}" — check list_commitments`);
         const outcome = await createTask(
           db,
           {
@@ -99,6 +104,7 @@ export function registerTaskTools(server: McpServer) {
             skillId,
             topic: args.topic ?? null,
             funActivityId: fun?.id ?? null,
+            commitmentId: commitment?.id ?? null,
             reminderNote: args.reminder_note,
           },
           now,
