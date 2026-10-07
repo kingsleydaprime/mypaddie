@@ -1,4 +1,5 @@
 import { signOut } from "@/features/auth/sign-out";
+import { FeedbackForm } from "@/features/feedback/ui/feedback-form";
 import { calendarStatus } from "@/features/calendar/calendar.repo";
 import { CalendarSettings } from "@/features/calendar/ui/calendar-settings";
 import { listIdentities } from "@/features/identity/identity.repo";
@@ -48,6 +49,7 @@ export default async function SettingsPage() {
 
       <ConnectPanel mcpUrl={`${await siteOrigin()}/api/mcp`} apps={apps} />
 
+      <FeedbackForm />
       <YourData />
 
       <form action={signOut}>

@@ -5,10 +5,15 @@ import { addDays, dayKey, localTimeOf, weekdayOf, zonedInstant } from "@/shared/
  * The subset of iCalendar RRULE that habits need:
  *   FREQ=DAILY                     every day
  *   FREQ=WEEKLY;BYDAY=MO,WE,FR     on those weekdays
- * Anything else (INTERVAL, COUNT, UNTIL, MONTHLY…) is rejected loudly rather
- * than half-understood.
+ *   …;UNTIL=20270131               …up to and including that local date
+ *                                  (a semester's classes, "gym until exams")
+ * Anything else (INTERVAL, COUNT, MONTHLY…) is rejected loudly rather than
+ * half-understood.
  */
-export type Recurrence = { freq: "daily" } | { freq: "weekly"; days: ReadonlySet<number> };
+export type Recurrence = ({ freq: "daily" } | { freq: "weekly"; days: ReadonlySet<number> }) & {
+  /** Last local day it happens, "YYYY-MM-DD"; none = forever. */
+  until?: string;
+};
 
 export class InvalidRecurrenceError extends Error {
   constructor(rule: string, why: string) {
@@ -29,12 +34,20 @@ export function parseRecurrence(rule: string): Recurrence {
   }
 
   const freq = parts.get("FREQ");
-  const extra = [...parts.keys()].filter((k) => k !== "FREQ" && k !== "BYDAY");
+  const extra = [...parts.keys()].filter((k) => k !== "FREQ" && k !== "BYDAY" && k !== "UNTIL");
   if (extra.length) throw new InvalidRecurrenceError(rule, `${extra.join(", ")} not supported`);
+  let until: string | undefined;
+  const rawUntil = parts.get("UNTIL");
+  if (rawUntil !== undefined) {
+    const m = rawUntil.match(/^(\d{4})(\d{2})(\d{2})(T\d{6}Z?)?$/);
+    if (!m || Number.isNaN(Date.parse(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`))) throw new InvalidRecurrenceError(rule, "UNTIL must be a date like 20270131");
+    until = `${m[1]}-${m[2]}-${m[3]}`;
+  }
+  const withUntil = <T extends object>(r: T) => (until ? { ...r, until } : r);
 
   if (freq === "DAILY") {
     if (parts.has("BYDAY")) throw new InvalidRecurrenceError(rule, "use FREQ=WEEKLY with BYDAY");
-    return { freq: "daily" };
+    return withUntil({ freq: "daily" as const });
   }
   if (freq === "WEEKLY") {
     const byday = parts.get("BYDAY");
@@ -45,13 +58,20 @@ export function parseRecurrence(rule: string): Recurrence {
       if (n === undefined) throw new InvalidRecurrenceError(rule, `unknown day "${d}"`);
       days.add(n);
     }
-    return { freq: "weekly", days };
+    return withUntil({ freq: "weekly" as const, days });
   }
   throw new InvalidRecurrenceError(rule, `FREQ must be DAILY or WEEKLY`);
 }
 
 export function occursOn(recurrence: Recurrence, day: string): boolean {
+  if (recurrence.until && day > recurrence.until) return false;
   return recurrence.freq === "daily" || recurrence.days.has(weekdayOf(day));
+}
+
+/** "FREQ=WEEKLY;BYDAY=MO" + "2027-01-31" → "FREQ=WEEKLY;BYDAY=MO;UNTIL=20270131" (replacing any UNTIL already there). */
+export function withUntil(rule: string, until: string | null): string {
+  const base = rule.split(";").filter((p) => p && !/^UNTIL=/i.test(p)).join(";");
+  return until ? `${base};UNTIL=${until.replaceAll("-", "")}` : base;
 }
 
 /** The latest existing row of a recurring habit — the template for new days. */

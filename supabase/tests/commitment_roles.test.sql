@@ -14,8 +14,8 @@ select throws_ok($$insert into public.commitment_roles (user_id, commitment_id, 
   '23505', null, 'only one current role at a time');
 select throws_ok($$insert into public.commitment_roles (user_id, commitment_id, title, starts_on, ends_on) values ('11111111-1111-1111-1111-111111111111', 'cccccccc-0000-0000-0000-000000000001', 'X', '2026-05-01', '2026-04-01')$$,
   '23514', null, 'a role can''t end before it starts');
-select is((select string_agg(title, ' → ' order by starts_on) from public.commitment_roles), 'Member → Secretary', 'history kept in order');
-delete from public.commitments;
-select is((select count(*)::int from public.commitment_roles), 0, 'deleting the commitment deletes its history');
+select is((select string_agg(title, ' → ' order by starts_on) from public.commitment_roles where commitment_id = 'cccccccc-0000-0000-0000-000000000001'), 'Member → Secretary', 'history kept in order');
+delete from public.commitments where id = 'cccccccc-0000-0000-0000-000000000001';
+select is((select count(*)::int from public.commitment_roles where commitment_id = 'cccccccc-0000-0000-0000-000000000001'), 0, 'deleting the commitment deletes its history');
 select * from finish();
 rollback;

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Turnstile } from "@/features/auth/turnstile";
 import { isSignedIn } from "@/features/auth/session";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -44,6 +45,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <input type="hidden" name="next" value={next} />
           <input name="email" type="email" required autoComplete="email" placeholder="Email" aria-label="Email" className={field} />
           <input name="password" type="password" required autoComplete="current-password" placeholder="Password" aria-label="Password" className={field} />
+          <Turnstile />
           <button className="rounded-xl border border-gold px-4 py-3.5 font-semibold text-gold">Sign in</button>
         </form>
         <details className="mt-3">

@@ -1,6 +1,6 @@
 import type { TopicSummary } from "@/features/learning/learning";
 import type { PillarWeight } from "@/features/xp/split";
-import { addDays } from "@/shared/time";
+import { addDays, weekdayOf } from "@/shared/time";
 
 export const ASSESSMENT_KINDS = ["exam", "test", "quiz", "assignment", "project", "presentation", "lab", "other"] as const;
 export type AssessmentKind = (typeof ASSESSMENT_KINDS)[number];
@@ -253,4 +253,44 @@ export function parseTopics(raw: string): { title: string; week: number | null }
       return { title, week: week ? Number(week[1]) : null };
     })
     .filter((t) => t.title.length > 0 && t.title.length <= 200);
+}
+
+// ─── Timetable ──────────────────────────────────────────────────────────────
+export const CLASS_KINDS = ["lecture", "tutorial", "lab", "seminar", "practical", "other"] as const;
+export type ClassKind = (typeof CLASS_KINDS)[number];
+export const WEEKDAY_CODES = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"] as const;
+export type WeekdayCode = (typeof WEEKDAY_CODES)[number];
+
+/** Attending is effort too, but it isn't the study: a small, steady amount. */
+export const CLASS_WEIGHTS: PillarWeight[] = [{ pillar: "academic", weight: 100 }];
+export const CLASS_BASE_XP = 5;
+
+const toMinutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+
+/** "09:00"–"11:00" → 120. End must be after start, same day. */
+export function classMinutes(start: string, end: string): number {
+  const m = toMinutes(end) - toMinutes(start);
+  if (!(m > 0)) throw new RangeError(`a class has to end after it starts (${start}–${end})`);
+  return m;
+}
+
+/** The first date on or after `from` that falls on one of `days`. */
+export function firstOn(from: string, days: readonly WeekdayCode[]): string {
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(from, i);
+    if (days.includes(WEEKDAY_CODES[weekdayOf(d)]!)) return d;
+  }
+  throw new RangeError("no class days given");
+}
+
+export interface ClassSlot {
+  days: readonly WeekdayCode[];
+  minutes: number;
+}
+
+/** Class minutes on each weekday — to warn when a day's classes already pass its capacity. */
+export function classMinutesByWeekday(classes: readonly ClassSlot[]): Record<WeekdayCode, number> {
+  const out = Object.fromEntries(WEEKDAY_CODES.map((d) => [d, 0])) as Record<WeekdayCode, number>;
+  for (const c of classes) for (const d of c.days) out[d] += c.minutes;
+  return out;
 }

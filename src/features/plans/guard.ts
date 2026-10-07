@@ -14,7 +14,7 @@ export function requireFeature(feature: Feature) {
 const COUNTERS: Record<Exclude<Limited, "aiApps">, (db: Db) => PromiseLike<number>> = {
   // A habit is a series still recurring (stopping one clears its rule).
   habits: async (db) => {
-    const { data } = await db.from("tasks").select("series_id").not("recurrence", "is", null).not("series_id", "is", null);
+    const { data } = await db.from("tasks").select("series_id").not("recurrence", "is", null).not("series_id", "is", null).is("course_id", null);
     return new Set((data ?? []).map((r) => r.series_id)).size;
   },
   courses: async (db) => (await db.from("courses").select("id", { count: "exact", head: true }).eq("status", "active")).count ?? 0,
@@ -22,6 +22,13 @@ const COUNTERS: Record<Exclude<Limited, "aiApps">, (db: Db) => PromiseLike<numbe
   applications: async (db) => (await db.from("applications").select("id", { count: "exact", head: true }).in("status", ["researching", "preparing"])).count ?? 0,
   funActivities: async (db) => (await db.from("fun_activities").select("id", { count: "exact", head: true })).count ?? 0,
 };
+
+/** Room for `n` more at once (all-or-nothing operations like a timetable)? */
+export async function requireRoomFor(db: Db, limited: Exclude<Limited, "aiApps">, n: number) {
+  const plan = currentPlan().plan;
+  if (n <= 0 || PLAN_INFO[plan].limits[limited] === null) return;
+  assertWithinLimit(plan, limited, (await COUNTERS[limited](db)) + n - 1);
+}
 
 /** Room for one more? Unlimited plans skip the count. */
 export async function requireRoom(db: Db, limited: Exclude<Limited, "aiApps">) {

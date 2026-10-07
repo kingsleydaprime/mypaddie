@@ -31,5 +31,5 @@ export async function finishOnboardingAction(_prev: ProfileFormState, form: Form
   const db = await requireDb("/welcome");
   const result = await completeOnboarding(db, readForm(form), new Date());
   if (!result.ok) return { error: result.error };
-  redirect("/app");
+  redirect("/welcome/connect");
 }

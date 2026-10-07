@@ -5,7 +5,7 @@ import { UpgradeNote } from "@/features/plans/ui/upgrade-note";
 import { notFound } from "next/navigation";
 import type { TopicStatus } from "@/features/courses/courses";
 import { assessmentDoneAction, courseStatusAction, removeTopicAction, scoreAction } from "@/features/courses/courses.actions";
-import { loadCourses, proposeStudy } from "@/features/courses/courses.repo";
+import { loadClasses, loadCourses, proposeStudy } from "@/features/courses/courses.repo";
 import { AcceptStudy, AddAssessmentForm, AddTopicsForm } from "@/features/courses/ui/course-forms";
 import { requireDb } from "@/shared/supabase/session";
 
@@ -24,6 +24,7 @@ export default async function CoursePage({ params }: PageProps<"/app/courses/[id
   const course = (await loadCourses(db, now, { course: id }))[0];
   if (!course) notFound();
   const canPlan = hasFeature(currentPlan().plan, "studyPlans");
+  const classes = await loadClasses(db, course.id);
   const plan = course.status === "active" && canPlan ? await proposeStudy(db, now, { course: id }) : null;
 
   return (
@@ -64,6 +65,23 @@ export default async function CoursePage({ params }: PageProps<"/app/courses/[id
           )}
         </section>
       )}
+
+      <section className="flex flex-col gap-2">
+        <h2 className="font-bold">Classes</h2>
+        {classes.length === 0 ? (
+          <p className="text-sm text-muted">No timetable yet. Send Paddie a photo of your timetable and it&apos;ll set up every class.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-line rounded-2xl border border-line bg-surface text-sm">
+            {classes.map((k) => (
+              <li key={k.seriesId} className="flex justify-between gap-3 px-4 py-2.5">
+                <span>{k.kind[0]!.toUpperCase() + k.kind.slice(1)} · {k.days.map((d) => d[0] + d[1]!.toLowerCase()).join(", ")}{k.venue ? ` · ${k.venue}` : ""}</span>
+                <span className="shrink-0 text-muted">{k.start}{k.minutes ? `, ${k.minutes} min` : ""}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {classes.some((k) => k.until) && <p className="text-xs text-muted">Until {classes.find((k) => k.until)!.until}.</p>}
+      </section>
 
       {course.status === "active" && !canPlan && <UpgradeNote feature="studyPlans" />}
 

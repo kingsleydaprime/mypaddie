@@ -5,6 +5,9 @@ import { loadUpcomingEvents } from "@/features/events/events.repo";
 import { syncCalendar } from "@/features/calendar/calendar.repo";
 import { loadWeekLoad } from "@/features/commitments/commitments.repo";
 import { loadFunPicture } from "@/features/fun/fun.repo";
+import { whoToReachOut } from "@/features/people/people";
+import { loadPeople } from "@/features/people/people.repo";
+import { loadSelfForAdvice } from "@/features/self/self.repo";
 import { applyBrokenPromises, loadPromisePicture } from "@/features/promises/promises.repo";
 import { loadActiveIdentity } from "@/features/identity/identity.repo";
 import { loadLearning } from "@/features/learning/learning.repo";
@@ -65,7 +68,7 @@ export function registerTodayTools(server: McpServer) {
         const caughtUp = { ...(await catchUp(db, now)), brokenPromises: await applyBrokenPromises(db, now) };
         // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
         await syncCalendar(db, now).catch(() => null);
-        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun, promises, week] = await Promise.all([
+        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun, promises, week, people, self] = await Promise.all([
           loadTasksAroundToday(db, now),
           loadMode(db, now),
           loadMoneyStage(db, now),
@@ -78,6 +81,8 @@ export function registerTodayTools(server: McpServer) {
           loadFunPicture(db, now),
           loadPromisePicture(db, now),
           loadWeekLoad(db, now),
+          loadPeople(db),
+          loadSelfForAdvice(db),
         ]);
         const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
         const room = roomOn(dayKey(now, tz()), dayTasks, capacity, now, undefined, dayEndsAt(schedule));
@@ -122,6 +127,13 @@ export function registerTodayTools(server: McpServer) {
           },
           // The week's load. Only raise it when it's tight or overloaded, and before the user takes on anything new.
           ...(hasFeature(currentPlan().plan, "loadAdvice") ? { week: { verdict: week.verdict, percent: Math.round(week.ratio * 100), ...(week.verdict !== "room" ? { dropCandidates: week.dropCandidates.slice(0, 3).map((d) => d.title) } : {}) } } : {}),
+          // One or two people due a check-in, with something to talk about. Suggest reaching out; don't list everyone.
+          ...(whoToReachOut(people, now, 2).length
+            ? { reachOut: whoToReachOut(people, now, 2).map(({ person, due }) => ({ name: person.name, who: person.who, overdueBy: due.overdueBy, talkAbout: person.topics[0] ?? null })) }
+            : {}),
+          // What they know about themselves that should shape advice: patterns, triggers, weak spots, habits to break,
+          // what they're healing from. Use it gently and specifically ("you tend to…"), never to shame.
+          ...(self.length ? { knowThem: self } : {}),
           // Who they're becoming — coach toward it all chat. Null: offer to help them write one.
           becoming: identity ? { name: identity.name, text: identity.text } : null,
         });

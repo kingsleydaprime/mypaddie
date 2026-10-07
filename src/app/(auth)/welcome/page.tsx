@@ -11,8 +11,9 @@ export default async function WelcomePage() {
   return (
     <>
       <header>
-        <h1 className="text-2xl font-bold">Welcome. Let&apos;s set you up.</h1>
-        <p className="mt-1 text-sm text-muted">Four things, then Paddie takes it from there. You can change any of them later in Settings.</p>
+        <p className="text-xs font-semibold tracking-widest text-gold uppercase">Step 1 of 4 · You</p>
+        <h1 className="mt-2 text-2xl font-bold">Welcome. Let&apos;s set you up.</h1>
+        <p className="mt-1 text-sm text-muted">Four quick steps, then Paddie takes it from there. You can change any of them later in Settings.</p>
       </header>
       <ProfileForm profile={currentProfile()} onboarding />
     </>

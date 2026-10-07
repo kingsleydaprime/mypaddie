@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { InvalidRecurrenceError, occursOn, parseRecurrence, planOccurrences, projectedOccurrences, type SeriesForSpawn, type SeriesTemplate } from "./recurrence";
+import { InvalidRecurrenceError, occursOn, withUntil, parseRecurrence, planOccurrences, projectedOccurrences, type SeriesForSpawn, type SeriesTemplate } from "./recurrence";
 
 const at = (local: string) => new Date(`${local}+01:00`);
 
@@ -111,5 +111,34 @@ describe("projectedOccurrences", () => {
   });
   test("days already created are real rows, not projected", () => {
     expect(projectedOccurrences([reading], "2026-10-06")).toEqual([]);
+  });
+});
+
+describe("UNTIL", () => {
+  test("parses a date, and stops after it", () => {
+    const r = parseRecurrence("FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20261216");
+    expect(r.until).toBe("2026-12-16");
+    expect(occursOn(r, "2026-12-14")).toBe(true); // a Monday, before
+    expect(occursOn(r, "2026-12-16")).toBe(true); // the last day itself
+    expect(occursOn(r, "2026-12-21")).toBe(false); // a Monday, after
+  });
+  test("daily with an end, and the UTC timestamp form", () => {
+    const r = parseRecurrence("FREQ=DAILY;UNTIL=20261020T235959Z");
+    expect(occursOn(r, "2026-10-20")).toBe(true);
+    expect(occursOn(r, "2026-10-21")).toBe(false);
+  });
+  test("nonsense UNTIL is refused", () => {
+    expect(() => parseRecurrence("FREQ=DAILY;UNTIL=soon")).toThrow(InvalidRecurrenceError);
+    expect(() => parseRecurrence("FREQ=DAILY;UNTIL=20261340")).toThrow(InvalidRecurrenceError);
+  });
+  test("withUntil adds, replaces and removes the end", () => {
+    expect(withUntil("FREQ=WEEKLY;BYDAY=MO", "2027-01-31")).toBe("FREQ=WEEKLY;BYDAY=MO;UNTIL=20270131");
+    expect(withUntil("FREQ=WEEKLY;BYDAY=MO;UNTIL=20270131", "2027-03-01")).toBe("FREQ=WEEKLY;BYDAY=MO;UNTIL=20270301");
+    expect(withUntil("FREQ=DAILY;UNTIL=20270131", null)).toBe("FREQ=DAILY");
+  });
+  test("planOccurrences doesn't spawn days past the end", () => {
+    const now = new Date("2026-12-20T09:00:00+01:00");
+    const out = planOccurrences([{ seriesId: "s", rule: "FREQ=DAILY;UNTIL=20261218", lastOccursOn: "2026-12-15", lastDueAt: null }], now, 7);
+    expect(out.map((o) => o.occursOn)).toEqual(["2026-12-16", "2026-12-17", "2026-12-18"]);
   });
 });

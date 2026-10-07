@@ -1,5 +1,6 @@
 import { addEvent } from "@/features/events/add-event";
-import { requireFeature, requireRoom } from "@/features/plans/guard";
+import { PlanLimitError } from "@/features/plans/plans";
+import { requireFeature, requireRoom, requireRoomFor } from "@/features/plans/guard";
 import { findOrCreateSkill, loadLearning } from "@/features/learning/learning.repo";
 import { dayEndsAt } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
@@ -7,9 +8,18 @@ import { roomOn } from "@/features/tasks/capacity";
 import { completeTask, createTask, deleteTask, loadCapacity, loadDayTasks, updateTask, type CreateResult } from "@/features/tasks/tasks.repo";
 import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
+import { parseRecurrence, withUntil } from "@/features/tasks/recurrence";
 import { addDays, dayKey, localTimeOf, zonedInstant } from "@/shared/time";
 import {
   ASSIGNMENT_WEIGHTS,
+  CLASS_BASE_XP,
+  CLASS_WEIGHTS,
+  classMinutes,
+  classMinutesByWeekday,
+  firstOn,
+  WEEKDAY_CODES,
+  type ClassKind,
+  type WeekdayCode,
   isSitting,
   planStudy,
   plannedKey,
@@ -432,4 +442,138 @@ export async function acceptStudy(db: Db, sessions: StudyBooking[], now: Date) {
     results.push(made.result === "created" ? { topic: s.topic, day: s.day, result: "booked" as const, taskId: made.task.id } : { topic: s.topic, day: s.day, ...made });
   }
   return { booked: results.filter((r) => r.result === "booked").length, results };
+}
+
+// ─── Timetable ──────────────────────────────────────────────────────────────
+
+export interface ClassInput {
+  /** Code or title; a course that doesn't exist yet is created. */
+  course: string;
+  kind: ClassKind;
+  days: WeekdayCode[];
+  start: string;
+  end: string;
+  venue?: string | null;
+}
+
+export interface LoadedClass {
+  seriesId: string;
+  title: string;
+  kind: string;
+  days: WeekdayCode[];
+  start: string | null;
+  minutes: number | null;
+  venue: string | null;
+  until: string | null;
+}
+
+/** A course's classes: its repeating time blocks (latest row of each series). */
+export async function loadClasses(db: Db, courseId: string): Promise<LoadedClass[]> {
+  const { data, error } = await db
+    .from("tasks")
+    .select("series_id, title, recurrence, due_at, duration_minutes, location, occurs_on")
+    .eq("course_id", courseId)
+    .not("recurrence", "is", null)
+    .order("occurs_on", { ascending: false });
+  if (error) throw new Error(`loading classes: ${error.message}`);
+  const seen = new Set<string>();
+  const out: LoadedClass[] = [];
+  for (const r of data) {
+    if (!r.series_id || seen.has(r.series_id)) continue;
+    seen.add(r.series_id);
+    const rule = parseRecurrence(r.recurrence!);
+    const days = rule.freq === "daily" ? [...WEEKDAY_CODES] : WEEKDAY_CODES.filter((_, i) => rule.days.has(i));
+    out.push({
+      seriesId: r.series_id,
+      title: r.title,
+      kind: r.title.split(" ").pop()!.toLowerCase(),
+      days,
+      start: r.due_at ? localTimeOf(new Date(r.due_at), tz()) : null,
+      minutes: r.duration_minutes,
+      venue: r.location,
+      until: rule.until ?? null,
+    });
+  }
+  const order = (c: LoadedClass) => Math.min(...c.days.map((d) => (WEEKDAY_CODES.indexOf(d) + 6) % 7));
+  return out.sort((a, b) => order(a) - order(b) || (a.start ?? "").localeCompare(b.start ?? ""));
+}
+
+const KIND_TITLE: Record<ClassKind, string> = { lecture: "Lecture", tutorial: "Tutorial", lab: "Lab", seminar: "Seminar", practical: "Practical", other: "Class" };
+
+/**
+ * Sets the timetable for the courses mentioned: their existing classes are
+ * replaced (stopped, history kept), each class becomes a weekly block from
+ * `from` (default today) until the semester ends. Classes are fixed — never
+ * refused for a full day — so the result names any weekday whose classes
+ * alone pass the day's capacity.
+ */
+export async function setTimetable(db: Db, input: { classes: ClassInput[]; from?: string; until?: string | null }, now: Date) {
+  const today = dayKey(now, tz());
+  const from = input.from && input.from > today ? input.from : today;
+  const until = input.until ?? null;
+  if (until && until < from) return { result: "bad_dates" as const, message: "The semester can't end before the classes start." };
+
+  const byCourse = new Map<string, ClassInput[]>();
+  for (const c of input.classes) byCourse.set(c.course.trim(), [...(byCourse.get(c.course.trim()) ?? []), c]);
+
+  // All or nothing: make sure the plan has room for every course this would create, before touching anything.
+  const missing = [];
+  for (const ref of byCourse.keys()) if (!(await loadCourses(db, now, { course: ref }))[0]) missing.push(ref);
+  try {
+    await requireRoomFor(db, "courses", missing.length);
+  } catch (e) {
+    if (e instanceof PlanLimitError) return { result: "plan_limit" as const, message: `${e.message} New courses in this timetable: ${missing.join(", ")}.`, nothingChanged: true };
+    throw e;
+  }
+
+  const results = [];
+  for (const [ref, classes] of byCourse) {
+    let course = (await loadCourses(db, now, { course: ref }))[0];
+    let created = false;
+    if (!course) {
+      const looksLikeCode = /^[A-Za-z]{2,5}\s?\d{2,4}[A-Za-z]?$/.test(ref);
+      const made = await addCourse(db, looksLikeCode ? { code: ref.toUpperCase(), title: ref.toUpperCase() } : { title: ref }, now);
+      if (made.result !== "added") throw new Error(`couldn't create the course "${ref}"`);
+      course = (await loadCourses(db, now, { course: made.id }))[0]!;
+      created = true;
+    }
+    // Replace: stop this course's current classes (past days stay as history).
+    for (const old of await loadClasses(db, course.id)) {
+      const { data: row } = await db.from("tasks").select("id").eq("series_id", old.seriesId).order("occurs_on", { ascending: false }).limit(1).maybeSingle();
+      if (row) await updateTask(db, row.id, {}, "stop", now);
+    }
+    await db.from("courses").update({ semester_start: from, ...(until ? { semester_end: until } : {}) }).eq("id", course.id);
+
+    for (const c of classes) {
+      const minutes = classMinutes(c.start, c.end);
+      const made = await createTask(
+        db,
+        {
+          title: `${course.label} ${KIND_TITLE[c.kind]}`,
+          itemId: null,
+          baseXp: CLASS_BASE_XP,
+          dueDate: firstOn(from, c.days),
+          dueTime: c.start,
+          recurrence: withUntil(`FREQ=WEEKLY;BYDAY=${c.days.join(",")}`, until),
+          nonNegotiable: false,
+          weights: CLASS_WEIGHTS,
+          durationMinutes: minutes,
+          courseId: course.id,
+          location: c.venue ?? null,
+          fixed: true,
+        },
+        now,
+      );
+      results.push({ course: course.label, created, class: `${KIND_TITLE[c.kind]} ${c.days.join("/")} ${c.start}–${c.end}`, result: made.result });
+    }
+  }
+
+  // Which weekdays are already over capacity from classes alone?
+  const capacity = await loadCapacity(db);
+  const everyClass = (
+    await Promise.all((await loadCourses(db, now)).map((c) => loadClasses(db, c.id)))
+  ).flat().filter((c) => c.minutes !== null && (!c.until || c.until >= today));
+  const perDay = classMinutesByWeekday(everyClass.map((c) => ({ days: c.days, minutes: c.minutes! })));
+  const overloaded = WEEKDAY_CODES.filter((d) => perDay[d] > capacity.defaultMinutes).map((d) => ({ day: d, classHours: perDay[d] / 60, capacityHours: capacity.defaultMinutes / 60 }));
+  return { result: "set" as const, from, until, classes: results, ...(overloaded.length ? { overloaded } : {}) };
 }

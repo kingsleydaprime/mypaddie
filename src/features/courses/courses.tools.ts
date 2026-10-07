@@ -2,13 +2,15 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
-import { ASSESSMENT_KINDS, type AssessmentKind } from "./courses";
+import { ASSESSMENT_KINDS, CLASS_KINDS, WEEKDAY_CODES, type AssessmentKind, type ClassKind, type WeekdayCode } from "./courses";
 import {
   acceptStudy,
   addCourse,
   changeAssessment,
   loadCourses,
+  loadClasses,
   proposeStudy,
+  setTimetable,
   updateCourse,
   type AssessmentInput,
   type LoadedCourse,
@@ -128,7 +130,11 @@ export function registerCourseTools(server: McpServer) {
         const now = new Date();
         const courses = await loadCourses(db, now, { course, includeFinished: include_finished });
         if (course && courses.length === 0) return toolError(`list_courses: no course "${course}"`);
-        return ok(await withMode(db, now, { courses: courses.map((c) => view(c, Boolean(course))) }));
+        const views = await Promise.all(courses.map(async (c) => ({
+          ...view(c, Boolean(course)),
+          ...(course ? { classes: (await loadClasses(db, c.id)).map((k) => ({ title: k.title, days: k.days, start: k.start, minutes: k.minutes, venue: k.venue, until: k.until })) } : {}),
+        })));
+        return ok(await withMode(db, now, { courses: views }));
       } catch (error) {
         return toolError(`list_courses failed: ${(error as Error).message}`);
       }
@@ -283,6 +289,42 @@ export function registerCourseTools(server: McpServer) {
         return ok(await withMode(db, now, { ...result }));
       } catch (error) {
         return toolError(`accept_study_plan failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "set_timetable",
+    {
+      title: "Set timetable",
+      description:
+        "Their class timetable — from a photo, PDF or typed list. Pull out every class: course (code or title), kind " +
+        "(lecture, tutorial, lab, seminar, practical), days, start and end time, venue. Send them all in one call with " +
+        "`until` = the last day of classes (ask if you don't know; it stops the classes then) and `from` if classes " +
+        "start later than today. Each class becomes a weekly time block with a 10-minute reminder; courses not yet in " +
+        "MyPaddie are created. Setting a course's classes replaces its old ones. Classes never get refused for a full " +
+        "day — if `overloaded` comes back, those weekdays are full from classes alone: suggest raising capacity on " +
+        "those days (set_capacity) rather than squeezing in more. Confirm what you read before sending if the image was unclear.",
+      inputSchema: z.object({
+        classes: z.array(z.object({
+          course: z.string().trim().min(1).max(200),
+          kind: z.enum(CLASS_KINDS).default("lecture"),
+          days: z.array(z.enum(WEEKDAY_CODES)).min(1).describe("MO TU WE TH FR SA SU"),
+          start: time,
+          end: time,
+          venue: z.string().trim().max(120).optional(),
+        })).min(1),
+        from: z.iso.date().optional().describe("First day of classes; default today"),
+        until: z.iso.date().optional().describe("Last day of classes this semester"),
+      }),
+    },
+    async (args: { classes: { course: string; kind: ClassKind; days: WeekdayCode[]; start: string; end: string; venue?: string }[]; from?: string; until?: string }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        const now = new Date();
+        return ok(await withMode(db, now, { ...(await setTimetable(db, args, now)) }));
+      } catch (error) {
+        return toolError(`set_timetable failed: ${(error as Error).message}`);
       }
     },
   );

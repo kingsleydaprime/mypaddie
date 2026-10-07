@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { captchaToken } from "@/features/auth/captcha";
 import { isEmail } from "@/features/auth/auth";
 import { safeNext } from "@/shared/safe-next";
 import { siteOrigin } from "@/shared/site";
@@ -17,6 +18,7 @@ export async function signIn(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({
     email: String(formData.get("email") ?? "").trim(),
     password: String(formData.get("password") ?? ""),
+    options: { captchaToken: captchaToken(formData) },
   });
   // Same message for every failure: don't reveal whether the email exists.
   if (error) redirect(back(next, "credentials"));
@@ -43,7 +45,7 @@ export async function sendSignInLink(_prev: LinkState, formData: FormData): Prom
   const supabase = await serverClient();
   await supabase.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: false, emailRedirectTo: `${await siteOrigin()}/auth/confirm?next=${encodeURIComponent(next)}` },
+    options: { shouldCreateUser: false, emailRedirectTo: `${await siteOrigin()}/auth/confirm?next=${encodeURIComponent(next)}`, captchaToken: captchaToken(formData) },
   });
   // Same answer whether or not the account exists.
   return { sent: email };
@@ -53,6 +55,6 @@ export async function sendPasswordReset(_prev: LinkState, formData: FormData): P
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (!isEmail(email)) return { error: "Enter your email." };
   const supabase = await serverClient();
-  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${await siteOrigin()}/auth/confirm?next=${encodeURIComponent("/reset-password")}` });
+  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${await siteOrigin()}/auth/confirm?next=${encodeURIComponent("/reset-password")}`, captchaToken: captchaToken(formData) });
   return { sent: email };
 }

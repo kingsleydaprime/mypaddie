@@ -5,6 +5,10 @@ import { registerCommitmentTools } from "@/features/commitments/commitments.tool
 import { registerCourseTools } from "@/features/courses/courses.tools";
 import { registerEventTools } from "@/features/events/events.tools";
 import { registerFunTools } from "@/features/fun/fun.tools";
+import { registerLibraryTools } from "@/features/library/library.tools";
+import { registerListTools } from "@/features/lists/lists.tools";
+import { registerPeopleTools } from "@/features/people/people.tools";
+import { registerSelfTools } from "@/features/self/self.tools";
 import { catalogue, registerHelpTool } from "@/features/help/help.tools";
 import { registerIdentityTools } from "@/features/identity/identity.tools";
 import { registerItemTools } from "@/features/items/items.tools";
@@ -57,6 +61,10 @@ const handler = createMcpHandler(
     tools.area("Jobs, roles and teams", () => registerCommitmentTools(server));
     tools.area("Promises", () => registerPromiseTools(server));
     tools.area("Settings", () => registerProfileTools(server));
+    tools.area("People", () => registerPeopleTools(server));
+    tools.area("About me", () => registerSelfTools(server));
+    tools.area("Library and favourites", () => registerLibraryTools(server));
+    tools.area("Lists", () => registerListTools(server));
     registerHelpTool(server, tools.entries);
   },
   {
@@ -71,8 +79,10 @@ const handler = createMcpHandler(
       "returns `becoming`, their 'Who I'm becoming' profile: praise choices that fit it, push back on ones that don't, and " +
       "never debate whether it's the right one. They can ask you to edit it (update_identity), or change their name, " +
       "time zone, currency or voice (update_profile). Money is whole units of their currency. MyPaddie has tools for a " +
-      "lot more than tasks — courses and study plans, promises, jobs and roles (with history), fun, workouts, pantry, " +
-      "events, applications, updates owed, Google Calendar. Before telling them it can't do something, check your " +
+      "lot more than tasks — courses, timetables and study plans, people and who to reach out to, notes about themselves " +
+      "(patterns, triggers, habits, what they're healing from), their library and favourite things, their own lists " +
+      "(bucket list, anything), promises, jobs and " +
+      "roles (with history), fun, workouts, pantry, events, applications, updates owed, Google Calendar. Before telling them it can't do something, check your " +
       "tools or call what_can_paddie_do. If a tool says their plan doesn't include something, tell them exactly that.",
   },
 );

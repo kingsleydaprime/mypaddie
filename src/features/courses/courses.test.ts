@@ -3,6 +3,9 @@ import type { TopicSummary } from "@/features/learning/learning";
 import { validateWeights } from "@/features/xp/split";
 import {
   ASSIGNMENT_WEIGHTS,
+  classMinutes,
+  classMinutesByWeekday,
+  firstOn,
   isSitting,
   parseTopics,
   planStudy,
@@ -238,5 +241,25 @@ describe("parseTopics", () => {
   });
   test("drops lines that are empty after stripping, or too long", () => {
     expect(parseTopics("- \n" + "x".repeat(201))).toEqual([]);
+  });
+});
+
+describe("timetable", () => {
+  test("class length", () => {
+    expect(classMinutes("09:00", "11:00")).toBe(120);
+    expect(classMinutes("14:30", "15:20")).toBe(50);
+    expect(() => classMinutes("11:00", "09:00")).toThrow(RangeError);
+  });
+  test("first class on or after the start", () => {
+    expect(firstOn("2026-10-12", ["MO", "WE"])).toBe("2026-10-12"); // a Monday
+    expect(firstOn("2026-10-13", ["MO", "WE"])).toBe("2026-10-14"); // Tue → Wed
+    expect(firstOn("2026-10-16", ["MO"])).toBe("2026-10-19"); // Fri → next Mon
+  });
+  test("minutes per weekday add up across courses", () => {
+    const m = classMinutesByWeekday([{ days: ["MO", "WE"], minutes: 120 }, { days: ["MO"], minutes: 180 }, { days: ["FR"], minutes: 60 }]);
+    expect(m.MO).toBe(300);
+    expect(m.WE).toBe(120);
+    expect(m.FR).toBe(60);
+    expect(m.SU).toBe(0);
   });
 });

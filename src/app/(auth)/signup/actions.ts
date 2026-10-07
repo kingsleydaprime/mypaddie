@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { captchaToken } from "@/features/auth/captcha";
 import { CLAIM_MESSAGES, isEmail, normalizeCode, passwordProblem } from "@/features/auth/auth";
 import { siteOrigin } from "@/shared/site";
 import { invitesRequired } from "@/features/auth/signup-settings";
@@ -46,7 +47,7 @@ export async function signUpAction(_prev: SignUpState, form: FormData): Promise<
   }
 
   if (method === "link") {
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true, data: meta, emailRedirectTo: confirm } });
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true, data: meta, emailRedirectTo: confirm, captchaToken: captchaToken(form) } });
     if (error) return { error: error.message };
     return { checkEmail: email, why: "link" };
   }
@@ -54,7 +55,7 @@ export async function signUpAction(_prev: SignUpState, form: FormData): Promise<
   const password = String(form.get("password") ?? "");
   const weak = passwordProblem(password);
   if (weak) return { error: weak };
-  const { data, error } = await supabase.auth.signUp({ email, password, options: { data: meta, emailRedirectTo: confirm } });
+  const { data, error } = await supabase.auth.signUp({ email, password, options: { data: meta, emailRedirectTo: confirm, captchaToken: captchaToken(form) } });
   if (error) return { error: error.message };
   // With email confirmation on, there's no session until they click the link.
   if (!data.session) return { checkEmail: email, why: "confirm" };

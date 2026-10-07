@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Turnstile } from "@/features/auth/turnstile";
 import { signUpAction, type SignUpState } from "./actions";
 
 const field = "rounded-xl border border-line bg-surface px-4 py-3.5 text-base placeholder:text-muted";
@@ -24,6 +25,7 @@ export function SignUpForm({ invite, inviteRequired }: { invite: string; inviteR
       {(inviteRequired || invite) && <input name="invite" required={inviteRequired} defaultValue={invite} autoCapitalize="characters" autoComplete="off" spellCheck={false}
         placeholder="Invite code" aria-label="Invite code" className={`${field} font-mono tracking-widest uppercase`} />}
       <input name="email" type="email" required autoComplete="email" placeholder="Your email" aria-label="Your email" className={field} />
+      <Turnstile key={state && "error" in state ? state.error : "first"} />
       {state && "error" in state && <p className="text-sm text-red" role="alert">{state.error}</p>}
       <button name="method" value="google" disabled={pending} className="flex items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-3.5 font-semibold disabled:opacity-60">
         <span aria-hidden className="font-bold">G</span> Continue with Google

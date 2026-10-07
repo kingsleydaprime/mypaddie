@@ -905,3 +905,70 @@ and `/signup` redirect a signed-in visitor: `/login` to its `next` (so an AI
 app's sign-in bounce carries straight on to the consent screen; `safeNext`
 still keeps it on this site), `/signup` to the app. `/reset-password` stays
 open: a reset link signs you in first.
+
+## 2026-10-14 — Timetables, people, knowing yourself, library, lists, first run
+
+### Habits can end
+Repeating tasks take `UNTIL=YYYYMMDD` (inclusive, local date): a semester's
+classes, "gym until exams". Both rule engines learned it — `occursOn()` in
+TypeScript and `private.recurs_on()` in SQL — so every path that creates
+habit days (catch-up, the morning job, projections) respects it at once.
+
+### A timetable is classes on a course
+`set_timetable` takes every class (course, kind, days, start–end, venue)
+plus the last day of classes. Each class is a weekly block linked to its
+course (`tasks.course_id`), ending with the semester. Classes are *fixed*:
+never refused for a full day or a clash — you have to be there — so the
+result names weekdays already over capacity from classes alone instead.
+They don't count as habits for plan limits. Setting a course's classes
+replaces its old ones. Missing courses are created — all or nothing: if the
+plan can't fit every new course, nothing changes and the message names them
+(caught by the end-to-end test, which first created one course and failed on
+the second).
+
+### People
+Who each person is to you (in your words), notes, birthday (onto the
+calendar, yearly), a reach-out rhythm, things to talk about, and a contact
+log. Logging contact pays Relationships/Social XP through a task done on the
+spot (5, or 8 for a call/visit), resets the clock and clears topics covered.
+Who's due: most overdue first, close people ahead. `get_today` carries one or
+two names with something to talk about; open promises show against the
+person by name.
+
+### Knowing yourself
+`self_notes`: strengths, weak spots, things they're healing from, patterns,
+triggers, good habits, habits to break, history — each with how they're
+working on it, and resolved when it's behind them. `get_today` carries only
+the kinds that change what good advice looks like (patterns, triggers, weak
+spots, habits to break, healing) so the AI can say "you tend to…" — the
+instructions say kindly, never to shame.
+
+### Library, favourites, and lists
+Media (book, film, series, music, podcast, game; want / on it / done; rating)
+matched by kind + title, so "I finished Atomic Habits" updates rather than
+duplicates. Favourites by category in their words ("Favourite Songs" →
+`song`). Lists are theirs to define — any title, items ticked off, progress as
+done/total; "just a list" hides progress. A list titled "Bucket list" pays
+the wish bonus (+50) the first time an item is ticked; `done_at` survives an
+untick so re-ticking never pays twice.
+
+### The first ten minutes
+Welcome is step 1 of 4; then Connect your AI (the address, Claude and
+ChatGPT steps), Reminders (the nudge switch, and on iPhone the "Add to Home
+Screen" step without which web push can't work), and "Empty your head" with
+copyable first messages. Every step can be skipped.
+
+### Bot protection, feedback, usage — all first-party
+Cloudflare Turnstile on sign-up and the email/password forms (Google does its
+own checks); dormant until `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set, enforced
+by Supabase Auth once its secret is set. Feedback goes to `public.feedback`
+(users can add and read their own). Usage is one row per user per day per way
+in (`private.activity_days`, app or AI) — nothing about what they did — and
+`private.usage_summary()` turns it into sign-ups, AI connection rate, actives
+and next-day return for the team, from the SQL editor. No third-party
+analytics.
+
+### export_all reads only what you may read
+A write-only table (feedback, before users could read their own) broke the
+export; it now skips any table the caller can't select, qualified by its own
+schema.

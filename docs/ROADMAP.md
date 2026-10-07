@@ -79,6 +79,14 @@ feature slice; the reasoning lives in DECISIONS.md once it's built.
 - [x] **Promises**: tracked with a task; −15 when broken, half back if kept
   late; renegotiate or release in time. Quests → Promises.
 
+## Done: people, self, library, lists, timetables (2026-10-14)
+- [x] Timetables: classes per course from a photo, ending with the semester; repeating tasks can end (UNTIL).
+- [x] People: who they are to you, reach-out rhythm, topics, contact log (XP), who's due in get_today.
+- [x] About me: strengths, weak spots, healing, patterns, triggers, habits, history — in every chat for advice.
+- [x] Library and favourites; lists of anything with progress; bucket list ticks pay +50 once.
+- [x] First ten minutes: Welcome → Connect your AI → Reminders (iPhone install help) → Empty your head.
+- [x] Turnstile bot protection (dormant until keys are set), feedback box, first-party usage counts.
+
 ## Next: MyPaddie for everyone (planned 2026-10-06)
 
 Anyone signs up, connects their AI, and gets their own Paddie, hosted at
@@ -155,6 +163,11 @@ which gets a new entry when it changes.
 - Competition prep plan: "final in 10 days" → proposed personal training sessions, like study plans.
 - Promise nudge wording of its own ("tell them now if you can't") instead of the generic task reminder.
 - Resuming a paused commitment brings its old sessions back.
+
+## Ideas for later (people and self)
+- Push nudge for people due a check-in (today it's in chat and on the People page).
+- Sign-in methods in Settings: attach Google to an email account with a different address.
+- Plan caps for people / lists / library on Free, if they're ever needed.
 
 ## Known gaps
 - Voiding income that's already been split into buckets (needs a split undo).

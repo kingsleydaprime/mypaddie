@@ -53,6 +53,9 @@ setConfigResolver(
 
 export const contextFor = (profile: Profile, plan: PlanState = DEFAULT_PLAN_STATE): UserContext => ({ profile, config: configFor(profile), plan });
 
+/** "Used MyPaddie today" — one row per user, day and way in (private.activity_days). Best-effort. */
+const touch = (db: Db, via: "app" | "ai") => Promise.resolve(db.rpc("touch_activity", { p_via: via })).then(() => undefined, () => undefined);
+
 const load = async (db: Db) => {
   const [profile, plan] = await Promise.all([loadProfile(db), loadPlan(db)]);
   return contextFor(profile, plan);
@@ -65,11 +68,13 @@ export function runAs<T>(ctx: UserContext, fn: () => T): T {
 
 /** Runs `fn` as this user (tool calls, scripts). */
 export async function withUser<T>(db: Db, fn: () => Promise<T>): Promise<T> {
+  await touch(db, "ai");
   return als.run(await load(db), fn);
 }
 
 /** For pages and actions: the rest of this request runs as this user. */
 export async function enterUser(db: Db): Promise<UserContext> {
+  await touch(db, "app");
   const ctx = await load(db);
   als.enterWith(ctx);
   try {

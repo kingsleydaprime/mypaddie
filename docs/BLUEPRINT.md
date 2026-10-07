@@ -1,14 +1,14 @@
 # Paddie Blueprint
 
-Oct 5, 2026 · updated Oct 6, 2026 to match what's built · @Kingsley Ihemelandu Chukwudi
+Oct 5, 2026 · updated Oct 14, 2026 to match what's built · @Kingsley Ihemelandu Chukwudi
 
 > **Public version.** The system design is complete; personal details (real figures, habits, wishes, the identity profile) have been replaced with generic examples. The real ones live in the app's own database, not in this repo.
 
-> **Status (Oct 6, 2026).** The four-day build is done: rules engine, MCP connector (75 tools), phone app, push notifications, and the extras that came after (learning, workouts, pantry, events, applications, updates, Google Calendar import, a fun list, courses, commitments and promises). The reasoning behind each choice is in [DECISIONS.md](../DECISIONS.md); what's next, including a multi-user version, is in [ROADMAP.md](ROADMAP.md).
+> **Status (Oct 14, 2026).** The four-day build is done, and MyPaddie is now open to anyone at mypaddie.spectroniqlimited.com: sign-up (invite-only is one switch away), per-user time zone, currency and voice, Free/Plus/Pro plans (nothing charged yet), one-URL AI connection, and the extras that came after (learning, workouts, pantry, events, applications, updates, Google Calendar import, fun, courses and timetables, commitments with role history, promises, people, about me, library, lists). 92 MCP tools. The reasoning behind each choice is in [DECISIONS.md](../DECISIONS.md); what's next, including a multi-user version, is in [ROADMAP.md](ROADMAP.md).
 
 ## Vision and principles
 
-Paddie is a private system that runs your life as a game, knows when to be strict or soft, and keeps you honest about your time, habits and money. It is built for one user: you. (A version anyone can sign up for is planned; see the roadmap.)
+Paddie is a private system that runs your life as a game, knows when to be strict or soft, and keeps you honest about your time, habits and money. It started as one person's coach; now anyone can have their own Paddie, each in their own locked-down corner of the same database (see "For everyone" below).
 
 **Core principle: reduce decision fatigue, don't create another life to manage.** Paddie's default screen and voice say "Here are the 3 things that matter right now. Do one." It never opens with a stats briefing. The numbers (pillar XP, weights, trends) are all there for when you go looking, but they are never pushed at you.
 
@@ -182,7 +182,7 @@ Paddie sounds like a deadpan game narrator with a big-brother streak: it describ
 - It narrates situations like a game log or a nature documentary.
 - The joke never replaces the instruction. Humour sits on top of the structure.
 - It laughs with you at how ridiculous a situation is, never at you when you're genuinely struggling.
-- Naija-friendly and relaxed, with banter, but not a caricature.
+- Naija-friendly and relaxed, with banter, but not a caricature. (A per-user setting: "naija", the default, or "neutral" — the same coach in plain English.)
 
 Examples of the voice:
 
@@ -252,11 +252,28 @@ These were added after the four-day plan, each because a real day needed it.
 - **Applications.** Deadlines kept in their own time zone, a target date (default 3 days early), requirements that become tasks, a pipeline, and their own reminder ladder.
 - **Updates owed.** Regular updates to people (recipient, channel, topic, format, cadence); `draft_update` writes from what you actually did since the last one, never padded.
 - **Google Calendar import.** Read-only, through the calendar's private iCal link (no Google sign-in needed). Synced when Today loads; your own flags survive a re-sync.
+- **Timetables.** Send a photo of your timetable: every class becomes a weekly block tied to its course, ending when the semester does (repeating tasks can now end: "gym until exams"). Classes are fixed — never refused for a full day — and don't count as habits.
+- **Role history.** A commitment keeps every role you've held there, with dates: Member (Sep 2025 – Mar 2026) → Secretary (since Mar 2026).
+- **People.** Who each person is to you, notes, birthdays (on the calendar), a reach-out rhythm, things to talk about. "Talked today" earns Relationships XP; Paddie names who's due a check-in.
+- **About me.** Strengths, weak spots, what you're healing from (and how), patterns, triggers, good habits and habits to break, history. The AI keeps the advice-relevant ones in mind every chat — kindly, never to shame.
+- **Library, favourites and lists.** Books, films, series, music, podcasts and games; your favourite things; and any list you like, ticked off with a percentage. A bucket-list tick pays +50, like a wish coming true.
 - **Fun list.** Things you enjoy, with rough cost, time, energy and company. "Did it" pays XP (emotional, plus social with people). Suggestions skip what you can't afford (only free fun in a deficit), what doesn't fit the gap, and high-energy fun on a soft day, and favour what you haven't done in a while. Free time in Plan my day comes with an idea.
 - **Courses.** Code, title, lecturer, units, target grade, the syllabus (topics, with weeks) and assessments. Share an outline and the AI fills it all in. Exams and tests become important events; assignments become tasks that turn must-do 2 days before. Each topic is to start, learning or solid, from the confidence you give after studying it. Paddie proposes study sessions (exam prep first, then reviews due, then new topics) that fit your daily capacity, and books the ones you accept. It can also create study tasks directly.
 - **Commitments.** Jobs (full-time, part-time, freelance, internship), roles (volunteer, campus ambassador, academic lead), memberships (a students' union, the church choir) and teams. Each has a priority (core, important, optional); its regular sessions (team training, rehearsals, personal training) are recurring tasks, and competitions or meetings are events tied to it. Pausing or ending one gives the time back.
 - **Weekly load.** The next 7 days plus unscheduled hours against the week's capacity: room, tight (80%+) or overloaded (over 100%). Before you take on something new, paddie checks, and if your plate is full it says so and suggests what to pause (optional first, never core), measured against "Who I'm becoming". Advice only; you decide.
 - **Promises.** Who, what, by when. On Today, a must-do from the day before. Tell them in time and move the date, or they let you off, and nothing is lost; patterns ("two broken promises to the same person") are named.
+
+## For everyone
+
+What changed to let anyone have their own Paddie. Details and reasons are in DECISIONS.md.
+
+- **Sign-up**: Google, an emailed link, or a password. Invite-only is a switch (off for now); with it on, a Supabase "before user created" hook admits only a valid code or an invited email. Bot protection with Cloudflare Turnstile.
+- **First ten minutes**: name, time zone, currency and voice → connect your AI (one URL) → turn on reminders (on iPhone, "Add to Home Screen" first) → "empty your head" into Paddie.
+- **Your own clock and money**: every rule and the nudge job run on each user's time zone; money shows in their currency. No zone saved = Lagos; a broken one = UTC.
+- **Connect your AI**: paste one URL into Claude or ChatGPT; the app registers itself. The consent screen judges by where access really goes, not by the name an app gives itself.
+- **Plans**: Free, Plus ($10 / ₦7,500) and Pro ($20 / ₦15,000), yearly at two months free, students half. Free caps things like habits, courses and AI apps; Plus adds study plans, weekly load advice and Calendar import; Pro adds unlimited AI apps and Paddie's own chat when it lands. Nothing is charged yet (Paystack later).
+- **Safety**: every table locked to its owner, checked across the whole schema by a test; rate limits on the AI endpoint; download everything or delete your account from Settings; a privacy policy and terms.
+- **Public site**: home, pricing, about, privacy, terms; the header shows "Open app" when you're signed in.
 
 ## Architecture
 
@@ -279,7 +296,7 @@ The AI chat calls the MCP server and the phone app calls the app API, but both g
 
 ## Data schema
 
-The database has 35 tables, all in Postgres (Supabase), and every row belongs to you through row-level security.
+The database has 45 tables (plus five private ones the API can't reach), all in Postgres (Supabase), and every row belongs to you through row-level security.
 
 | Table | Key fields | Purpose |
 | --- | --- | --- |
@@ -309,6 +326,12 @@ Added since the first schema:
 | updates, update\_log | Updates owed and when each was sent |
 | push\_subscriptions | Devices that receive nudges |
 | fun\_activities | The fun list: cost, minutes, energy, company, times done, last done |
+| people, people\_contacts | People in your life and when you were last in touch |
+| self\_notes | Strengths, weak spots, healing, patterns, triggers, habits, history |
+| media, favorites | Your library, and your favourite things |
+| lists, list\_items | Lists you define, ticked off with progress |
+| commitment\_roles | Every role held at a commitment, with dates |
+| invites, user\_plans, feedback | Invites, chosen plan, feedback to the team |
 | commitments | Jobs, roles, memberships and teams: kind, role, org, priority, status, unscheduled hours; tasks and events link to them |
 | promises | To whom, what, by when, status (open, kept, released, broken), renegotiations, its task |
 | courses, course\_topics, course\_assessments | Courses (each with its own academic skill), their syllabus, and tests/exams/assignments linked to events or tasks |
@@ -320,7 +343,7 @@ A single `export_all` function dumps every table to JSON so your data is never t
 
 ## MCP tool list
 
-The connector exposes 75 tools. Each one returns the current mode, so the AI always knows how strict to be.
+The connector exposes 92 tools — `what_can_paddie_do` lists them all, grouped, with the user's plan. Each one returns the current mode, so the AI always knows how strict to be.
 
 | Area | Tools |
 | --- | --- |
@@ -345,7 +368,11 @@ The connector exposes 75 tools. Each one returns the current mode, so the AI alw
 | Fun | list\_fun (with suggestions that fit now), add\_fun, update\_fun, log\_fun |
 | Commitments | add\_commitment (with regular sessions), list\_commitments, update\_commitment, check\_load (before taking on more) |
 | Promises | add\_promise, list\_promises, update\_promise (kept, released, renegotiate) |
-| Courses | add\_course (from an outline), list\_courses, update\_course, update\_assessment, propose\_study\_plan, accept\_study\_plan |
+| People | list\_people, add\_person, update\_person, log\_contact |
+| About me | get\_self, add\_self\_note, update\_self\_note |
+| Library and lists | get\_library, save\_media, save\_favorite, get\_lists, create\_list, update\_list |
+| Profile and help | get\_profile, update\_profile, what\_can\_paddie\_do |
+| Courses | set\_timetable, add\_course (from an outline), list\_courses, update\_course, update\_assessment, propose\_study\_plan, accept\_study\_plan |
 
 Authentication is OAuth 2.1 with PKCE. It never runs authless, because it returns your money and personal data.
 
@@ -355,7 +382,7 @@ The app is designed phone-first as an installable web app (PWA) on Android, with
 
 | Tab | What's on it |
 | --- | --- |
-| Quests | Needs, wants, goals, wishes and dreams, with tier filters and an add button. Commitments, Promises, Courses, Fun list, Applications and Updates live here |
+| Quests | Needs, wants, goals, wishes and dreams, with tier filters and an add button. Me & people (People, About me, Library, Lists), Commitments, Promises, Courses, Fun list, Applications and Updates live here |
 | Money | Balance card, current stage, buckets, the gap in deficit mode, quick log, history with void and edit, purchase checks. Pantry lives here |
 | Home (centre) | The 3 things that matter right now, with a button to do one. Everything else is one tap away, plus Plan my day, Events and today's workout |
 | Stats | The eleven pillars and levels, learning and training. The numbers live here, behind a tap, and are never pushed at you on Home |

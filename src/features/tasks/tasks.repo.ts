@@ -383,6 +383,14 @@ export interface NewTask {
   topic?: string | null;
   /** The job, role, team or group it's for. */
   commitmentId?: string | null;
+  /** A class in a course's timetable. */
+  courseId?: string | null;
+  location?: string | null;
+  /**
+   * Set by others, not chosen: a class, a shift. Never refused for a full day
+   * or a clash (you have to be there); the caller reports the load instead.
+   */
+  fixed?: boolean;
 }
 
 export type Reminder = "eve" | "morning" | "30" | "10";
@@ -399,7 +407,8 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = curr
   validateWeights(task.weights);
   if (task.recurrence) {
     parseRecurrence(task.recurrence);
-    await requireRoom(db, "habits");
+    // Classes come with a course, not a choice: they don't use up habit slots.
+    if (!task.courseId) await requireRoom(db, "habits");
   }
 
   const hasDay = task.dueDate !== null || task.dueTime !== null || task.recurrence !== null;
@@ -407,7 +416,7 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = curr
   const start = task.dueTime ? zonedInstant(day, task.dueTime, config.timeZone) : null;
   const dueAt = start ?? (task.dueDate ? zonedInstant(day, "23:59", config.timeZone) : null);
 
-  if (hasDay) {
+  if (hasDay && !task.fixed) {
     // A one-off is checked on its day; a habit on each of its next 14 days,
     // so a daily habit can't quietly overfill next Tuesday.
     const rule = task.recurrence ? parseRecurrence(task.recurrence) : null;
@@ -448,6 +457,8 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = curr
       fun_activity_id: task.funActivityId ?? null,
       topic: task.topic?.trim() || null,
       commitment_id: task.commitmentId ?? null,
+      course_id: task.courseId ?? null,
+      location: task.location?.trim() || null,
     })
     .select("id, title, due_at, recurrence")
     .single();
