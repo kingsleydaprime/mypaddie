@@ -17,7 +17,8 @@ export async function StatsScreen({ db }: { db: Db }) {
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="text-2xl font-bold">Stats</h1>
+        <Link href="/app/more" className="text-sm text-muted" aria-label="Back to others">‹ Others</Link>
+        <h1 className="mt-1 text-2xl font-bold">Stats</h1>
         <p className="mt-1 text-sm text-muted">
           {totalXp} XP total · {weekXp >= 0 ? "+" : ""}
           {weekXp} this week

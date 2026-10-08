@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 type Tab = { href: string; label: string; icon: string };
 
 const SIDE: [Tab, Tab, Tab, Tab] = [
-  { href: "/app/quests", label: "Quests", icon: "M5 4h14M5 9h14M5 14h9M5 19h6" },
+  { href: "/app/tasks", label: "Tasks", icon: "M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" },
   { href: "/app/money", label: "Money", icon: "M3 7h18v10H3zM7 12h.01M17 12h.01M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" },
-  { href: "/app/stats", label: "Stats", icon: "M5 20V10m7 10V4m7 16v-7" },
+  { href: "/app/more", label: "Others", icon: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" },
   {
     href: "/app/settings",
     label: "Settings",
@@ -18,7 +18,19 @@ const SIDE: [Tab, Tab, Tab, Tab] = [
 const HOME_ICON = "M3 11.5 12 4l9 7.5M5.5 9.5V20h5v-6h3v6h5V9.5";
 
 /** Screens reached from Today count as "home" for the highlighted tab. */
-const HOME_PATHS = ["/app/plan", "/app/events", "/app/workout", "/app/tasks"];
+const HOME_PATHS = ["/app/plan", "/app/events", "/app/workout", "/app/close", "/app/done"];
+
+/** Screens that belong to a side tab without living under its URL. */
+const OWNED: Record<string, string[]> = {
+  "/app/tasks": ["/app/routines"],
+  "/app/money": ["/app/pantry"],
+  "/app/more": [
+    "/app/quests", "/app/commitments", "/app/promises", "/app/me", "/app/people", "/app/lists", "/app/growth",
+    "/app/achievements", "/app/stats", "/app/life", "/app/courses", "/app/applications", "/app/updates", "/app/fun",
+  ],
+};
+
+const under = (path: string, base: string) => path === base || path.startsWith(`${base}/`);
 
 function Icon({ d, className }: { d: string; className: string }) {
   return (
@@ -29,7 +41,7 @@ function Icon({ d, className }: { d: string; className: string }) {
 }
 
 function SideTab({ tab, path }: { tab: Tab; path: string }) {
-  const active = path === tab.href || path.startsWith(`${tab.href}/`) || (tab.href === "/app/quests" && (path.startsWith("/app/applications") || path.startsWith("/app/updates"))) || (tab.href === "/app/money" && path.startsWith("/app/pantry"));
+  const active = under(path, tab.href) || (OWNED[tab.href] ?? []).some((p) => under(path, p));
   return (
     <Link
       href={tab.href}

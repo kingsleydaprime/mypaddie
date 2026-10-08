@@ -124,6 +124,7 @@ export async function TodayScreen({ db }: { db: Db }) {
         <div className="rounded-2xl border border-line bg-surface p-6 text-center">
           <p className="text-lg font-semibold">Quest log: clear.</p>
           <p className="mt-1 text-muted">Nothing due. Go enjoy yourself — rest is part of the game.</p>
+          <Link href="/app/tasks" className="mt-3 inline-block text-sm font-semibold text-gold">See what&rsquo;s coming up ›</Link>
         </div>
       ) : (
         <ol className="flex flex-col gap-3">

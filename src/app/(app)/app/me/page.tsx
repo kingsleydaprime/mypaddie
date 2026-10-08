@@ -17,7 +17,7 @@ export default async function MePage() {
   return (
     <div className="flex flex-col gap-5">
       <header className="flex items-center gap-3">
-        <Link href="/app/quests" className="text-muted" aria-label="Back to quests">‹ Quests</Link>
+        <Link href="/app/more" className="text-muted" aria-label="Back to others">‹ Others</Link>
         <h1 className="text-2xl font-bold">Me</h1>
       </header>
       <p className="-mt-2 text-sm text-muted">What Paddie knows about you and your people, so its advice fits. Tell Paddie in chat, or add it here.</p>
@@ -31,7 +31,7 @@ export default async function MePage() {
           </li>
         ))}
       </ul>
-      <p className="text-xs text-muted">Timetable: open a course under Quests → Courses, or send Paddie a photo of it.</p>
+      <p className="text-xs text-muted">Timetable: open a course under Others → Courses, or send Paddie a photo of it.</p>
     </div>
   );
 }

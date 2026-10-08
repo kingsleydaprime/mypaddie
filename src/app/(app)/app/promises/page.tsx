@@ -21,7 +21,7 @@ export default async function PromisesPage() {
   return (
     <div className="flex flex-col gap-5">
       <header className="flex items-center gap-3">
-        <Link href="/app/quests" className="text-muted" aria-label="Back to quests">‹ Quests</Link>
+        <Link href="/app/more" className="text-muted" aria-label="Back to others">‹ Others</Link>
         <h1 className="text-2xl font-bold">Promises</h1>
       </header>
       <AddPromiseForm />

@@ -16,7 +16,7 @@ export default async function UpdatesPage() {
   return (
     <div className="flex flex-col gap-5">
       <header className="flex items-center gap-3">
-        <Link href="/app/quests" className="text-muted" aria-label="Back to quests">‹ Quests</Link>
+        <Link href="/app/more" className="text-muted" aria-label="Back to others">‹ Others</Link>
         <h1 className="text-2xl font-bold">Updates</h1>
       </header>
       <p className="text-sm text-muted">Ask Paddie &ldquo;draft my update to …&rdquo; — it writes from what you actually did since the last one.</p>

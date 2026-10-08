@@ -75,28 +75,13 @@ export async function QuestsScreen({ db, tier, status = "active" }: { db: Db; ti
 
   return (
     <div className="flex flex-col gap-5">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Quests</h1>
+      <header className="flex items-center gap-3">
+        <Link href="/app/more" className="text-muted" aria-label="Back to others">‹ Others</Link>
+        <h1 className="flex-1 text-2xl font-bold">Life list</h1>
         <Link href={`/app/quests/new${tier ? `?tier=${tier}` : ""}`} className="rounded-xl bg-gold px-4 py-2.5 font-semibold text-on-gold">
           + Add
         </Link>
       </header>
-
-      <nav className="-mx-4 flex gap-2 overflow-x-auto px-4" aria-label="More">
-        {[
-          ["/app/me", "Me & people"],
-          ["/app/growth", "Growth"],
-          ["/app/routines", "Routines"],
-          ["/app/commitments", "Commitments"],
-          ["/app/promises", "Promises"],
-          ["/app/courses", "Courses"],
-          ["/app/fun", "Fun list"],
-          ["/app/applications", "Applications"],
-          ["/app/updates", "Updates"],
-        ].map(([href, label]) => (
-          <Link key={href} href={href} className="shrink-0 rounded-xl border border-line px-3 py-2.5 text-sm font-medium">{label}</Link>
-        ))}
-      </nav>
 
       <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="Filter by tier">
         <Chip href={`/app/quests${status !== "active" ? `?status=${status}` : ""}`} active={tier === null}>All</Chip>
@@ -109,7 +94,7 @@ export async function QuestsScreen({ db, tier, status = "active" }: { db: Db; ti
 
       {status !== "active" && (
         <p className="flex items-center justify-between text-sm text-muted">
-          Showing {status} quests
+          Showing {status}
           <Link href={withStatus("active")} className="font-semibold text-gold">Back to active</Link>
         </p>
       )}

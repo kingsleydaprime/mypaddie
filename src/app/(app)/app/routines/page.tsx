@@ -17,7 +17,7 @@ export default async function RoutinesPage() {
   return (
     <div className="flex flex-col gap-5">
       <header className="flex items-center gap-3">
-        <Link href="/app/quests" className="text-muted" aria-label="Back to quests">‹ Quests</Link>
+        <Link href="/app/tasks" className="text-muted" aria-label="Back to tasks">‹ Tasks</Link>
         <h1 className="text-2xl font-bold">Routines</h1>
       </header>
       <p className="-mt-2 text-sm text-muted">Habits that belong together, shown on Today as one item. Ask Paddie to make one: &ldquo;my morning routine is pray, read, brush, bath, dress — from 6am&rdquo;.</p>
