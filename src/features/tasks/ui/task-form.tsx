@@ -14,6 +14,7 @@ export interface TaskFormValues {
   must: boolean;
   /** Self-care uses the waking day, not work hours. */
   selfCare: boolean;
+  priority: "high" | "normal" | "low";
   note: string;
   details: string;
   /** One step per line. */
@@ -85,6 +86,14 @@ export function TaskForm({ task, forOptions }: { task: TaskFormValues; forOption
         <label className="flex flex-col gap-1 text-sm text-muted">
           Reminder note — what the notification should say
           <input name="note" maxLength={200} defaultValue={task.note} placeholder="e.g. Bring the signed form" className={field} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm text-muted">
+          Priority — among your other tasks
+          <select name="priority" defaultValue={task.priority} className={field}>
+            <option value="high">High — goes first</option>
+            <option value="normal">Normal</option>
+            <option value="low">Low — whenever there&apos;s room</option>
+          </select>
         </label>
         <label className="flex items-center gap-3"><input type="checkbox" name="must" defaultChecked={task.must} className="h-5 w-5" /> Must-do (nudged until done)</label>
         <label className="flex items-start gap-3">

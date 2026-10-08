@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
-import { PILLARS } from "@/shared/domain";
+import { PILLARS, PRIORITIES, type Priority } from "@/shared/domain";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { findCommitment } from "@/features/commitments/commitments.repo";
 import { findCourseRef } from "@/features/courses/courses.repo";
@@ -28,6 +28,11 @@ const REFUSALS =
   "plainly with the numbers, and offer to finish or drop something first, or move it to another day. `full: 'work'` " +
   "means their work hours are used up; `full: 'day'` means there's no waking time left at all. Do NOT suggest " +
   "raising capacity to squeeze it in — that's their deliberate setting (set_capacity).";
+
+const PRIORITY =
+  "Among their other tasks: high goes first in its group on Today, low sinks below the rest; must-do still outranks " +
+  "it. Default normal — leave it unless they say it matters more ('this one's important', a deadline that counts) or " +
+  "less ('whenever', 'no rush'). Never ask them to rate tasks.";
 
 const CHECKLIST =
   "Steps inside one task, in order (an essay: outline, draft, edit). Ticked with tick_step. XP stays on the task as a " +
@@ -60,6 +65,7 @@ export function registerTaskTools(server: McpServer) {
         non_negotiable: z.boolean().default(false),
         self_care: z.boolean().optional().describe(SELF_CARE),
         checklist: z.array(z.string().trim().min(1).max(200)).min(1).max(30).optional().describe(CHECKLIST),
+        priority: z.enum(PRIORITIES).optional().describe(PRIORITY),
         weights: weightsSchema,
         duration_minutes: z.number().int().min(1).max(1440).optional(),
         reminders: reminders.optional(),
@@ -85,6 +91,7 @@ export function registerTaskTools(server: McpServer) {
         non_negotiable: boolean;
         self_care?: boolean;
         checklist?: string[];
+        priority?: Priority;
         weights: { pillar: (typeof PILLARS)[number]; weight: number }[];
         duration_minutes?: number;
         reminders?: ("eve" | "morning" | "30" | "10")[];
@@ -122,6 +129,7 @@ export function registerTaskTools(server: McpServer) {
             nonNegotiable: args.non_negotiable,
             selfCare: args.self_care,
             checklist: args.checklist ?? null,
+            priority: args.priority,
             weights: args.weights,
             durationMinutes: args.duration_minutes ?? null,
             reminders: args.reminders ?? null,
@@ -168,6 +176,7 @@ export function registerTaskTools(server: McpServer) {
         checklist: z.array(z.string().trim().max(200)).max(30).nullable().optional().describe(
           CHECKLIST + " Replaces the whole list in order; steps that stay keep their tick. null or [] clears it. For a habit, later days start unticked.",
         ),
+        priority: z.enum(PRIORITIES).optional().describe(PRIORITY + " For a habit it applies from this day on."),
         recurrence: z.string().optional().describe("Recurring habits only, e.g. FREQ=WEEKLY;BYDAY=MO,TH"),
         weights: weightsSchema.optional(),
         duration_minutes: z.number().int().min(1).max(1440).nullable().optional(),
@@ -193,6 +202,7 @@ export function registerTaskTools(server: McpServer) {
         non_negotiable?: boolean;
         self_care?: boolean;
         checklist?: string[] | null;
+        priority?: Priority;
         recurrence?: string;
         weights?: { pillar: (typeof PILLARS)[number]; weight: number }[];
         duration_minutes?: number | null;
@@ -228,6 +238,7 @@ export function registerTaskTools(server: McpServer) {
             nonNegotiable: args.non_negotiable,
             selfCare: args.self_care,
             checklist: args.checklist,
+            priority: args.priority,
             recurrence: args.recurrence,
             weights: args.weights,
             durationMinutes: args.duration_minutes,

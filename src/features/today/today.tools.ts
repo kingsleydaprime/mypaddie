@@ -42,6 +42,7 @@ const item = (i: FocusItem) => ({
   overdue: i.overdue,
   nonNegotiable: i.nonNegotiable,
   ...(i.forLabel ? { for: i.forLabel } : {}),
+  ...(i.priority !== "normal" ? { priority: i.priority } : {}),
   ...(i.startedAt ? { inProgressSince: formatLocal(i.startedAt, tz()) } : {}),
   ...(i.spentMinutes > 0 ? { minutesSpentBefore: i.spentMinutes } : {}),
   ...(!i.startedAt && i.spentMinutes > 0 ? { paused: true } : {}),

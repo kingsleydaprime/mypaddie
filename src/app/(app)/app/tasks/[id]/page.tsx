@@ -16,7 +16,7 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
   const db = await requireDb(`/app/tasks/${id}`);
   const { data: t } = await db
     .from("tasks")
-    .select("id, title, status, due_at, duration_minutes, is_non_negotiable, is_self_care, reminder_note, series_id, commitment_id, course_id, is_class, details, started_at, spent_minutes, checklist")
+    .select("id, title, status, due_at, duration_minutes, is_non_negotiable, is_self_care, reminder_note, series_id, commitment_id, course_id, is_class, details, started_at, spent_minutes, checklist, priority")
     .eq("id", id)
     .maybeSingle();
   if (!t) notFound();
@@ -59,6 +59,7 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
               duration: t.duration_minutes,
               must: t.is_non_negotiable,
               selfCare: t.is_self_care,
+            priority: t.priority as "high" | "normal" | "low",
               note: t.reminder_note ?? "",
               details: t.details ?? "",
               checklist: steps.map((st) => st.text).join("\n"),

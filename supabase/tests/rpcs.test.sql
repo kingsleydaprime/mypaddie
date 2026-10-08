@@ -5,7 +5,7 @@ create extension if not exists pgtap with schema extensions;
 -- somewhere not on this connection's search_path) and add that schema.
 select set_config('search_path', current_setting('search_path') || ', ' || n.nspname, true)
   from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgtap';
-select plan(19);
+select plan(20);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com'),
@@ -64,6 +64,13 @@ select is(
 select is(
   (select started_at from public.tasks where occurs_on = '2026-10-09' and series_id = 'cccccccc-0000-0000-0000-000000000001'),
   null, 'the new row is not in progress'
+);
+-- Priority carries to the next day.
+update public.tasks set priority = 'high' where occurs_on = '2026-10-09' and series_id = 'cccccccc-0000-0000-0000-000000000001';
+select public.spawn_occurrence('cccccccc-0000-0000-0000-000000000001', '2026-10-10', '2026-10-10 06:00:00+00');
+select is(
+  (select priority from public.tasks where occurs_on = '2026-10-10' and series_id = 'cccccccc-0000-0000-0000-000000000001'),
+  'high', 'the new row copies the priority'
 );
 select is(
   public.spawn_occurrence('99999999-0000-0000-0000-000000000000', '2026-10-06', null),

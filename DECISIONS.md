@@ -1423,3 +1423,21 @@ moment. A task with a real time ("submit by 23:00") keeps it. Missing a need
 (the deduction) is still judged when the calendar day ends, as for timed
 tasks: the late part of the evening is for recovering, not for losing points.
 The 23:59 marker stays in the database; only how it's read changed.
+
+### Task priority: high, normal, low (normal by default)
+Any-time tasks had nothing to sort by, so an important one and a trivial one
+tied (in effect, alphabetical). `tasks.priority` is high, normal or low,
+normal by default, and most tasks never change. On Today it orders tasks
+*inside* each group (must-dos, needs, the rest) before time does: high
+first, low below everything else in its group. Must-do still outranks it,
+because must-do means "this has to happen" and priority means "this matters
+more than its neighbours". The morning brief's top three rank the same way.
+A habit's next day keeps its priority.
+
+Considered: a single Important toggle (like events). It can only push things
+up; it can't say "nice-to-have, put it last", which matters as much for a
+pile of any-time tasks. The usual risk with levels, everything drifting to
+"high", comes from being asked to choose every time. So nothing asks: the
+default is normal, and Paddie only sets a level when you say something
+matters more or less. It's a field on add_task and update_task (like must-do
+and self-care), not a tool of its own.

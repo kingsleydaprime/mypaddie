@@ -157,3 +157,35 @@ describe("any time ends when quiet hours start", () => {
     expect(f.top[0]!.overdue).toBe(true);
   });
 });
+
+describe("priority", () => {
+  test("high comes before normal, low after, within a group — before time", () => {
+    const f = pickFocus([
+      task({ title: "Inbox", dueAt: at("2026-10-06T11:00:00") }),
+      task({ title: "Tidy desk", dueAt: null, priority: "low" }),
+      task({ title: "Pitch deck", dueAt: null, priority: "high" }),
+      task({ title: "Call bank", dueAt: null }),
+    ], now, 4);
+    expect(titles(f.top)).toEqual(["Pitch deck", "Inbox", "Call bank", "Tidy desk"]);
+  });
+
+  test("a must-do still outranks a high-priority ordinary task", () => {
+    const f = pickFocus([
+      task({ title: "Pitch deck", priority: "high" }),
+      task({ title: "Pray", isNonNegotiable: true, priority: "low" }),
+    ], now);
+    expect(titles(f.top)).toEqual(["Pray", "Pitch deck"]);
+  });
+
+  test("an overdue normal task comes after an upcoming high one (priority before time)", () => {
+    const f = pickFocus([
+      task({ title: "Late email", dueAt: at("2026-10-06T08:00:00") }),
+      task({ title: "Pitch deck", dueAt: at("2026-10-06T16:00:00"), priority: "high" }),
+    ], now);
+    expect(titles(f.top)).toEqual(["Pitch deck", "Late email"]);
+  });
+
+  test("it comes through on the item", () => {
+    expect(pickFocus([task({ priority: "high" })], now).top[0]!.priority).toBe("high");
+  });
+});

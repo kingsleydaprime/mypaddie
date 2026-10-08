@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { PRIORITIES } from "@/shared/domain";
 import { requireDb } from "@/shared/supabase/session";
 import { deleteTask, startTask, tickTaskStep, updateTask } from "./tasks.repo";
 import { refusalMessage } from "./ui/refusal";
@@ -38,6 +39,7 @@ export async function saveTaskAction(_prev: TaskFormState, form: FormData): Prom
       durationMinutes: minutes,
       nonNegotiable: form.get("must") === "on",
       selfCare: form.get("selfCare") === "on",
+      priority: PRIORITIES.find((p) => p === form.get("priority")) ?? "normal",
       // One step per line; steps that stay keep their tick.
       checklist: String(form.get("checklist") ?? "").split("\n"),
       reminderNote: String(form.get("note") ?? "").trim() || null,

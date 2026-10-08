@@ -1,5 +1,5 @@
 import { currentConfig, type EngineConfig } from "@/shared/config";
-import type { Tier } from "@/shared/domain";
+import type { Priority, Tier } from "@/shared/domain";
 import { dayKey } from "@/shared/time";
 
 export interface TaskForFocus {
@@ -21,6 +21,8 @@ export interface TaskForFocus {
   forLabel?: string | null;
   /** An any-time task's day is over at this moment (quiet hours start): overdue after it. */
   anyTimeEndsAt?: Date | null;
+  /** Among its neighbours; missing = normal. */
+  priority?: Priority;
 }
 
 export interface FocusItem {
@@ -35,7 +37,10 @@ export interface FocusItem {
   spentMinutes: number;
   steps: { done: number; total: number } | null;
   forLabel: string | null;
+  priority: Priority;
 }
+
+const PRIORITY_ORDER: Record<Priority, number> = { high: 0, normal: 1, low: 2 };
 
 export interface Focus {
   /** The 3 things that matter right now. Do one. */
@@ -52,7 +57,9 @@ export interface Focus {
  *   2. non-negotiables still to come today
  *   3. other needs, overdue then upcoming
  *   4. everything else, overdue then upcoming
- * Within a group, earliest due first; undated tasks go last in their group.
+ * Within a group, priority first (high, normal, low), then overdue before
+ * upcoming, then earliest due; undated tasks go last among their equals. So a
+ * must-do still outranks a high-priority ordinary task.
  * Only today's open tasks and anything overdue are considered.
  */
 export function pickFocus(
@@ -78,9 +85,9 @@ export function pickFocus(
   const rank = (t: TaskForFocus) => {
     // Whatever they've started comes first: it's what they're doing.
     if (t.startedAt) return -1;
-    const overdue = isOverdue(t);
     const group = t.isNonNegotiable ? 0 : t.tier === "need" ? 1 : 2;
-    return group * 2 + (overdue ? 0 : 1);
+    const priority = PRIORITY_ORDER[t.priority ?? "normal"];
+    return group * 6 + priority * 2 + (isOverdue(t) ? 0 : 1);
   };
 
   const sorted = [...open].sort(
@@ -100,6 +107,7 @@ export function pickFocus(
     spentMinutes: t.spentMinutes ?? 0,
     steps: t.steps ?? null,
     forLabel: t.forLabel ?? null,
+    priority: t.priority ?? "normal",
   });
 
   // A routine takes one place: its open steps collapse into a single item at

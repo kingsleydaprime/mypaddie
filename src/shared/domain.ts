@@ -22,6 +22,10 @@ export type Pillar = (typeof PILLARS)[number];
 export const TIERS = ["need", "want", "goal", "wish", "dream"] as const;
 export type Tier = (typeof TIERS)[number];
 
+/** A task's priority among its neighbours (mirrors tasks.priority). Most tasks stay normal. */
+export const PRIORITIES = ["high", "normal", "low"] as const;
+export type Priority = (typeof PRIORITIES)[number];
+
 /** Modes in the blueprint's table. `strictest`/`softest` only come from an override. */
 export type Mode = "curious" | "strict" | "soft" | "strictest" | "softest";
 

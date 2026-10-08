@@ -2,7 +2,7 @@ import { validateWeights, type PillarWeight } from "@/features/xp/split";
 import { requireRoom } from "@/features/plans/guard";
 import { anyTimeEndsAt, completionXp, ignoredNeedDeduction, isLate, lateAfter, type SlipForXp, type TaskForXp } from "@/features/xp/xp";
 import { currentConfig, type EngineConfig } from "@/shared/config";
-import type { Tier } from "@/shared/domain";
+import type { Priority, Tier } from "@/shared/domain";
 import type { Database, Json } from "@/shared/supabase/database.types";
 import { eventBlocksOn } from "@/features/events/events.repo";
 import { activeDay, dayEndsAt } from "@/features/settings/schedule";
@@ -28,7 +28,7 @@ const LOOKBACK_DAYS = 14;
 const SERIES_LOOKBACK_DAYS = 60;
 
 const TASK_COLUMNS =
-  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, fun_activity_id, topic, item_id, routine_id, routine_step, started_at, spent_minutes, checklist, occurs_on, routines(title), items(tier), commitments(title), courses(code, title), task_pillars(pillar, weight)";
+  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, fun_activity_id, topic, item_id, routine_id, routine_step, started_at, spent_minutes, checklist, occurs_on, priority, routines(title), items(tier), commitments(title), courses(code, title), task_pillars(pillar, weight)";
 
 type TaskRow = {
   id: string;
@@ -50,6 +50,7 @@ type TaskRow = {
   spent_minutes: number;
   checklist: Json | null;
   occurs_on: string | null;
+  priority: string;
   routines: { title: string } | null;
   items: { tier: Tier } | null;
   commitments: { title: string } | null;
@@ -72,6 +73,7 @@ export interface LoadedTask extends TaskForXp {
   forLabel: string | null;
   /** For an any-time task: when its day is over (quiet hours start), so it's overdue after. Null otherwise. */
   anyTimeEndsAt: Date | null;
+  priority: Priority;
 }
 
 /**
@@ -97,6 +99,7 @@ function toTask(row: TaskRow, now?: Date, dayEnds: string = "23:59", config = cu
     steps: stepsDone(readChecklist(row.checklist)),
     forLabel: row.commitments?.title ?? (row.courses ? row.courses.code || row.courses.title : null),
     anyTimeEndsAt: anyTimeEndsAt(row.due_at ? new Date(row.due_at) : null, row.occurs_on, dayEnds, config),
+    priority: row.priority as Priority,
   };
 }
 
@@ -482,6 +485,8 @@ export interface NewTask {
   selfCare?: boolean;
   /** Steps inside the task, in order, all unticked. */
   checklist?: string[] | null;
+  /** Among its neighbours on Today; default normal. */
+  priority?: Priority;
   location?: string | null;
   /**
    * Set by others, not chosen: a class, a shift. Never refused for a full day
@@ -573,6 +578,7 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = curr
       routine_step: task.routine?.step ?? null,
       is_self_care: selfCare,
       checklist: (checklist?.ok ? checklist.steps : null) as unknown as Json,
+      priority: task.priority ?? "normal",
       location: task.location?.trim() || null,
     })
     .select("id, title, due_at, recurrence")
@@ -614,6 +620,7 @@ export interface TaskChanges {
   selfCare?: boolean;
   /** The checklist's steps, in order (steps that stay keep their tick); null or [] clears it. */
   checklist?: string[] | null;
+  priority?: Priority;
 }
 
 export type UpdateResult =
@@ -736,6 +743,7 @@ export async function updateTask(
     if (changes.courseId !== undefined) patch.course_id = changes.courseId;
     if (changes.details !== undefined) patch.details = changes.details?.trim() || null;
     if (changes.selfCare !== undefined) patch.is_self_care = changes.selfCare;
+    if (changes.priority !== undefined) patch.priority = changes.priority;
     if (checklist?.ok) {
       // This day keeps its ticks; later days of a habit start with every step open.
       const steps = row.id === task.id ? checklist.steps : checklist.steps?.map((st) => ({ ...st, done: false })) ?? null;

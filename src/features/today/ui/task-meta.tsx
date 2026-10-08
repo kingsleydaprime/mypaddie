@@ -11,8 +11,10 @@ function soFar(spent: number, startedAt: Date | null, now: Date): number {
 }
 
 /** The line under a task's title: what it's for, whether it's in progress, how far its checklist is. Nothing if none apply. */
-export function TaskMeta({ item, now }: { item: Pick<FocusItem, "forLabel" | "startedAt" | "spentMinutes" | "steps">; now: Date }) {
+export function TaskMeta({ item, now }: { item: Pick<FocusItem, "forLabel" | "startedAt" | "spentMinutes" | "steps" | "priority">; now: Date }) {
   const bits = [
+    item.priority === "high" && <span key="h" className="font-medium text-gold">High priority</span>,
+    item.priority === "low" && <span key="l">Low priority</span>,
     item.startedAt && <span key="p" className="font-medium text-gold">In progress · {hm(soFar(item.spentMinutes, item.startedAt, now))}</span>,
     !item.startedAt && item.spentMinutes > 0 && <span key="z">Paused · {hm(item.spentMinutes)} so far</span>,
     item.steps && <span key="s">{item.steps.done}/{item.steps.total} steps</span>,

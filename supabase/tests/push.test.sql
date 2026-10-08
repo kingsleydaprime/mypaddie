@@ -10,7 +10,7 @@ select set_config('search_path', current_setting('search_path') || ', ' || n.nsp
 create function pg_temp.mine(t timestamptz) returns setof jsonb language sql as $$
   select n from jsonb_array_elements(private.collect_nudges(t)) n where n->>'endpoint' like 'https://push.example/%'
 $$;
-select plan(32);
+select plan(33);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com');
 -- Monday 2026-10-05 rows: a daily non-negotiable at 07:00, a Tue/Thu habit, an ordinary task at 10:00.
@@ -68,6 +68,12 @@ select is((select n->'items' from out2 where n->>'kind' = 'brief'), '["Morning r
   'the brief lists today''s top three, non-negotiables first');
 select is((select count(*)::int from pg_temp.mine('2026-10-06 08:20+01')), 0,
   'one brief per day');
+-- The brief ranks like Today: a high-priority task beats an earlier normal one (but not a must-do).
+update public.tasks set priority = 'high' where series_id = 'cccccccc-0000-0000-0000-000000000002' and occurs_on = '2026-10-06';
+delete from private.nudges where kind = 'brief' and user_id = '11111111-1111-1111-1111-111111111111';
+select is((select n->'items' from pg_temp.mine('2026-10-06 08:25+01') n where n->>'kind' = 'brief'), '["Morning reading", "Gym", "Email the lecturer"]'::jsonb,
+  'high priority comes before time, after must-dos');
+update public.tasks set priority = 'normal' where series_id = 'cccccccc-0000-0000-0000-000000000002' and occurs_on = '2026-10-06';
 
 -- 09:50: the 10:00 email task is 10 minutes away → its 10-minute reminder.
 create temp table out_h as select pg_temp.mine('2026-10-06 09:50+01') as n;
