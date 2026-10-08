@@ -1335,3 +1335,18 @@ can see.
 pure code: the earliest open row from today, otherwise the first day its rule
 gives after the latest row. It reuses `firstOccurrence`, so it agrees with how
 habits are created.
+
+### Making a routine is all or nothing
+A routine was saved first, then each step was created as its own habit. A
+step can be refused (its day is over capacity, or it clashes), and that
+refusal was recorded but never acted on: the tool still said "created". You
+got a routine with some or none of its steps, which then never showed
+anywhere (an Evening routine did exactly this, twice). Now the first refused
+step undoes the whole routine (its step rows, then the routine) and the
+result says which step and why, so Paddie has to tell you. A same-named
+routine with no steps, left over from before this fix, is taken over rather
+than blocking the name. Editing a routine reports any step it couldn't add
+in `notAdded` instead of listing it as added. Considered: checking every
+step's room before inserting anything. That duplicates `createTask`'s
+capacity and clash logic, and each step must count the ones before it anyway,
+so undo-on-refusal is simpler and stays in step with how habits are checked.
