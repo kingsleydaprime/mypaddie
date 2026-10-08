@@ -22,8 +22,14 @@ const reminders = z.array(z.enum(["eve", "morning", "30", "10"])).describe(
 const REFUSALS =
   "If the result is 'clash', say what's already there and when, and ask whether to book it anyway (then retry " +
   "with force_clash=true) or pick another time. If it's 'over_capacity', their plate for that day is full: say so " +
-  "plainly with the numbers, and offer to finish or drop something first, or move it to another day. Do NOT suggest " +
+  "plainly with the numbers, and offer to finish or drop something first, or move it to another day. `full: 'work'` " +
+  "means their work hours are used up; `full: 'day'` means there's no waking time left at all. Do NOT suggest " +
   "raising capacity to squeeze it in — that's their deliberate setting (set_capacity).";
+
+const SELF_CARE =
+  "Self-care (looking after themselves: routines, workouts, hygiene, rest) takes time in the day but not from their " +
+  "work hours (capacity). Default: false for a task, true for routine steps and workouts. Set it when the user says " +
+  "what something is; don't guess.";
 
 export function registerTaskTools(server: McpServer) {
   server.registerTool(
@@ -45,6 +51,7 @@ export function registerTaskTools(server: McpServer) {
         due_time: time.optional().describe("HH:MM, Lagos time"),
         recurrence: z.string().optional(),
         non_negotiable: z.boolean().default(false),
+        self_care: z.boolean().optional().describe(SELF_CARE),
         weights: weightsSchema,
         duration_minutes: z.number().int().min(1).max(1440).optional(),
         reminders: reminders.optional(),
@@ -68,6 +75,7 @@ export function registerTaskTools(server: McpServer) {
         due_time?: string;
         recurrence?: string;
         non_negotiable: boolean;
+        self_care?: boolean;
         weights: { pillar: (typeof PILLARS)[number]; weight: number }[];
         duration_minutes?: number;
         reminders?: ("eve" | "morning" | "30" | "10")[];
@@ -103,6 +111,7 @@ export function registerTaskTools(server: McpServer) {
             dueTime: args.due_time ?? null,
             recurrence: args.recurrence ?? null,
             nonNegotiable: args.non_negotiable,
+            selfCare: args.self_care,
             weights: args.weights,
             durationMinutes: args.duration_minutes ?? null,
             reminders: args.reminders ?? null,
@@ -143,6 +152,7 @@ export function registerTaskTools(server: McpServer) {
         due_date: z.iso.date().optional().describe("One-off tasks only. YYYY-MM-DD, Lagos time"),
         due_time: time.nullable().optional().describe("HH:MM Lagos, or null"),
         non_negotiable: z.boolean().optional(),
+        self_care: z.boolean().optional().describe(SELF_CARE + " For a habit it applies from this day on; switching to work re-checks that day's work hours."),
         recurrence: z.string().optional().describe("Recurring habits only, e.g. FREQ=WEEKLY;BYDAY=MO,TH"),
         weights: weightsSchema.optional(),
         duration_minutes: z.number().int().min(1).max(1440).nullable().optional(),
@@ -165,6 +175,7 @@ export function registerTaskTools(server: McpServer) {
         due_date?: string;
         due_time?: string | null;
         non_negotiable?: boolean;
+        self_care?: boolean;
         recurrence?: string;
         weights?: { pillar: (typeof PILLARS)[number]; weight: number }[];
         duration_minutes?: number | null;
@@ -195,6 +206,7 @@ export function registerTaskTools(server: McpServer) {
             dueDate: args.due_date,
             dueTime: args.due_time,
             nonNegotiable: args.non_negotiable,
+            selfCare: args.self_care,
             recurrence: args.recurrence,
             weights: args.weights,
             durationMinutes: args.duration_minutes,

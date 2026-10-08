@@ -14,7 +14,7 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
   const db = await requireDb(`/app/tasks/${id}`);
   const { data: t } = await db
     .from("tasks")
-    .select("id, title, status, due_at, duration_minutes, is_non_negotiable, reminder_note, series_id, commitment_id, course_id, is_class, details")
+    .select("id, title, status, due_at, duration_minutes, is_non_negotiable, is_self_care, reminder_note, series_id, commitment_id, course_id, is_class, details")
     .eq("id", id)
     .maybeSingle();
   if (!t) notFound();
@@ -53,6 +53,7 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
             time: time === "23:59" ? "" : time,
             duration: t.duration_minutes,
             must: t.is_non_negotiable,
+            selfCare: t.is_self_care,
             note: t.reminder_note ?? "",
             details: t.details ?? "",
             habit: t.series_id !== null,

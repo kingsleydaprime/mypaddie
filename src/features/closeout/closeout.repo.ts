@@ -2,7 +2,7 @@ import { upcoming } from "@/features/events/events";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
 import { loadBills } from "@/features/money/guardrails.repo";
 import { loadCheckin } from "@/features/metrics/metrics.repo";
-import { dayEndsAt } from "@/features/settings/schedule";
+import { activeDay } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { recordSlip } from "@/features/slips/slips.repo";
 import { roomOn } from "@/features/tasks/capacity";
@@ -49,7 +49,7 @@ export async function loadCloseOut(db: Db, now: Date) {
     status: t.status as "pending",
   }));
   const unfinished = sweep(tasks, today);
-  const room = roomOn(tomorrow, tomorrowTasks, capacity, now, undefined, dayEndsAt(schedule));
+  const room = roomOn(tomorrow, tomorrowTasks, capacity, now, undefined, activeDay(schedule));
 
   return {
     today,

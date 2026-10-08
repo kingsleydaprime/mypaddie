@@ -60,6 +60,61 @@ describe("roomOn", () => {
   });
 });
 
+describe("two limits: work hours and the waking day", () => {
+  const morning = at("2026-10-06T08:00:00");
+
+  test("self-care takes day, not work hours", () => {
+    const room = roomOn("2026-10-07", [
+      task({ durationMinutes: 120, selfCare: true }), // morning routine
+      task({ durationMinutes: 60, selfCare: true }), // gym
+      task({ durationMinutes: 180 }), // study
+    ], DEFAULT_CAPACITY, morning);
+    expect(room).toMatchObject({ capacity: 360, committed: 180, selfCare: 180, available: 180 });
+  });
+
+  test("the waking day is quiet hours' end to their start: 07:00 → 22:00 is 15h", () => {
+    const room = roomOn("2026-10-07", [task({ durationMinutes: 120, selfCare: true }), task({ durationMinutes: 180 })], DEFAULT_CAPACITY, morning);
+    expect(room).toMatchObject({ dayMinutes: 900, dayAvailable: 600 });
+  });
+
+  test("a custom active day sets the window", () => {
+    expect(roomOn("2026-10-07", [], DEFAULT_CAPACITY, morning, undefined, { startsAt: "05:30", endsAt: "23:00" }).dayMinutes).toBe(17 * 60 + 30);
+  });
+
+  test("finished self-care frees the day too", () => {
+    const room = roomOn("2026-10-07", [task({ durationMinutes: 120, selfCare: true, status: "done" })], DEFAULT_CAPACITY, morning);
+    expect(room).toMatchObject({ selfCare: 0, dayAvailable: 900 });
+  });
+
+  test("a day packed with self-care leaves less room for work, even with work hours spare", () => {
+    const room = roomOn("2026-10-07", [task({ durationMinutes: 800, selfCare: true })], DEFAULT_CAPACITY, morning);
+    expect(room).toMatchObject({ committed: 0, dayAvailable: 100, available: 100 });
+  });
+
+  test("today, both limits stop at the time left before quiet hours", () => {
+    const room = roomOn("2026-10-06", [], DEFAULT_CAPACITY, at("2026-10-06T21:00:00"));
+    expect(room).toMatchObject({ available: 60, dayAvailable: 60 });
+  });
+
+  test("self-care fits when work hours are full", () => {
+    const room = roomOn("2026-10-07", [task({ durationMinutes: 360 })], DEFAULT_CAPACITY, morning);
+    expect(checkCapacity(room, 90).ok).toBe(false);
+    expect(checkCapacity(room, 90, true).ok).toBe(true);
+  });
+
+  test("full work hours are reported as work", () => {
+    const room = roomOn("2026-10-07", [task({ durationMinutes: 360 })], DEFAULT_CAPACITY, morning);
+    expect(checkCapacity(room, 30)).toMatchObject({ ok: false, full: "work" });
+  });
+
+  test("a full day is reported as the day, for work and self-care alike", () => {
+    const room = roomOn("2026-10-07", [task({ durationMinutes: 870, selfCare: true })], DEFAULT_CAPACITY, morning);
+    expect(checkCapacity(room, 60)).toMatchObject({ ok: false, full: "day" });
+    expect(checkCapacity(room, 60, true)).toMatchObject({ ok: false, full: "day" });
+    expect(checkCapacity(room, 30, true).ok).toBe(true);
+  });
+});
+
 describe("checkCapacity", () => {
   const room = roomOn("2026-10-07", [task({ durationMinutes: 300 })], DEFAULT_CAPACITY, at("2026-10-06T08:00:00"));
   test("fits exactly", () => {

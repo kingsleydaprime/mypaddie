@@ -255,7 +255,8 @@ export async function loadWeekLoad(db: Db, now: Date, adding?: number) {
     Promise.all(days.map((d) => loadDayTasks(db, d))),
   ]);
   const minutes = (t: { durationMinutes: number | null }) => t.durationMinutes ?? DEFAULT_DURATION;
-  const counted = (t: { status: string }) => t.status === "pending" || t.status === "done";
+  // Work only: self-care (routines, workouts) doesn't use the work hours the week is measured against.
+  const counted = (t: { status: string; selfCare?: boolean }) => (t.status === "pending" || t.status === "done") && !t.selfCare;
   const scheduled = dayTasks.flat().filter(counted).reduce((s, t) => s + minutes(t), 0);
   const capacityTotal = days.reduce((s, d) => s + capacityFor(d, capacity).minutes, 0);
 

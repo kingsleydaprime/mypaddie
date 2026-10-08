@@ -4,7 +4,7 @@ import { withMode } from "@/features/mode/mode.repo";
 import { currentConfig } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { dayKey } from "@/shared/time";
-import { dayEndsAt } from "@/features/settings/schedule";
+import { activeDay } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { roomOn } from "./capacity";
 import { loadCapacity, loadDayTasks, saveCapacity } from "./tasks.repo";
@@ -17,8 +17,9 @@ export function registerCapacityTools(server: McpServer) {
     {
       title: "Get capacity",
       description:
-        "Their daily capacity (hours of tasks a day), any date-range overrides, and how full a given day is " +
-        "(default today). Use when the user asks how much is on their plate.",
+        "Their daily capacity (hours of work a day), any date-range overrides, and how full a given day is " +
+        "(default today). Use when the user asks how much is on their plate. Self-care (routines, workouts) doesn't " +
+        "use the work hours; it's shown separately, with the waking time left for anything at all.",
       inputSchema: z.object({ date: z.iso.date().optional().describe("YYYY-MM-DD, Lagos. Default today") }),
       annotations: { readOnlyHint: true },
     },
@@ -28,12 +29,20 @@ export function registerCapacityTools(server: McpServer) {
         const now = new Date();
         const day = date ?? dayKey(now, currentConfig().timeZone);
         const [setting, tasks, schedule] = await Promise.all([loadCapacity(db), loadDayTasks(db, day), loadSchedule(db)]);
-        const room = roomOn(day, tasks, setting, now, undefined, dayEndsAt(schedule));
+        const room = roomOn(day, tasks, setting, now, undefined, activeDay(schedule));
         return ok(
           await withMode(db, now, {
             defaultHours: hours(setting.defaultMinutes),
             periods: setting.periods.map((p) => ({ ...p, hours: hours(p.minutes) })),
-            day: { date: day, label: room.label, capacityHours: hours(room.capacity), committedHours: hours(room.committed), availableHours: hours(room.available) },
+            day: {
+              date: day,
+              label: room.label,
+              capacityHours: hours(room.capacity),
+              committedHours: hours(room.committed),
+              availableHours: hours(room.available),
+              selfCareHours: hours(room.selfCare),
+              wakingHoursLeft: hours(room.dayAvailable),
+            },
           }),
         );
       } catch (error) {

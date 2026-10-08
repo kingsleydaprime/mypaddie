@@ -5,7 +5,7 @@ import { currentConfig, type EngineConfig } from "@/shared/config";
 import type { Tier } from "@/shared/domain";
 import type { Database, Json } from "@/shared/supabase/database.types";
 import { eventBlocksOn } from "@/features/events/events.repo";
-import { dayEndsAt } from "@/features/settings/schedule";
+import { activeDay, dayEndsAt } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, localTimeOf, zonedInstant } from "@/shared/time";
@@ -290,7 +290,7 @@ export async function loadDayTasks(db: Db, day: string, config = currentConfig()
   const to = zonedInstant(addDays(day, 1), "00:00", config.timeZone).toISOString();
   const { data, error } = await db
     .from("tasks")
-    .select("id, title, due_at, duration_minutes, status")
+    .select("id, title, due_at, duration_minutes, status, is_self_care")
     // Timed tasks on the day, plus "any time" habit rows for it.
     .or(`and(due_at.gte.${from},due_at.lt.${to}),and(occurs_on.eq.${day},due_at.is.null)`);
   if (error) fail("loading the day", error);
@@ -300,6 +300,7 @@ export async function loadDayTasks(db: Db, day: string, config = currentConfig()
     dueAt: t.due_at ? new Date(t.due_at) : null,
     durationMinutes: t.duration_minutes,
     status: t.status,
+    selfCare: t.is_self_care,
   }));
   // Timed events take time too: a task can clash with a meeting, and a
   // three-hour wedding uses three hours of that day's capacity. Habit days not
@@ -313,7 +314,7 @@ export async function loadDayTasks(db: Db, day: string, config = currentConfig()
 export async function loadSeriesTemplates(db: Db): Promise<SeriesTemplate[]> {
   const { data, error } = await db
     .from("tasks")
-    .select("series_id, title, recurrence, occurs_on, due_at, duration_minutes")
+    .select("series_id, title, recurrence, occurs_on, due_at, duration_minutes, is_self_care")
     .not("series_id", "is", null)
     .order("occurs_on", { ascending: false });
   if (error) fail("loading habits", error);
@@ -327,6 +328,7 @@ export async function loadSeriesTemplates(db: Db): Promise<SeriesTemplate[]> {
       lastOccursOn: r.occurs_on,
       lastDueAt: r.due_at ? new Date(r.due_at) : null,
       durationMinutes: r.duration_minutes,
+      selfCare: r.is_self_care,
     });
   }
   return [...latest.values()];
@@ -335,16 +337,18 @@ export async function loadSeriesTemplates(db: Db): Promise<SeriesTemplate[]> {
 /** Why a task can't go where it was asked to. */
 export type Refusal =
   | { result: "clash"; clashes: Clash[] }
-  | { result: "over_capacity"; room: DayRoom; adding: number };
+  /** `full`: "work" = your work hours are used up; "day" = there's no waking time left for it. */
+  | { result: "over_capacity"; room: DayRoom; adding: number; full: "work" | "day" };
 
 /**
  * The two checks before anything lands on a day:
  *   clash    — overlaps another block; skipped when `forceClash` (a deliberate double-booking)
- *   capacity — the day is full; no override (change capacity instead)
+ *   capacity — the day is full; no override (change capacity instead).
+ *              Work is held to your work hours; self-care only to the waking day.
  */
 async function guardDay(
   db: Db,
-  opts: { day: string; start: Date | null; minutes: number; excludeId: string | null; forceClash: boolean; now: Date },
+  opts: { day: string; start: Date | null; minutes: number; excludeId: string | null; forceClash: boolean; now: Date; selfCare: boolean },
   config: EngineConfig,
 ): Promise<Refusal | null> {
   const tasks = (await loadDayTasks(db, opts.day, config)).filter((t) => t.id !== opts.excludeId);
@@ -352,9 +356,9 @@ async function guardDay(
     const clashes = findClashes(opts.start, opts.minutes, tasks);
     if (clashes.length > 0) return { result: "clash", clashes };
   }
-  const dayEnd = dayEndsAt(await loadSchedule(db));
-  const check = checkCapacity(roomOn(opts.day, tasks, await loadCapacity(db), opts.now, config, dayEnd), opts.minutes);
-  return check.ok ? null : { result: "over_capacity", room: check.room, adding: check.adding };
+  const active = activeDay(await loadSchedule(db));
+  const check = checkCapacity(roomOn(opts.day, tasks, await loadCapacity(db), opts.now, config, active), opts.minutes, opts.selfCare);
+  return check.ok ? null : { result: "over_capacity", room: check.room, adding: check.adding, full: check.full };
 }
 
 // ─── Create ──────────────────────────────────────────────────────────────────
@@ -396,6 +400,8 @@ export interface NewTask {
   isClass?: boolean;
   /** A step in a routine (the routine counts once toward the habit limit). */
   routine?: { id: string; step: number } | null;
+  /** Looking after yourself (routines, workouts): uses the waking day, not your work hours. Default: true for a routine step, else false. */
+  selfCare?: boolean;
   location?: string | null;
   /**
    * Set by others, not chosen: a class, a shift. Never refused for a full day
@@ -423,6 +429,7 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = curr
   }
 
   const hasDay = task.dueDate !== null || task.dueTime !== null || task.recurrence !== null;
+  const selfCare = task.selfCare ?? Boolean(task.routine);
   const today = dayKey(now, config.timeZone);
   const startDay = task.dueDate ?? today;
   // A habit starts on its first real day: one its rule includes, not already past.
@@ -450,6 +457,7 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = curr
           excludeId: null,
           forceClash: task.forceClash ?? false,
           now,
+          selfCare,
         },
         config,
       );
@@ -481,6 +489,7 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = curr
       is_class: task.isClass ?? false,
       routine_id: task.routine?.id ?? null,
       routine_step: task.routine?.step ?? null,
+      is_self_care: selfCare,
       location: task.location?.trim() || null,
     })
     .select("id, title, due_at, recurrence")
@@ -518,6 +527,8 @@ export interface TaskChanges {
   commitmentId?: string | null;
   courseId?: string | null;
   details?: string | null;
+  /** Self-care uses the waking day, not your work hours. Switching to work re-checks the day. */
+  selfCare?: boolean;
 }
 
 export type UpdateResult =
@@ -542,7 +553,7 @@ export async function updateTask(
 ): Promise<UpdateResult> {
   const { data: task, error } = await db
     .from("tasks")
-    .select("id, status, series_id, occurs_on, due_at, recurrence, duration_minutes")
+    .select("id, status, series_id, occurs_on, due_at, recurrence, duration_minutes, is_self_care")
     .eq("id", taskId)
     .maybeSingle();
   if (error) fail("loading the task", error);
@@ -582,8 +593,11 @@ export async function updateTask(
   };
   const moves = changes.dueDate !== undefined || changes.dueTime !== undefined;
 
+  const selfCare = changes.selfCare ?? task.is_self_care;
+  // Becoming work starts using your work hours, so that's checked like a move.
+  const becomesWork = task.is_self_care && !selfCare;
   // Re-check the day this task lands on, if its time or length changes.
-  if (moves || changes.durationMinutes !== undefined) {
+  if (moves || changes.durationMinutes !== undefined || becomesWork) {
     const dueAt = moves ? newDueAt(task) : task.due_at;
     if (dueAt) {
       const at = new Date(dueAt);
@@ -598,6 +612,7 @@ export async function updateTask(
           excludeId: task.id,
           forceClash: changes.forceClash ?? false,
           now,
+          selfCare,
         },
         config,
       );
@@ -632,6 +647,7 @@ export async function updateTask(
     if (changes.commitmentId !== undefined) patch.commitment_id = changes.commitmentId;
     if (changes.courseId !== undefined) patch.course_id = changes.courseId;
     if (changes.details !== undefined) patch.details = changes.details?.trim() || null;
+    if (changes.selfCare !== undefined) patch.is_self_care = changes.selfCare;
     if (moves) patch.due_at = newDueAt(row);
     if (Object.keys(patch).length > 0) {
       const { error: e } = await db.from("tasks").update(patch).eq("id", row.id);

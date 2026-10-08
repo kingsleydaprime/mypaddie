@@ -154,6 +154,8 @@ export interface SeriesTemplate {
   lastOccursOn: string;
   lastDueAt: Date | null;
   durationMinutes: number | null;
+  /** Self-care uses the waking day, not work hours. */
+  selfCare?: boolean;
 }
 
 /**
@@ -172,6 +174,7 @@ export function projectedOccurrences(series: readonly SeriesTemplate[], day: str
         dueAt: s.lastDueAt ? zonedInstant(day, localTimeOf(s.lastDueAt, config.timeZone), config.timeZone) : null,
         durationMinutes: s.durationMinutes,
         status: "pending" as const,
+        selfCare: s.selfCare ?? false,
       },
     ];
   });

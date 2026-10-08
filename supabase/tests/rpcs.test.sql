@@ -5,7 +5,7 @@ create extension if not exists pgtap with schema extensions;
 -- somewhere not on this connection's search_path) and add that schema.
 select set_config('search_path', current_setting('search_path') || ', ' || n.nspname, true)
   from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgtap';
-select plan(16);
+select plan(17);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com'),
@@ -44,6 +44,14 @@ select is(
 select is(
   (select title || '|' || base_xp || '|' || item_id from public.tasks where occurs_on = '2026-10-06'),
   'Read Rhapsody|10|aaaaaaaa-0000-0000-0000-000000000001', 'the new row copies title, XP and item'
+);
+-- Self-care (routines, workouts) stays self-care on every new day, or the
+-- day after it's set it would start using work hours again.
+update public.tasks set is_self_care = true where occurs_on = '2026-10-06';
+select public.spawn_occurrence('cccccccc-0000-0000-0000-000000000001', '2026-10-08', '2026-10-08 06:00:00+00');
+select is(
+  (select is_self_care from public.tasks where occurs_on = '2026-10-08' and series_id = 'cccccccc-0000-0000-0000-000000000001'),
+  true, 'the new row copies the self-care flag'
 );
 select is(
   public.spawn_occurrence('99999999-0000-0000-0000-000000000000', '2026-10-06', null),

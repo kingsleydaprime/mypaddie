@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { applyScheduleChange, dayEndsAt, DEFAULT_SCHEDULE, isQuiet, readSchedule } from "./schedule";
+import { applyScheduleChange, activeDay, dayEndsAt, DEFAULT_SCHEDULE, isQuiet, readSchedule } from "./schedule";
 
 describe("isQuiet", () => {
   test("a window that crosses midnight", () => {
@@ -105,5 +105,17 @@ describe("phone-free settings", () => {
     const r = applyScheduleChange(DEFAULT_SCHEDULE, { phoneFreeEvening: 60 });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toContain("close-out");
+  });
+});
+
+describe("activeDay", () => {
+  test("from when quiet hours end to when they start", () => {
+    expect(activeDay({ quietStart: "22:00", quietEnd: "07:00" })).toEqual({ startsAt: "07:00", endsAt: "22:00" });
+  });
+  test("quiet hours after midnight: the day runs to 23:59", () => {
+    expect(activeDay({ quietStart: "01:00", quietEnd: "08:00" })).toEqual({ startsAt: "08:00", endsAt: "23:59" });
+  });
+  test("waking after the day 'ends' (night shifts): counted from midnight", () => {
+    expect(activeDay({ quietStart: "14:00", quietEnd: "22:00" })).toEqual({ startsAt: "00:00", endsAt: "14:00" });
   });
 });

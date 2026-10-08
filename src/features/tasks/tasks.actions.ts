@@ -36,6 +36,7 @@ export async function saveTaskAction(_prev: TaskFormState, form: FormData): Prom
       dueTime: t || null,
       durationMinutes: minutes,
       nonNegotiable: form.get("must") === "on",
+      selfCare: form.get("selfCare") === "on",
       reminderNote: String(form.get("note") ?? "").trim() || null,
       details: String(form.get("details") ?? "").slice(0, 2000).trim() || null,
       forceClash: form.get("force") === "on",

@@ -1350,3 +1350,29 @@ in `notAdded` instead of listing it as added. Considered: checking every
 step's room before inserting anything. That duplicates `createTask`'s
 capacity and clash logic, and each step must count the ones before it anyway,
 so undo-on-refusal is simpler and stays in step with how habits are checked.
+
+### Two limits: work hours and the waking day
+The 6h capacity counted every open task, so a 2h morning routine took a third
+of the day's work hours before any work was planned, and an evening routine
+was refused. But capacity was always meant as a focus budget, and brushing,
+a bath, prayer or a workout aren't work. Not counting them at all would bring
+back what "Habits count on every day they happen" fixed: you could book 6h of
+work plus 4h of routines plus travel, and nothing would warn you the day
+doesn't fit.
+
+So a day has two limits. **Work** (study, projects, admin, one-offs) is held
+to the capacity setting, as before. **Self-care** doesn't use those hours. And
+**everything together** has to fit the waking day: from when quiet hours end
+to when they start (07:00 → 22:00 by default, 15h). A refusal says which
+limit it hit (`full: "work"` or `"day"`).
+
+Self-care is a flag on each task (`tasks.is_self_care`), not a guess. Routine
+steps and workouts start as self-care and everything else starts as work;
+you can switch any task on its page, or ask Paddie. Considered: deciding by
+pillar (physical/spiritual = self-care), but studying for a theology exam or
+training for a competition breaks that. Considered: "anything in a routine",
+but a workout isn't in a routine and is still self-care. The migration marks
+existing routine steps, planned workout days and logged workouts. New habit
+days copy the flag (`spawn_occurrence`). Events still count as work, as
+before. The weekly load measures work only, since it's measured against work
+hours.

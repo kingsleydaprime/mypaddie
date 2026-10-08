@@ -16,5 +16,8 @@ export function refusalMessage(r: Refusal): string {
     const more = r.clashes.length > 1 ? ` (and ${r.clashes.length - 1} more)` : "";
     return `${onDay(dayKey(c.start, currentConfig().timeZone))}, that overlaps ${c.title} at ${localTimeOf(c.start, currentConfig().timeZone)}–${localTimeOf(c.end, currentConfig().timeZone)}${more}. Pick another time, or tick "book it anyway".`;
   }
-  return `${onDay(r.room.day)} is full: ${hm(r.room.committed)} of ${hm(r.room.capacity)} committed, only ${hm(r.room.available)} left and this needs ${hm(r.adding)}. Finish or drop something, or choose another day.`;
+  if (r.full === "day") {
+    return `${onDay(r.room.day)} has no time left: only ${hm(r.room.dayAvailable)} of your waking day is free and this needs ${hm(r.adding)}. Finish or drop something, or choose another day.`;
+  }
+  return `${onDay(r.room.day)}'s work hours are full: ${hm(r.room.committed)} of ${hm(r.room.capacity)} committed, only ${hm(r.room.available)} left and this needs ${hm(r.adding)}. Finish or drop something, or choose another day.`;
 }

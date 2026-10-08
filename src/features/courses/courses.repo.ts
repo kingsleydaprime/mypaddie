@@ -2,7 +2,7 @@ import { addEvent } from "@/features/events/add-event";
 import { PlanLimitError } from "@/features/plans/plans";
 import { requireFeature, requireRoom, requireRoomFor } from "@/features/plans/guard";
 import { findOrCreateSkill, loadLearning } from "@/features/learning/learning.repo";
-import { dayEndsAt } from "@/features/settings/schedule";
+import { activeDay } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { roomOn } from "@/features/tasks/capacity";
 import { completeTask, createTask, deleteTask, loadCapacity, loadDayTasks, updateTask, type CreateResult } from "@/features/tasks/tasks.repo";
@@ -388,7 +388,7 @@ export async function proposeStudy(db: Db, now: Date, opts: { course?: string; d
   const room: Record<string, number> = {};
   for (let i = 0; i < days; i++) {
     const day = addDays(today, i);
-    room[day] = roomOn(day, await loadDayTasks(db, day), capacity, now, undefined, dayEndsAt(schedule)).available;
+    room[day] = roomOn(day, await loadDayTasks(db, day), capacity, now, undefined, activeDay(schedule)).available;
   }
 
   // Topics already booked as open study tasks aren't booked twice.

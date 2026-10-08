@@ -7,7 +7,7 @@ import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, localTimeOf, zonedInstant } from "@/shared/time";
 import { mealsForDay } from "@/features/pantry/meals.repo";
-import { dayEndsAt } from "@/features/settings/schedule";
+import { activeDay, dayEndsAt } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { CHORE_MAX_XP, planDay, type FixedBlock, type FlexibleTask } from "./plan";
 
@@ -85,7 +85,7 @@ export async function proposeDay(db: Db, day: string, now: Date) {
   // Undated tasks join today's plan only while capacity allows, most important first.
   const overCapacity: { id: string; title: string; minutes: number }[] = [];
   if (undated.data!.length) {
-    let room = roomOn(day, await loadDayTasks(db, day), await loadCapacity(db), now, undefined, dayEndsAt(schedule)).available;
+    let room = roomOn(day, await loadDayTasks(db, day), await loadCapacity(db), now, undefined, activeDay(schedule)).available;
     const candidates = undated.data!.map((r) => flex(r, { undated: true })).sort((a, b) => Number(b.must) - Number(a.must) || Number(b.need) - Number(a.need));
     for (const c of candidates) {
       if (c.minutes <= room) {

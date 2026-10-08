@@ -138,6 +138,8 @@ export async function savePlan(
         nonNegotiable: opts.nonNegotiable,
         weights: WORKOUT_WEIGHTS,
         durationMinutes: d.duration_minutes,
+        // Training is looking after yourself: it uses the day, not your work hours.
+        selfCare: true,
       },
       now,
     );
@@ -230,6 +232,7 @@ export async function logWorkout(db: Db, input: WorkoutLogInput, now: Date) {
         nonNegotiable: false,
         weights: WORKOUT_WEIGHTS,
         durationMinutes: input.durationMinutes,
+        selfCare: true,
       },
       now,
     );

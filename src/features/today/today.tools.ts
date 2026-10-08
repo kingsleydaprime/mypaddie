@@ -16,7 +16,7 @@ import { loadSelfForAdvice } from "@/features/self/self.repo";
 import { applyBrokenPromises, loadPromisePicture } from "@/features/promises/promises.repo";
 import { loadActiveIdentity } from "@/features/identity/identity.repo";
 import { loadLearning } from "@/features/learning/learning.repo";
-import { dayEndsAt } from "@/features/settings/schedule";
+import { activeDay } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { loadMode } from "@/features/mode/mode.repo";
 import { loadMoneyStage } from "@/features/money/money.repo";
@@ -100,7 +100,7 @@ export function registerTodayTools(server: McpServer) {
           loadStatus(db, now),
         ]);
         const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
-        const room = roomOn(dayKey(now, tz()), dayTasks, capacity, now, undefined, dayEndsAt(schedule));
+        const room = roomOn(dayKey(now, tz()), dayTasks, capacity, now, undefined, activeDay(schedule));
         const focus = pickFocus(tasks, now);
         // Details for the top three only: what they'd read when starting one.
         const { data: detailRows } = focus.top.length
@@ -125,7 +125,8 @@ export function registerTodayTools(server: McpServer) {
           doneToday: focus.doneToday,
           money: moneySummary(money),
           // How full today is, in minutes. Mention only if they're near or over, or asks.
-          plate: { capacity: room.capacity, committed: room.committed, available: room.available, label: room.label },
+          // Work hours; self-care (routines, workouts) is separate and doesn't use them.
+          plate: { capacity: room.capacity, committed: room.committed, available: room.available, label: room.label, selfCare: room.selfCare, wakingLeft: room.dayAvailable },
           caughtUp,
           // Topics due for review (spaced repetition). Offer one as a short practice, don't list them all.
           reviewDue: learning

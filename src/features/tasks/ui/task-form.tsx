@@ -12,6 +12,8 @@ export interface TaskFormValues {
   time: string;
   duration: number | null;
   must: boolean;
+  /** Self-care uses the waking day, not work hours. */
+  selfCare: boolean;
   note: string;
   details: string;
   habit: boolean;
@@ -79,6 +81,10 @@ export function TaskForm({ task, forOptions }: { task: TaskFormValues; forOption
           <input name="note" maxLength={200} defaultValue={task.note} placeholder="e.g. Bring the signed form" className={field} />
         </label>
         <label className="flex items-center gap-3"><input type="checkbox" name="must" defaultChecked={task.must} className="h-5 w-5" /> Must-do (nudged until done)</label>
+        <label className="flex items-start gap-3">
+          <input type="checkbox" name="selfCare" defaultChecked={task.selfCare} className="mt-0.5 h-5 w-5" />
+          <span>Self-care <span className="block text-sm text-muted">Takes time in your day, not your work hours</span></span>
+        </label>
         <label className="flex items-center gap-3 text-sm text-muted"><input type="checkbox" name="force" className="h-5 w-5" /> Book it anyway if it overlaps something</label>
         {task.habit && <p className="text-xs text-muted">This is a daily/weekly habit: changes apply from this day on.</p>}
         {message && "error" in message && <p className="text-sm text-red" role="alert">{message.error}</p>}

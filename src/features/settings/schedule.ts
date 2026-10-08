@@ -71,6 +71,16 @@ export function dayEndsAt(s: Pick<Schedule, "quietStart">): string {
   return s.quietStart >= "12:00" ? s.quietStart : "23:59";
 }
 
+/**
+ * The waking day, for capacity: from when quiet hours end to when the day
+ * ends. Quiet hours that end in the afternoon or later (a night-shift
+ * schedule) mean the day is counted from midnight.
+ */
+export function activeDay(s: Pick<Schedule, "quietStart" | "quietEnd">): { startsAt: string; endsAt: string } {
+  const endsAt = dayEndsAt(s);
+  return { startsAt: s.quietEnd < endsAt ? s.quietEnd : "00:00", endsAt };
+}
+
 /** Saved settings merged over the defaults; anything invalid falls back to its default. */
 export function readSchedule(saved: unknown): Schedule {
   const merged: Record<string, unknown> = { ...DEFAULT_SCHEDULE };
