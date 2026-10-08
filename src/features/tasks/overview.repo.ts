@@ -1,7 +1,7 @@
 import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, zonedInstant } from "@/shared/time";
-import { summariseSeries, type SeriesRow } from "./overview";
+import { forLabelOf, summariseSeries, type SeriesRow } from "./overview";
 
 /** How far back to look for a habit's latest row (matches catch-up's template lookback). */
 const SERIES_LOOKBACK_DAYS = 60;
@@ -31,7 +31,7 @@ export async function loadTaskOverview(db: Db, now: Date, config = currentConfig
     db.from("routines").select("id, title").order("created_at"),
     db
       .from("tasks")
-      .select("id, title, due_at, is_non_negotiable, commitments(title), courses(code, title)")
+      .select("id, title, due_at, is_non_negotiable, commitments(title, org), courses(code, title)")
       .is("series_id", null)
       .eq("status", "pending")
       .gte("due_at", from)
@@ -58,7 +58,7 @@ export async function loadTaskOverview(db: Db, now: Date, config = currentConfig
     title: t.title,
     dueAt: new Date(t.due_at!),
     nonNegotiable: t.is_non_negotiable,
-    forLabel: t.commitments?.title ?? (t.courses ? t.courses.code || t.courses.title : null),
+    forLabel: forLabelOf(t.commitments, t.courses),
   }));
   return { ...summariseSeries(series, routines, now, config), upcoming };
 }

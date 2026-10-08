@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { dayLabel, describeRecurrence, summariseSeries, type SeriesRow } from "./overview";
+import { dayLabel, describeRecurrence, forLabelOf, summariseSeries, type SeriesRow } from "./overview";
 
 const at = (local: string) => new Date(`${local}+01:00`);
 /** Thursday morning, Lagos. */
@@ -140,4 +140,20 @@ describe("habits", () => {
 test("a habit says whether it's self-care", () => {
   const r = row({ seriesId: "church", recurrence: "FREQ=WEEKLY;BYDAY=SU", occursOn: "2026-10-04", status: "done", selfCare: true });
   expect(summariseSeries([r], [], now).habits[0]).toMatchObject({ selfCare: true, next: { day: "2026-10-11" } });
+});
+
+describe("forLabelOf", () => {
+  test("a role says where, since the same role can be held in several places", () => {
+    expect(forLabelOf({ title: "Lead Engineer", org: "Nextvibe" }, null)).toBe("Lead Engineer · Nextvibe");
+  });
+  test("a role with no organisation is just its title", () => {
+    expect(forLabelOf({ title: "Choir", org: null }, null)).toBe("Choir");
+  });
+  test("a course goes by its code, or its title without one", () => {
+    expect(forLabelOf(null, { code: "CSC 301", title: "Algorithms" })).toBe("CSC 301");
+    expect(forLabelOf(null, { code: null, title: "Algorithms" })).toBe("Algorithms");
+  });
+  test("for nothing", () => {
+    expect(forLabelOf(null, null)).toBeNull();
+  });
 });

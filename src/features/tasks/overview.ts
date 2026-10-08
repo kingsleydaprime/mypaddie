@@ -156,3 +156,12 @@ export function summariseSeries(
   const routineKey = (r: RoutineSummary) => (r.today?.nextId ? "0" : r.next ? `1 ${nextKey(r.next)}` : r.today ? "2" : "3");
   return { routines: summaries.sort((a, b) => cmp(routineKey(a), routineKey(b))), habits: habits.sort(byNext) };
 }
+
+/**
+ * What a task is for, by name: "Lead Engineer · Nextvibe" (the same role can
+ * be held at several places), or a course's code. Null if it's for neither.
+ */
+export function forLabelOf(commitment: { title: string; org: string | null } | null, course: { code: string | null; title: string } | null): string | null {
+  if (commitment) return commitment.org ? `${commitment.title} · ${commitment.org}` : commitment.title;
+  return course ? course.code || course.title : null;
+}

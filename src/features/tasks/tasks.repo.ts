@@ -20,6 +20,7 @@ import {
   type DayRoom,
   type DayTask,
 } from "./capacity";
+import { forLabelOf } from "./overview";
 import { planChecklist, readChecklist, stepsDone, tickStep, timeSpent, totalTime } from "./progress";
 import { firstOccurrence, occursOn, parseRecurrence, planOccurrences, projectedOccurrences, type SeriesForSpawn, type SeriesTemplate } from "./recurrence";
 
@@ -28,7 +29,7 @@ const LOOKBACK_DAYS = 14;
 const SERIES_LOOKBACK_DAYS = 60;
 
 const TASK_COLUMNS =
-  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, fun_activity_id, topic, item_id, routine_id, routine_step, started_at, spent_minutes, checklist, occurs_on, priority, routines(title), items(tier), commitments(title), courses(code, title), task_pillars(pillar, weight)";
+  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, fun_activity_id, topic, item_id, routine_id, routine_step, started_at, spent_minutes, checklist, occurs_on, priority, routines(title), items(tier), commitments(title, org), courses(code, title), task_pillars(pillar, weight)";
 
 type TaskRow = {
   id: string;
@@ -53,7 +54,7 @@ type TaskRow = {
   priority: string;
   routines: { title: string } | null;
   items: { tier: Tier } | null;
-  commitments: { title: string } | null;
+  commitments: { title: string; org: string | null } | null;
   courses: { code: string | null; title: string } | null;
   task_pillars: PillarWeight[];
 };
@@ -97,7 +98,7 @@ function toTask(row: TaskRow, now?: Date, dayEnds: string = "23:59", config = cu
     startedAt: row.started_at ? new Date(row.started_at) : null,
     spentMinutes: row.spent_minutes,
     steps: stepsDone(readChecklist(row.checklist)),
-    forLabel: row.commitments?.title ?? (row.courses ? row.courses.code || row.courses.title : null),
+    forLabel: forLabelOf(row.commitments, row.courses),
     anyTimeEndsAt: anyTimeEndsAt(row.due_at ? new Date(row.due_at) : null, row.occurs_on, dayEnds, config),
     priority: row.priority as Priority,
   };
