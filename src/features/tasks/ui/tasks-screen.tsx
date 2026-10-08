@@ -2,6 +2,8 @@ import Link from "next/link";
 import { pickFocus, type FocusItem } from "@/features/today/focus";
 import { TaskButtons } from "@/features/today/ui/task-buttons";
 import { TaskMeta } from "@/features/today/ui/task-meta";
+import { ExpandableText } from "@/features/today/ui/expandable-text";
+import { RoutineSteps } from "@/features/today/ui/routine-steps";
 import { anyTimeLabel, dayEndsAt } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { currentConfig } from "@/shared/config";
@@ -32,15 +34,21 @@ const Empty = ({ children }: { children: React.ReactNode }) => (
   <p className="rounded-2xl border border-dashed border-line px-4 py-3 text-sm text-muted">{children}</p>
 );
 
-function TodayRow({ item, now, anyTime }: { item: FocusItem; now: Date; anyTime: string }) {
+function TodayRow({ item, now, anyTime, details }: { item: FocusItem; now: Date; anyTime: string; details?: string | null }) {
   const time = item.dueAt ? localTimeOf(item.dueAt, tz()) : null;
   const label = !time || time === "23:59" ? anyTime : dayKey(item.dueAt!, tz()) === dayKey(now, tz()) ? time : `yesterday ${time}`;
   return (
     <li className="rounded-2xl border border-line bg-surface px-4 py-3">
       <div className="min-w-0">
-        <Link href={`/app/tasks/${item.id}`} className="block truncate font-semibold">{item.title}</Link>
-        {item.routine && <p className="mt-0.5 text-sm">Next: {item.routine.next} <span className="text-muted">· {item.routine.done}/{item.routine.total}</span></p>}
+        <Link href={item.routine ? "/app/routines" : `/app/tasks/${item.id}`} className="block truncate font-semibold">{item.title}</Link>
+        {item.routine && (
+          <>
+            <p className="mt-0.5 text-sm text-muted">{item.routine.done}/{item.routine.total} done · next: <span className="text-text">{item.routine.next}</span></p>
+            <RoutineSteps steps={item.routine.items} />
+          </>
+        )}
         <TaskMeta item={item} now={now} />
+        {details && <ExpandableText text={details} lines={1} />}
         <p className="mt-0.5 text-sm text-muted">
           <span className={item.overdue ? "font-medium text-red" : ""}>{item.overdue ? `overdue · ${label}` : label}</span>
           {item.nonNegotiable && <span className="text-gold"> · must</span>}
@@ -79,6 +87,10 @@ export async function TasksScreen({ db }: { db: Db }) {
   const focus = pickFocus(around, now, 3, undefined, schedule.showTimedWithin);
   const open = [...focus.top, ...focus.rest];
   const today = dayKey(now, tz());
+  const { data: detailRows } = open.length
+    ? await db.from("tasks").select("id, details").in("id", open.map((f) => f.id)).not("details", "is", null)
+    : { data: [] as { id: string; details: string | null }[] };
+  const details = new Map((detailRows ?? []).map((d) => [d.id, d.details]));
 
   const byDay = new Map<string, typeof overview.upcoming>();
   for (const t of overview.upcoming) {
@@ -98,7 +110,7 @@ export async function TasksScreen({ db }: { db: Db }) {
           <Empty>Nothing open today.{focus.doneToday > 0 ? ` ${focus.doneToday} done.` : ""}</Empty>
         ) : (
           <ul className="flex flex-col gap-2">
-            {open.map((item) => <TodayRow key={item.id} item={item} now={now} anyTime={anyTime} />)}
+            {open.map((item) => <TodayRow key={item.id} item={item} now={now} anyTime={anyTime} details={details.get(item.id)} />)}
           </ul>
         )}
         {focus.doneToday > 0 && open.length > 0 && (

@@ -19,6 +19,8 @@ import { dayKey, localTimeOf } from "@/shared/time";
 import { pickFocus, type FocusItem } from "../focus";
 import { TaskButtons } from "./task-buttons";
 import { TaskMeta } from "./task-meta";
+import { ExpandableText } from "./expandable-text";
+import { RoutineSteps } from "./routine-steps";
 import { anyTimeLabel, dayEndsAt } from "@/features/settings/schedule";
 import { StatusBar } from "@/features/status/ui/status-bar";
 import { loadCheckin } from "@/features/metrics/metrics.repo";
@@ -48,17 +50,19 @@ function Row({ item, now, big, details, anyTime }: { item: FocusItem; now: Date;
   return (
     <li className={`rounded-2xl border border-line bg-surface ${big ? "p-4" : "px-4 py-3"}`}>
       <div className="min-w-0">
-        <Link href={`/app/tasks/${item.id}`} className={`block truncate font-semibold ${big ? "text-lg" : "text-base"}`}>
+        {/* A routine's title opens the routine; its steps are ticked right here. */}
+        <Link href={item.routine ? "/app/routines" : `/app/tasks/${item.id}`} className={`block truncate font-semibold ${big ? "text-lg" : "text-base"}`}>
           {item.title}
         </Link>
         {item.routine && (
-          <p className="mt-0.5 text-sm">Next: {item.routine.next} <span className="text-muted">· {item.routine.done}/{item.routine.total}</span></p>
+          <>
+            <p className="mt-0.5 text-sm text-muted">{item.routine.done}/{item.routine.total} done · next: <span className="text-text">{item.routine.next}</span></p>
+            <RoutineSteps steps={item.routine.items} />
+          </>
         )}
         <TaskMeta item={item} now={now} />
-        {/* A preview: two lines on the top three, one in the list. The task page has it all. */}
-        {details && (
-          <p className={`mt-0.5 whitespace-pre-line break-words text-sm text-muted ${big ? "line-clamp-2" : "line-clamp-1"}`}>{details}</p>
-        )}
+        {/* A preview: two lines on the top three, one in the list. Tap to read it all. */}
+        {details && <ExpandableText text={details} lines={big ? 2 : 1} />}
         <p className="mt-0.5 flex items-center gap-2 text-sm text-muted">
           <span className={item.overdue ? "font-medium text-red" : ""}>{item.overdue ? `overdue · ${due(item, now, anyTime)}` : due(item, now, anyTime)}</span>
           {item.nonNegotiable && <span className="text-gold">· must</span>}

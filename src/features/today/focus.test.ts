@@ -127,6 +127,14 @@ describe("routines take one place", () => {
     expect(f.top.map((i) => i.title)).toEqual(["Morning routine", "Reply Ada"]);
     expect(f.top[0]).toMatchObject({ id: "r2", routine: { next: "Read", done: 1, total: 4 } });
   });
+  test("each of today's steps comes along, in order, ticked or not", () => {
+    const f = pickFocus([step("Read", 2), step("Pray", 1, "done"), step("Brush", 3)], now);
+    expect(f.top[0]!.routine!.items).toEqual([
+      { id: "r1", title: "Pray", done: true },
+      { id: "r2", title: "Read", done: false },
+      { id: "r3", title: "Brush", done: false },
+    ]);
+  });
   test("a finished routine disappears", () => {
     const f = pickFocus([step("Pray", 1, "done"), step("Read", 2, "done")], now);
     expect(f.top).toEqual([]);

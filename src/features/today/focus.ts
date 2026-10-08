@@ -32,7 +32,8 @@ export interface FocusItem {
   dueAt: Date | null;
   overdue: boolean;
   nonNegotiable: boolean;
-  routine?: { title: string; next: string; done: number; total: number };
+  /** `items`: today's steps in order, each tickable on its own. */
+  routine?: { title: string; next: string; done: number; total: number; items: { id: string; title: string; done: boolean }[] };
   startedAt: Date | null;
   spentMinutes: number;
   steps: { done: number; total: number } | null;
@@ -142,13 +143,19 @@ export function pickFocus(
     seenRoutine.add(t.routine.id);
     const rid = t.routine.id;
     const isToday = (x: TaskForFocus) => x.routine?.id === rid && (x.dueAt === null || dayKey(x.dueAt, config.timeZone) === today);
-    const steps = tasks.filter(isToday).sort((a, b) => a.routine!.step - b.routine!.step);
+    const steps = tasks.filter((x) => isToday(x) && x.status !== "cancelled").sort((a, b) => a.routine!.step - b.routine!.step);
     const next = open.filter((x) => x.routine?.id === rid).sort((a, b) => a.routine!.step - b.routine!.step)[0]!;
     items.push({
       ...toItem(t),
       id: next.id,
       title: t.routine.title,
-      routine: { title: t.routine.title, next: next.title, done: steps.filter((x) => x.status === "done").length, total: steps.length },
+      routine: {
+        title: t.routine.title,
+        next: next.title,
+        done: steps.filter((x) => x.status === "done").length,
+        total: steps.length,
+        items: steps.map((x) => ({ id: x.id, title: x.title, done: x.status === "done" })),
+      },
     });
   }
 
