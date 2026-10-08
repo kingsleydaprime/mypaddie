@@ -6,6 +6,8 @@ import type { PillarWeight } from "@/features/xp/split";
 import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, zonedInstant } from "@/shared/time";
+import { periodOf } from "@/features/reviews/periods";
+import { loadSchedule } from "@/features/settings/settings.repo";
 import {
   assessLoad,
   weeklyMinutes,
@@ -242,13 +244,20 @@ export async function updateCommitment(db: Db, ref: string, changesIn: Commitmen
 }
 
 /**
- * The next 7 days against their capacity, what each commitment takes, and —
- * when it's tight or over — what to drop. `adding` = minutes a week of
- * something he's thinking of taking on.
+ * A week against their capacity, what each commitment takes, and — when
+ * it's tight or over — what to drop. `adding` = minutes a week of something
+ * they're thinking of taking on.
+ *
+ * Which week: `next7` (default) is the next seven days from today — what
+ * Paddie judges "can I take this on?" by, so the answer doesn't depend on the
+ * weekday. `thisWeek` is their calendar week (Sunday or Monday start, by
+ * their setting), days already gone included — how heavy this week is.
  */
-export async function loadWeekLoad(db: Db, now: Date, adding?: number) {
+export async function loadWeekLoad(db: Db, now: Date, adding?: number, window: "next7" | "thisWeek" = "next7") {
   const today = dayKey(now, tz());
-  const days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
+  const week = window === "thisWeek" ? periodOf("week", today, (await loadSchedule(db)).weekStart) : null;
+  const first = week?.start ?? today;
+  const days = Array.from({ length: 7 }, (_, i) => addDays(first, i));
   const [capacity, commitments, dayTasks] = await Promise.all([
     loadCapacity(db),
     loadCommitments(db),
@@ -262,8 +271,8 @@ export async function loadWeekLoad(db: Db, now: Date, adding?: number) {
 
   const active = commitments.filter((c) => c.status === "active");
   const ids = active.map((c) => c.id);
-  const from = zonedInstant(today, "00:00", tz()).toISOString();
-  const to = zonedInstant(addDays(today, 7), "00:00", tz()).toISOString();
+  const from = zonedInstant(first, "00:00", tz()).toISOString();
+  const to = zonedInstant(addDays(first, 7), "00:00", tz()).toISOString();
   const [habits, oneOffs, events] = ids.length
     ? await Promise.all([
         db.from("tasks").select("commitment_id, series_id, recurrence, duration_minutes, occurs_on").in("commitment_id", ids).not("series_id", "is", null).order("occurs_on", { ascending: false }),
@@ -295,5 +304,7 @@ export async function loadWeekLoad(db: Db, now: Date, adding?: number) {
     scheduledMinutes: perCommitment.get(c.id) ?? 0,
     extraMinutes: c.extra_minutes_per_week,
   }));
-  return assessLoad({ capacity: capacityTotal, scheduled, commitments: loads, adding });
+  const assessed = assessLoad({ capacity: capacityTotal, scheduled, commitments: loads, adding });
+  // This week: which days, and how many are left (today included).
+  return week ? { ...assessed, week: { start: week.start, end: week.end, daysLeft: days.filter((d) => d >= today).length } } : assessed;
 }

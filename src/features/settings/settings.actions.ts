@@ -21,6 +21,7 @@ export async function saveSettingsAction(_prev: SettingsState, form: FormData): 
     closeOut: form.get("closeOut") === "on",
     closeAt: get("closeAt"),
     anyTimeNudgeFrom: get("anyTimeNudgeFrom"),
+    weekStart: get("weekStart") as "sunday" | "monday",
     phoneFreeMorning: Number(get("phoneFreeMorning")),
     phoneFreeEvening: Number(get("phoneFreeEvening")),
   });

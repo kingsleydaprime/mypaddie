@@ -87,7 +87,7 @@ function defaultCopy(n: Nudge): NotificationCopy {
     // Level: 1 week, 2 month, 3 quarter, 4 year — the biggest period ending today.
     const what = ["your week", n.title ? n.title.split(" ")[0] : "your month", "your quarter", "your year"][Math.min(Math.max(n.level, 1), 4) - 1]!;
     return {
-      title: n.level === 4 ? "The year in review" : n.level === 1 ? "Sunday review" : `${what[0]!.toUpperCase()}${what.slice(1)} in review`,
+      title: n.level === 4 ? "The year in review" : n.level === 1 ? "Weekly review" : `${what[0]!.toUpperCase()}${what.slice(1)} in review`,
       body: `Ten minutes to look back on ${what}: what you did, what you avoided, what changes next. Paddie has the facts ready.`,
       url: "/app/growth",
       tag: "review",

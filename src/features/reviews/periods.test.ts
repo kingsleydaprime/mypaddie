@@ -56,3 +56,23 @@ describe("themesFor", () => {
 test("every review ends with what to change", () => {
   for (const qs of Object.values(QUESTIONS)) expect(qs.at(-1)!.key).toBe("change");
 });
+
+describe("a week that starts on Sunday", () => {
+  // 2026-10-08 is a Thursday.
+  test("runs Sunday to Saturday", () => {
+    expect(periodOf("week", "2026-10-08", "sunday")).toEqual({ start: "2026-10-04", end: "2026-10-10", label: "Week of 4 Oct" });
+  });
+  test("Sunday is its first day, Saturday its last", () => {
+    expect(periodOf("week", "2026-10-04", "sunday").start).toBe("2026-10-04");
+    expect(periodOf("week", "2026-10-10", "sunday").end).toBe("2026-10-10");
+  });
+  test("Monday weeks are unchanged", () => {
+    expect(periodOf("week", "2026-10-08")).toMatchObject({ start: "2026-10-05", end: "2026-10-11" });
+  });
+  test("the review is owed on Saturday, for the week ending then", () => {
+    expect(reviewsOwed("2026-10-10", new Set(), "sunday").find((r) => r.period === "week")).toMatchObject({ start: "2026-10-04", end: "2026-10-10" });
+  });
+  test("…and not on the Thursday before", () => {
+    expect(reviewsOwed("2026-10-08", new Set(), "sunday").find((r) => r.period === "week")).toBeUndefined();
+  });
+});

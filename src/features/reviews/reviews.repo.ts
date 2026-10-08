@@ -3,9 +3,12 @@ import { currentConfig } from "@/shared/config";
 import type { Json } from "@/shared/supabase/database.types";
 import type { Db } from "@/shared/supabase/token-client";
 import { addDays, dayKey, zonedInstant } from "@/shared/time";
-import { periodOf, QUESTIONS, reviewsOwed, themesFor, type ReviewPeriod, type ThemePeriod } from "./periods";
+import { loadSchedule } from "@/features/settings/settings.repo";
+import { periodOf, QUESTIONS, reviewsOwed, themesFor, weekLabel, type ReviewPeriod, type ThemePeriod, type WeekStart } from "./periods";
 
 const tz = () => currentConfig().timeZone;
+/** Where their week starts (Sunday or Monday), from their settings. */
+const weekStartOf = async (db: Db): Promise<WeekStart> => (await loadSchedule(db)).weekStart;
 
 export interface Theme {
   id: string;
@@ -47,8 +50,8 @@ export async function currentThemes(db: Db, now: Date) {
 
 /** Which reviews are owed today. */
 export async function owedReviews(db: Db, now: Date) {
-  const { data } = await db.from("reviews").select("period, starts_on");
-  return reviewsOwed(dayKey(now, tz()), new Set((data ?? []).map((r) => `${r.period}:${r.starts_on}`)));
+  const [{ data }, weekStart] = await Promise.all([db.from("reviews").select("period, starts_on"), weekStartOf(db)]);
+  return reviewsOwed(dayKey(now, tz()), new Set((data ?? []).map((r) => `${r.period}:${r.starts_on}`)), weekStart);
 }
 
 /**
@@ -56,10 +59,11 @@ export async function owedReviews(db: Db, now: Date) {
  * Counts and short lists only — the AI writes the report.
  */
 export async function reviewDigest(db: Db, period: ReviewPeriod, day: string) {
-  const p = periodOf(period, day);
+  const weekStart = await weekStartOf(db);
+  const p = periodOf(period, day, weekStart);
   const from = zonedInstant(p.start, "00:00", tz()).toISOString();
   const to = zonedInstant(addDays(p.end, 1), "00:00", tz()).toISOString();
-  const prev = periodOf(period, addDays(p.start, -1));
+  const prev = periodOf(period, addDays(p.start, -1), weekStart);
   const [done, xp, slips, promises, money, learning, workouts, contacts, ticks, achievements, checkins, previous, themes, decisions, values] = await Promise.all([
     db.from("tasks").select("title, series_id").eq("status", "done").gte("done_at", from).lt("done_at", to),
     db.from("xp_log").select("pillar, amount, reason").gte("at", from).lt("at", to),
@@ -135,7 +139,7 @@ export async function reviewDigest(db: Db, period: ReviewPeriod, day: string) {
 }
 
 export async function saveReview(db: Db, input: { period: ReviewPeriod; day: string; answers: Record<string, string>; summary?: string | null }) {
-  const p = periodOf(input.period, input.day);
+  const p = periodOf(input.period, input.day, await weekStartOf(db));
   const { error } = await db.from("reviews").upsert(
     { period: input.period, starts_on: p.start, ends_on: p.end, answers: input.answers as { [key: string]: Json }, summary: input.summary?.trim() || null, updated_at: new Date().toISOString() },
     { onConflict: "user_id,period,starts_on" },
@@ -147,5 +151,10 @@ export async function saveReview(db: Db, input: { period: ReviewPeriod; day: str
 export async function loadReviews(db: Db, limit = 30) {
   const { data, error } = await db.from("reviews").select("id, period, starts_on, ends_on, answers, summary, updated_at").order("starts_on", { ascending: false }).limit(limit);
   if (error) throw new Error(`loading reviews: ${error.message}`);
-  return data.map((r) => ({ ...r, label: periodOf(r.period as ReviewPeriod, r.starts_on).label, answers: r.answers as Record<string, string> }));
+  // A saved week is labelled from its own first day, whichever day their week started on back then.
+  return data.map((r) => ({
+    ...r,
+    label: r.period === "week" ? weekLabel(r.starts_on) : periodOf(r.period as ReviewPeriod, r.starts_on).label,
+    answers: r.answers as Record<string, string>,
+  }));
 }

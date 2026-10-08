@@ -1,3 +1,4 @@
+import { loadSchedule } from "@/features/settings/settings.repo";
 import { completeTask, createTask, updateTask } from "@/features/tasks/tasks.repo";
 import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
@@ -78,10 +79,11 @@ export async function loadTrends(db: Db, now: Date, weeks = 8, only?: Metric) {
   const today = dayKey(now, tz());
   const from = addDays(today, -7 * weeks);
   const metrics = only ? [only] : [...METRICS];
+  const { weekStart } = await loadSchedule(db);
   return Promise.all(
     metrics.map(async (m) => {
       const info = METRIC_INFO[m];
-      const series = weeklySeries(await loadPoints(db, m, from, today), today, weeks, info.agg);
+      const series = weeklySeries(await loadPoints(db, m, from, today), today, weeks, info.agg, weekStart);
       return { metric: m, label: info.label, unit: info.unit, better: info.better, series, trend: trendOf(series, info.better) };
     }),
   );

@@ -21,11 +21,13 @@ const NEXT_PRIORITY: Record<CommitmentPriority, CommitmentPriority> = { core: "i
 export default async function CommitmentsPage() {
   const db = await requireDb("/app/commitments");
   const now = new Date();
-  const [list, load] = await Promise.all([loadCommitments(db, { includeEnded: true }), loadWeekLoad(db, now)]);
+  const [list, load] = await Promise.all([loadCommitments(db, { includeEnded: true }), loadWeekLoad(db, now, undefined, "thisWeek")]);
   const minutesFor = (id: string) => load.byCommitment.find((b) => b.id === id)?.minutes ?? 0;
   const live = list.filter((c) => c.status !== "ended");
   const ended = list.filter((c) => c.status === "ended");
   const pct = Math.round(load.ratio * 100);
+  const week = "week" in load ? load.week : null;
+  const span = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { timeZone: "UTC", weekday: "short" });
   const advice = hasFeature(currentPlan().plan, "loadAdvice");
 
   return (
@@ -38,7 +40,10 @@ export default async function CommitmentsPage() {
       {!advice && <UpgradeNote feature="loadAdvice" />}
       {advice && <section className="rounded-2xl border border-line bg-surface p-4">
         <p className={`font-semibold ${VERDICT[load.verdict].tone}`}>{VERDICT[load.verdict].label}</p>
-        <p className="text-sm text-muted">Next 7 days: {hours(load.total)} of {hours(load.capacity)} ({pct}%)</p>
+        <p className="text-sm text-muted">
+          This week{week ? ` (${span(week.start)}–${span(week.end)})` : ""}: {hours(load.total)} of {hours(load.capacity)} ({pct}%)
+          {week && ` · ${week.daysLeft} day${week.daysLeft === 1 ? "" : "s"} left`}
+        </p>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(pct, 100)} aria-label={`${pct}% of the week's capacity`}>
           <div className={`h-full rounded-full ${load.verdict === "overloaded" ? "bg-red" : "bg-gold"}`} style={{ width: `${Math.min(pct, 100)}%` }} />
         </div>

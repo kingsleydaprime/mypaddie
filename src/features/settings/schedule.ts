@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { WEEK_STARTS } from "@/features/reviews/periods";
 import { phoneFreeAt } from "@/features/status/status";
 
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "use HH:MM, 24-hour");
@@ -30,6 +31,8 @@ export const scheduleSchema = z.object({
   closeAt: time,
   /** A must-do with no set time starts escalating at this time on its day. */
   anyTimeNudgeFrom: time,
+  /** Their week: Sunday–Saturday or Monday–Sunday. Weekly reviews, trends and "this week" follow it. */
+  weekStart: z.enum(WEEK_STARTS),
   /** No phone for this many minutes after quiet hours end (0 = off). Nothing arrives then. */
   phoneFreeMorning: z.number().int().min(0).max(240),
   /** No phone for this many minutes before quiet hours start (0 = off). */
@@ -58,6 +61,7 @@ export const DEFAULT_SCHEDULE: Schedule = {
   closeAt: "21:30",
   // The morning stays free; there's still the afternoon and evening to act.
   anyTimeNudgeFrom: "15:00",
+  weekStart: "monday",
   phoneFreeMorning: 0,
   phoneFreeEvening: 0,
 };

@@ -7,7 +7,7 @@ create function pg_temp.at(t timestamptz) returns text language sql as $$
   select coalesce(string_agg((n->>'level') || ':' || (n->>'title'), ','), '')
   from jsonb_array_elements(private.collect_review_nudges(t)) n where n->>'endpoint' like 'https://rv.example/%'
 $$;
-select plan(9);
+select plan(13);
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'r@example.com');
 insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values ('11111111-1111-1111-1111-111111111111', 'https://rv.example/a', 'k', 'a');
 
@@ -25,6 +25,15 @@ select is(pg_temp.at('2026-10-31 20:00+01'), '2:October 2026', 'last day of the 
 select is(pg_temp.at('2026-09-30 20:00+01'), '3:September 2026', 'last day of a quarter: the quarter wins');
 select is(pg_temp.at('2026-12-31 20:00+01'), '4:December 2026', '31 December: the year');
 select is(pg_temp.at('2026-11-30 22:30+01'), '', 'never in quiet hours');
+
+-- A week that starts on Sunday ends on Saturday: the review comes then, not on Sunday.
+insert into public.settings (user_id, key, value) values ('11111111-1111-1111-1111-111111111111', 'schedule', '{"weekStart": "sunday"}');
+select is(pg_temp.at('2026-11-07 20:00+01'), '1:November 2026', 'a Sunday week: Saturday evening, the week');
+select is(pg_temp.at('2026-11-08 20:00+01'), '', '…and nothing on the Sunday after');
+-- Written for the week Sunday 15 – Saturday 21 Nov: no reminder that Saturday.
+insert into public.reviews (user_id, period, starts_on, ends_on) values ('11111111-1111-1111-1111-111111111111', 'week', '2026-11-15', '2026-11-21');
+select is(pg_temp.at('2026-11-21 20:00+01'), '', 'its review is written: nothing');
+select is(pg_temp.at('2026-11-28 20:00+01'), '1:November 2026', 'the next Saturday: the next week');
 
 select * from finish();
 rollback;

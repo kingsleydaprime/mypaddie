@@ -2,6 +2,7 @@ import Link from "next/link";
 import { METRIC_INFO, METRICS, type Metric } from "@/features/metrics/metrics";
 import { finishExperimentAction, startExperimentAction } from "@/features/metrics/metrics.actions";
 import { loadCheckin, loadExperiments, loadTrends } from "@/features/metrics/metrics.repo";
+import { loadSchedule } from "@/features/settings/settings.repo";
 import { CheckinForm } from "@/features/metrics/ui/checkin-form";
 import { Sparkline } from "@/features/metrics/ui/sparkline";
 import { currentConfig } from "@/shared/config";
@@ -23,7 +24,7 @@ const VERDICT = { helped: "Helped", no_difference: "No difference", made_worse: 
 export default async function TrendsPage() {
   const db = await requireDb("/app/stats/trends");
   const now = new Date();
-  const [trends, experiments, today] = await Promise.all([loadTrends(db, now, 8), loadExperiments(db, now), loadCheckin(db, dayKey(now, currentConfig().timeZone))]);
+  const [trends, experiments, today, schedule] = await Promise.all([loadTrends(db, now, 8), loadExperiments(db, now), loadCheckin(db, dayKey(now, currentConfig().timeZone)), loadSchedule(db)]);
   const running = experiments.filter((e) => e.status === "running");
   const finished = experiments.filter((e) => e.status !== "running");
   return (
@@ -59,7 +60,7 @@ export default async function TrendsPage() {
             );
           })}
         </ul>
-        <p className="text-xs text-muted">Weekly, Monday to Sunday. The arrow compares the last 2 weeks with the 4 before; gold means it&apos;s going the better way.</p>
+        <p className="text-xs text-muted">Weekly, {schedule.weekStart === "sunday" ? "Sunday to Saturday" : "Monday to Sunday"}. The arrow compares the last 2 weeks with the 4 before; gold means it&apos;s going the better way.</p>
       </section>
 
       <section className="flex flex-col gap-2">

@@ -3,6 +3,7 @@ import { loadDecisions } from "@/features/decisions/decisions.repo";
 import { periodOf } from "@/features/reviews/periods";
 import { logDecisionAction, reviewDecisionAction } from "@/features/reviews/reviews.actions";
 import { currentThemes, loadReviews, owedReviews } from "@/features/reviews/reviews.repo";
+import { loadSchedule } from "@/features/settings/settings.repo";
 import { ThemeForm } from "@/features/reviews/ui/theme-form";
 import { currentConfig } from "@/shared/config";
 import { requireDb } from "@/shared/supabase/session";
@@ -14,10 +15,11 @@ export default async function GrowthPage({ searchParams }: PageProps<"/app/growt
   const db = await requireDb("/app/growth");
   const now = new Date();
   const today = dayKey(now, currentConfig().timeZone);
-  const [themes, owed, reviews, decisions] = await Promise.all([currentThemes(db, now), owedReviews(db, now), loadReviews(db, 12), loadDecisions(db, now)]);
+  const [themes, owed, reviews, decisions, schedule] = await Promise.all([currentThemes(db, now), owedReviews(db, now), loadReviews(db, 12), loadDecisions(db, now), loadSchedule(db)]);
   const month = periodOf("month", today);
   const year = periodOf("year", today);
-  const week = periodOf("week", today);
+  const week = periodOf("week", today, schedule.weekStart);
+  const weekEndDay = schedule.weekStart === "sunday" ? "Saturday" : "Sunday";
   return (
     <div className="flex flex-col gap-5">
       <header className="flex items-center gap-3">
@@ -57,7 +59,7 @@ export default async function GrowthPage({ searchParams }: PageProps<"/app/growt
           <Link href={`/app/growth/review?period=week&day=${week.start}`} className="text-sm text-gold">Review this week ›</Link>
         </div>
         {reviews.length === 0 ? (
-          <p className="text-sm text-muted">None yet. Every Sunday evening Paddie will offer one; at the end of each month, quarter and year too.</p>
+          <p className="text-sm text-muted">None yet. Every {weekEndDay} evening Paddie will offer one; at the end of each month, quarter and year too.</p>
         ) : (
           <ul className="flex flex-col divide-y divide-line rounded-2xl border border-line bg-surface">
             {reviews.map((r) => (

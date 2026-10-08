@@ -105,7 +105,7 @@ describe("fun nudge", () => {
 
 describe("review nudge", () => {
   test("Sunday: the week; month end: the month by name; year end: the year", () => {
-    expect(copyFor({ kind: "review", level: 1, title: "October 2026", items: null }).title).toBe("Sunday review");
+    expect(copyFor({ kind: "review", level: 1, title: "October 2026", items: null }).title).toBe("Weekly review");
     expect(copyFor({ kind: "review", level: 2, title: "October 2026", items: null }).title).toBe("October in review");
     expect(copyFor({ kind: "review", level: 4, title: "December 2026", items: null }).title).toBe("The year in review");
     expect(copyFor({ kind: "review", level: 1, title: null, items: null }).url).toBe("/app/growth");

@@ -5,19 +5,22 @@ export type ReviewPeriod = (typeof REVIEW_PERIODS)[number];
 export const THEME_PERIODS = ["year", "quarter", "month"] as const;
 export type ThemePeriod = (typeof THEME_PERIODS)[number];
 
+/** Which day a week starts on: a week runs Sunday–Saturday or Monday–Sunday (their setting). */
+export const WEEK_STARTS = ["sunday", "monday"] as const;
+export type WeekStart = (typeof WEEK_STARTS)[number];
+
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const pad = (n: number) => String(n).padStart(2, "0");
 const lastDayOfMonth = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate(); // m: 1–12
 
-/** The period containing `day`: weeks run Monday–Sunday. */
-export function periodOf(period: ReviewPeriod | ThemePeriod, day: string): { start: string; end: string; label: string } {
+/** The period containing `day`. A week starts on `weekStart` (Monday unless they've chosen Sunday). */
+export function periodOf(period: ReviewPeriod | ThemePeriod, day: string, weekStart: WeekStart = "monday"): { start: string; end: string; label: string } {
   const y = Number(day.slice(0, 4));
   const m = Number(day.slice(5, 7));
   switch (period) {
     case "week": {
-      const start = addDays(day, -((weekdayOf(day) + 6) % 7));
-      const end = addDays(start, 6);
-      return { start, end, label: `Week of ${Number(start.slice(8))} ${MONTHS[Number(start.slice(5, 7)) - 1]!.slice(0, 3)}` };
+      const start = addDays(day, -(weekStart === "sunday" ? weekdayOf(day) : (weekdayOf(day) + 6) % 7));
+      return { start, end: addDays(start, 6), label: weekLabel(start) };
     }
     case "month":
       return { start: `${y}-${pad(m)}-01`, end: `${y}-${pad(m)}-${pad(lastDayOfMonth(y, m))}`, label: `${MONTHS[m - 1]} ${y}` };
@@ -31,23 +34,29 @@ export function periodOf(period: ReviewPeriod | ThemePeriod, day: string): { sta
   }
 }
 
+/** "Week of 4 Oct", from the week's first day. */
+export function weekLabel(start: string): string {
+  return `Week of ${Number(start.slice(8))} ${MONTHS[Number(start.slice(5, 7)) - 1]!.slice(0, 3)}`;
+}
+
 /** How long after a period ends its review is still "owed" (days, the end day included as 0). */
 const GRACE: Record<ReviewPeriod, number> = { week: 2, month: 3, quarter: 7, year: 14 };
 
 /**
  * Reviews owed today: a period that ended today or within its grace, not yet
- * reviewed. A week is owed from its Sunday; the others from their last day.
+ * reviewed. A week is owed from its last day (Saturday or Sunday, by where
+ * their week starts); the others from their last day too.
  * Biggest first — a year review covers more than a month's.
  */
-export function reviewsOwed(today: string, done: ReadonlySet<string>): { period: ReviewPeriod; start: string; end: string; label: string }[] {
+export function reviewsOwed(today: string, done: ReadonlySet<string>, weekStart: WeekStart = "monday"): { period: ReviewPeriod; start: string; end: string; label: string }[] {
   const owed = [];
   for (const period of [...REVIEW_PERIODS].reverse()) {
     // The period that has most recently ended (or ends today).
-    let p = periodOf(period, today);
-    if (p.end > today) p = periodOf(period, addDays(p.start, -1));
+    let p = periodOf(period, today, weekStart);
+    if (p.end > today) p = periodOf(period, addDays(p.start, -1), weekStart);
     const sinceEnd = Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${p.end}T00:00:00Z`)) / 86_400_000);
-    const ownWeekToday = period === "week" && periodOf("week", today).end === today; // Sunday: this week's review
-    const target = ownWeekToday ? periodOf("week", today) : p;
+    const ownWeekToday = period === "week" && periodOf("week", today, weekStart).end === today; // its last day: this week's review
+    const target = ownWeekToday ? periodOf("week", today, weekStart) : p;
     const age = ownWeekToday ? 0 : sinceEnd;
     if (age >= 0 && age <= GRACE[period] && !done.has(`${period}:${target.start}`)) owed.push({ period, ...target });
   }

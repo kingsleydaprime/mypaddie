@@ -1483,3 +1483,20 @@ minutes. Now **important** timed events also get "In 10 minutes" and
 only, so a day of meetings isn't a constant buzz. For an important event
 with under 10 minutes left (added late), the 10-minute reminder replaces
 the 30-minute one rather than both arriving together.
+
+### A week starts where they say (Sunday or Monday)
+Weeks were Monday–Sunday everywhere: the weekly review (owed from Sunday,
+pushed Sunday evening), trends, and the growth page. Your week is
+Sunday–Saturday, and MyPaddie has other users, so it's a setting
+(`weekStart`, Monday by default) rather than a new fixed rule.
+`periodOf("week", …)` takes it. The weekly review is owed and pushed on the
+week's last day (Saturday evening for a Sunday week; `collect_review_nudges`
+reads the setting). Trends group by it. A saved review keeps the label of
+its own start date, so reviews written under the old week still read right.
+
+The Commitments screen shows **this week** (the calendar week, days already
+gone included) instead of the next 7 days, with the days left. Paddie's "can
+I take this on?" check (`check_load`, and the load in `get_today`) stays on
+the **next 7 days**. A new commitment repeats every week, so it's measured
+against a full week, and late in the week a "this week" window would be two
+days long and the verdict would swing with the weekday.

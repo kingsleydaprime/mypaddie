@@ -1,5 +1,5 @@
 import { addDays } from "@/shared/time";
-import { periodOf } from "@/features/reviews/periods";
+import { periodOf, type WeekStart } from "@/features/reviews/periods";
 
 export const METRICS = ["sleep", "energy", "mood", "screen_time", "exercise", "learning", "spending", "word_kept"] as const;
 export type Metric = (typeof METRICS)[number];
@@ -22,9 +22,9 @@ export interface Point {
 
 const round = (n: number) => Math.round(n * 10) / 10;
 
-/** One value per week (Monday–Sunday), oldest first; a week with no data is null — never a zero. */
-export function weeklySeries(points: readonly Point[], today: string, weeks: number, agg: "avg" | "sum"): { weekStart: string; value: number | null }[] {
-  const thisWeek = periodOf("week", today).start;
+/** One value per week (starting on their week's first day), oldest first; a week with no data is null — never a zero. */
+export function weeklySeries(points: readonly Point[], today: string, weeks: number, agg: "avg" | "sum", weekStart: WeekStart = "monday"): { weekStart: string; value: number | null }[] {
+  const thisWeek = periodOf("week", today, weekStart).start;
   return Array.from({ length: weeks }, (_, i) => {
     const start = addDays(thisWeek, -7 * (weeks - 1 - i));
     const end = addDays(start, 6);
