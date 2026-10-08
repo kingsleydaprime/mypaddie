@@ -1373,6 +1373,14 @@ pillar (physical/spiritual = self-care), but studying for a theology exam or
 training for a competition breaks that. Considered: "anything in a routine",
 but a workout isn't in a routine and is still self-care. The migration marks
 existing routine steps, planned workout days and logged workouts. New habit
-days copy the flag (`spawn_occurrence`). Events still count as work, as
-before. The weekly load measures work only, since it's measured against work
-hours.
+days copy the flag (`spawn_occurrence`). The weekly load measures work only,
+since it's measured against work hours.
+
+Events take the same flag (`events.is_self_care`). Social events, birthdays,
+anniversaries and weddings start as self-care; meetings, appointments,
+deadlines, exams and "other" start as work. Kind alone would get
+appointments wrong (a doctor's visit is self-care, a visa interview isn't),
+so it's only the default, and any event can be switched. Changing an event's
+kind brings the new kind's default unless self-care is set in the same edit.
+Imported Google Calendar events come in as meetings or "other", so they start
+as work.

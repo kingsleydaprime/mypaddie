@@ -1,7 +1,7 @@
 import type { Db } from "@/shared/supabase/token-client";
-import { blockOn, type EventKind, type EventLike } from "./events";
+import { blockOn, selfCareByDefault, type EventKind, type EventLike } from "./events";
 
-const COLUMNS = "id, title, kind, starts_at, ends_at, all_day, important, yearly, status, person, location, notes, reminder_note";
+const COLUMNS = "id, title, kind, starts_at, ends_at, all_day, important, yearly, status, person, location, notes, reminder_note, is_self_care";
 
 type Row = {
   id: string;
@@ -17,9 +17,10 @@ type Row = {
   location: string | null;
   notes: string | null;
   reminder_note: string | null;
+  is_self_care: boolean;
 };
 
-export type EventRecord = EventLike & { person: string | null; location: string | null; notes: string | null; reminderNote: string | null };
+export type EventRecord = EventLike & { person: string | null; location: string | null; notes: string | null; reminderNote: string | null; selfCare: boolean };
 
 const toEvent = (r: Row): EventRecord => ({
   id: r.id,
@@ -35,6 +36,7 @@ const toEvent = (r: Row): EventRecord => ({
   location: r.location,
   notes: r.notes,
   reminderNote: r.reminder_note,
+  selfCare: r.is_self_care,
 });
 
 /** Every upcoming event (yearly ones keep their original date; occurrences are computed). */
@@ -49,7 +51,7 @@ export async function eventBlocksOn(db: Db, day: string) {
   return (await loadUpcomingEvents(db)).flatMap((e) => {
     const block = blockOn(e, day);
     return block
-      ? [{ id: `event:${e.id}`, title: e.title, dueAt: block.start, durationMinutes: block.minutes, status: "pending" as const }]
+      ? [{ id: `event:${e.id}`, title: e.title, dueAt: block.start, durationMinutes: block.minutes, status: "pending" as const, selfCare: e.selfCare }]
       : [];
   });
 }
@@ -67,6 +69,8 @@ export interface NewEvent {
   notes?: string | null;
   reminderNote?: string | null;
   commitmentId?: string | null;
+  /** Uses the waking day, not work hours. Default: by kind (social, birthday, anniversary, wedding). */
+  selfCare?: boolean;
 }
 
 export async function insertEvent(db: Db, e: NewEvent) {
@@ -85,6 +89,7 @@ export async function insertEvent(db: Db, e: NewEvent) {
       notes: e.notes ?? null,
       reminder_note: e.reminderNote?.trim() || null,
       commitment_id: e.commitmentId ?? null,
+      is_self_care: e.selfCare ?? selfCareByDefault(e.kind),
     })
     .select(COLUMNS)
     .single();
@@ -108,6 +113,12 @@ export async function changeEvent(
       ? {
           ...(changes.title !== undefined ? { title: changes.title } : {}),
           ...(changes.kind !== undefined ? { kind: changes.kind } : {}),
+          // Said outright, it's what they said; a new kind without it brings that kind's default.
+          ...(changes.selfCare !== undefined
+            ? { is_self_care: changes.selfCare }
+            : changes.kind !== undefined
+              ? { is_self_care: selfCareByDefault(changes.kind) }
+              : {}),
           ...(changes.startsAt !== undefined ? { starts_at: changes.startsAt.toISOString() } : {}),
           ...(changes.endsAt !== undefined ? { ends_at: changes.endsAt?.toISOString() ?? null } : {}),
           ...(changes.allDay !== undefined ? { all_day: changes.allDay } : {}),

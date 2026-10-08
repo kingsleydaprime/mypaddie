@@ -24,7 +24,7 @@ export async function addEventAction(_prev: EventFormState, form: FormData): Pro
   const parsed = schema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form" };
   const db = await requireDb("/app/events");
-  const result = await addEvent(db, { ...parsed.data, important: form.get("important") === "on" }, new Date());
+  const result = await addEvent(db, { ...parsed.data, important: form.get("important") === "on", self_care: form.get("self_care") === "on" }, new Date());
   if ("error" in result) return { error: result.error };
   revalidatePath("/app/events");
   const clash = result.clashes[0];

@@ -4,6 +4,14 @@ import { dayKey, daysBetween, localTimeOf, zonedInstant } from "@/shared/time";
 export const EVENT_KINDS = ["meeting", "social", "birthday", "anniversary", "wedding", "appointment", "deadline", "exam", "other"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
+/** Kinds that are time with people you love, not work: they start as self-care (you can change any one). */
+const SELF_CARE_KINDS: readonly EventKind[] = ["social", "birthday", "anniversary", "wedding"];
+
+/** Whether a new event of this kind starts as self-care: it uses the waking day, not your work hours. */
+export function selfCareByDefault(kind: EventKind): boolean {
+  return SELF_CARE_KINDS.includes(kind);
+}
+
 /** Within this many days, an event is "close". */
 export const CLOSE_DAYS = 7;
 /** A timed event with no end is assumed to take this long. */

@@ -26,6 +26,13 @@ const fields = {
   location: z.string().trim().optional(),
   notes: z.string().optional(),
   reminder_note: z.string().trim().max(200).optional().describe("Their own words for the notifications, e.g. 'Buy flowers on the way'"),
+  self_care: z
+    .boolean()
+    .optional()
+    .describe(
+      "Self-care events take time in the day but not from their work hours. Default by kind: social, birthday, " +
+        "anniversary and wedding are self-care; the rest are work. Set it when they say otherwise (a doctor's appointment, a networking 'social').",
+    ),
 };
 
 export function registerEventTools(server: McpServer) {
@@ -51,7 +58,7 @@ export function registerEventTools(server: McpServer) {
       args: {
         title: string; kind: EventKind; date: string; start_time?: string; end_time?: string; important: boolean; yearly?: boolean;
         person?: string; location?: string; notes?: string; reminder_note?: string; prep?: { days_before: number; title?: string; duration_minutes?: number };
-        commitment?: string;
+        commitment?: string; self_care?: boolean;
       },
       ctx: ToolContext,
     ) => {
@@ -88,12 +95,14 @@ export function registerEventTools(server: McpServer) {
         location: z.string().trim().optional(),
         notes: z.string().optional(),
         reminder_note: z.string().trim().max(200).nullable().optional(),
+        self_care: fields.self_care.describe("Changing `kind` without this resets it to the new kind's default."),
       }),
     },
     async (
       args: {
         id: string; action: "edit" | "cancel" | "done" | "delete"; title?: string; kind?: EventKind; date?: string;
         start_time?: string | null; end_time?: string | null; important?: boolean; yearly?: boolean; person?: string; location?: string; notes?: string; reminder_note?: string | null;
+        self_care?: boolean;
       },
       ctx: ToolContext,
     ) => {
@@ -102,6 +111,7 @@ export function registerEventTools(server: McpServer) {
         const changes: Parameters<typeof changeEvent>[3] = {
           title: args.title, kind: args.kind, important: args.important, yearly: args.yearly, person: args.person, location: args.location, notes: args.notes,
           reminderNote: args.reminder_note,
+          selfCare: args.self_care,
         };
         if (args.date !== undefined || args.start_time !== undefined || args.end_time !== undefined) {
           const { data: cur } = await db.from("events").select("starts_at, ends_at, all_day").eq("id", args.id).maybeSingle();

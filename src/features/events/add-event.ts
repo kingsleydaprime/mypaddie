@@ -27,6 +27,8 @@ export interface AddEventInput {
   prep?: { days_before: number; title?: string; duration_minutes?: number };
   /** The job, role, team or group it's for. */
   commitment_id?: string | null;
+  /** Uses the waking day, not work hours. Default: by kind. */
+  self_care?: boolean;
 }
 
 /**
@@ -53,6 +55,7 @@ export async function addEvent(db: Db, args: AddEventInput, now: Date): Promise<
       title: args.title, kind: args.kind, startsAt, endsAt, allDay, important: args.important, yearly,
       person: args.person, location: args.location, notes: args.notes, reminderNote: args.reminder_note,
       commitmentId: args.commitment_id ?? null,
+      selfCare: args.self_care,
     });
 
     // Informational: events aren't refused for clashing — you go to the wedding.

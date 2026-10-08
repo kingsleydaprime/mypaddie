@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { blockOn, nextOccurrence, quadrant, upcoming, type EventLike } from "./events";
+import { blockOn, EVENT_KINDS, nextOccurrence, quadrant, selfCareByDefault, upcoming, type EventLike } from "./events";
 
 const at = (local: string) => new Date(`${local}+01:00`);
 let n = 0;
@@ -95,5 +95,14 @@ describe("blockOn", () => {
   });
   test("a yearly timed event blocks its slot each year", () => {
     expect(blockOn(ev({ startsAt: at("2020-12-24T19:00:00"), yearly: true }), "2026-12-24")!.start).toEqual(at("2026-12-24T19:00:00"));
+  });
+});
+
+describe("selfCareByDefault", () => {
+  test("time with people you love starts as self-care", () => {
+    expect(EVENT_KINDS.filter(selfCareByDefault)).toEqual(["social", "birthday", "anniversary", "wedding"]);
+  });
+  test("meetings, appointments, deadlines and exams start as work", () => {
+    for (const k of ["meeting", "appointment", "deadline", "exam", "other"] as const) expect(selfCareByDefault(k)).toBe(false);
   });
 });
