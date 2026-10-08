@@ -10,7 +10,7 @@ select set_config('search_path', current_setting('search_path') || ', ' || n.nsp
 create function pg_temp.mine(t timestamptz) returns setof jsonb language sql as $$
   select n from jsonb_array_elements(private.collect_nudges(t)) n where n->>'endpoint' like 'https://push.example/%'
 $$;
-select plan(33);
+select plan(37);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com');
 -- Monday 2026-10-05 rows: a daily non-negotiable at 07:00, a Tue/Thu habit, an ordinary task at 10:00.
@@ -100,6 +100,25 @@ select is((select count(*)::int from pg_temp.mine('2026-10-06 14:51+01') n where
 update public.tasks set started_at = null where id = 'aaaaaaaa-0000-0000-0000-000000000004';
 select is((select n->>'kind' || '/' || (n->>'level') from pg_temp.mine('2026-10-06 14:53+01') n where n->>'title' = 'Write the report'),
   'reminder/4', 'stopped again, its reminder comes back');
+
+-- An any-time must-do (no set time) starts escalating at 15:00, not never.
+insert into public.tasks (id, user_id, title, due_at, is_non_negotiable) values
+  ('aaaaaaaa-0000-0000-0000-000000000005', '11111111-1111-1111-1111-111111111111', 'Pay rent', '2026-10-06 23:59+01', true);
+-- (Its ordinary "morning of" reminder can still go out; only escalation is counted here.)
+select is((select count(*)::int from pg_temp.mine('2026-10-06 14:55+01') n where n->>'title' = 'Pay rent' and n->>'kind' = 'nudge'),
+  0, 'an any-time must-do doesn''t escalate before 15:00');
+select is((select n->>'level' from pg_temp.mine('2026-10-06 15:05+01') n where n->>'title' = 'Pay rent' and n->>'kind' = 'nudge'),
+  '1', 'from 15:00 it escalates');
+select is((select count(*)::int from pg_temp.mine('2026-10-06 15:40+01') n where n->>'title' = 'Pay rent' and n->>'kind' = 'nudge'),
+  0, 'hourly, like any other must-do');
+update public.tasks set status = 'done', done_at = '2026-10-06 15:45+01' where id = 'aaaaaaaa-0000-0000-0000-000000000005';
+-- The same for a daily must-do habit with no time at all (its day, no due time).
+insert into public.tasks (id, user_id, title, due_at, recurrence, series_id, occurs_on, is_non_negotiable) values
+  ('aaaaaaaa-0000-0000-0000-000000000006', '11111111-1111-1111-1111-111111111111', 'Read Bible', null,
+   'FREQ=DAILY', 'cccccccc-0000-0000-0000-000000000006', '2026-10-06', true);
+select is((select n->>'level' from pg_temp.mine('2026-10-06 16:10+01') n where n->>'title' = 'Read Bible' and n->>'kind' = 'nudge'),
+  '1', 'an untimed must-do habit escalates from 15:00 too');
+update public.tasks set status = 'done', done_at = '2026-10-06 16:15+01' where id = 'aaaaaaaa-0000-0000-0000-000000000006';
 
 select is((select n->>'title' from pg_temp.mine('2026-10-06 17:50+01') n where n->>'kind' = 'reminder'),
   'Gym', '17:50: a habit gets its 10-minute reminder');

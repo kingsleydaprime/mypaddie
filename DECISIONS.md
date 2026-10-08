@@ -1424,6 +1424,12 @@ moment. A task with a real time ("submit by 23:00") keeps it. Missing a need
 tasks: the late part of the evening is for recovering, not for losing points.
 The 23:59 marker stays in the database; only how it's read changed.
 
+An any-time **must-do** never escalated, because escalation starts at the
+due time and 23:59 is inside quiet hours. It now escalates from 15:00 that
+day (hourly, four nudges at most, never in quiet hours, like any must-do).
+That leaves the morning free, but there's still time to act before the day
+ends at quiet hours. 15:00 is fixed for now, not a setting.
+
 ### Task priority: high, normal, low (normal by default)
 Any-time tasks had nothing to sort by, so an important one and a trivial one
 tied (in effect, alphabetical). `tasks.priority` is high, normal or low,
