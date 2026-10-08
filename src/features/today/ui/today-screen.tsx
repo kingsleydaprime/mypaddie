@@ -15,6 +15,7 @@ import type { Db } from "@/shared/supabase/token-client";
 import { dayKey, localTimeOf } from "@/shared/time";
 import { pickFocus, type FocusItem } from "../focus";
 import { DoneButton } from "./done-button";
+import { TaskMeta } from "./task-meta";
 import { StatusBar } from "@/features/status/ui/status-bar";
 import { loadCheckin } from "@/features/metrics/metrics.repo";
 import { CheckinForm } from "@/features/metrics/ui/checkin-form";
@@ -47,6 +48,7 @@ function Row({ item, now, big, details }: { item: FocusItem; now: Date; big?: bo
         {item.routine && (
           <p className="mt-0.5 text-sm">Next: {item.routine.next} <span className="text-muted">· {item.routine.done}/{item.routine.total}</span></p>
         )}
+        <TaskMeta item={item} now={now} />
         {/* A preview: two lines on the top three, one in the list. The task page has it all. */}
         {details && (
           <p className={`mt-0.5 whitespace-pre-line break-words text-sm text-muted ${big ? "line-clamp-2" : "line-clamp-1"}`}>{details}</p>

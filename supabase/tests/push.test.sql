@@ -10,7 +10,7 @@ select set_config('search_path', current_setting('search_path') || ', ' || n.nsp
 create function pg_temp.mine(t timestamptz) returns setof jsonb language sql as $$
   select n from jsonb_array_elements(private.collect_nudges(t)) n where n->>'endpoint' like 'https://push.example/%'
 $$;
-select plan(30);
+select plan(32);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com');
 -- Monday 2026-10-05 rows: a daily non-negotiable at 07:00, a Tue/Thu habit, an ordinary task at 10:00.
@@ -85,6 +85,15 @@ select is((select count(*)::int from pg_temp.mine('2026-10-06 12:30+01') n where
   0, 'ordinary tasks only get one check-in');
 select is((select count(*)::int from pg_temp.mine('2026-10-06 13:00+01')), 0,
   'after four nudges, the non-negotiable stops escalating');
+
+-- A task in progress gets no reminders (you're already doing it); stopping it brings them back.
+insert into public.tasks (id, user_id, title, due_at, started_at) values
+  ('aaaaaaaa-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', 'Write the report', '2026-10-06 15:00+01', '2026-10-06 14:30+01');
+select is((select count(*)::int from pg_temp.mine('2026-10-06 14:51+01') n where n->>'title' = 'Write the report'),
+  0, 'a started task gets no reminder');
+update public.tasks set started_at = null where id = 'aaaaaaaa-0000-0000-0000-000000000004';
+select is((select n->>'kind' || '/' || (n->>'level') from pg_temp.mine('2026-10-06 14:53+01') n where n->>'title' = 'Write the report'),
+  'reminder/4', 'stopped again, its reminder comes back');
 
 select is((select n->>'title' from pg_temp.mine('2026-10-06 17:50+01') n where n->>'kind' = 'reminder'),
   'Gym', '17:50: a habit gets its 10-minute reminder');

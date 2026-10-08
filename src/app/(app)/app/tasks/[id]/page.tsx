@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { readChecklist } from "@/features/tasks/progress";
+import { DoingPanel } from "@/features/tasks/ui/doing-panel";
 import { TaskForm } from "@/features/tasks/ui/task-form";
 import { UndoButton } from "@/features/undo/ui/undo-button";
 import { currentConfig } from "@/shared/config";
@@ -14,7 +16,7 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
   const db = await requireDb(`/app/tasks/${id}`);
   const { data: t } = await db
     .from("tasks")
-    .select("id, title, status, due_at, duration_minutes, is_non_negotiable, is_self_care, reminder_note, series_id, commitment_id, course_id, is_class, details")
+    .select("id, title, status, due_at, duration_minutes, is_non_negotiable, is_self_care, reminder_note, series_id, commitment_id, course_id, is_class, details, started_at, checklist")
     .eq("id", id)
     .maybeSingle();
   if (!t) notFound();
@@ -30,6 +32,7 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
   ];
   const forValue = t.commitment_id ? `role:${t.commitment_id}` : t.course_id ? `course:${t.course_id}` : "";
 
+  const steps = readChecklist(t.checklist);
   const due = t.due_at ? new Date(t.due_at) : null;
   const time = due ? localTimeOf(due, tz()) : "";
   return (
@@ -44,25 +47,29 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
           <UndoButton kind="task" id={t.id} title={t.title} />
         </div>
       ) : (
-        <TaskForm
-          task={{
-            id: t.id,
-            title: t.title,
-            date: due ? dayKey(due, tz()) : "",
-            // 23:59 is how "any time that day" is stored.
-            time: time === "23:59" ? "" : time,
-            duration: t.duration_minutes,
-            must: t.is_non_negotiable,
-            selfCare: t.is_self_care,
-            note: t.reminder_note ?? "",
-            details: t.details ?? "",
-            habit: t.series_id !== null,
-            forValue,
-            // A timetable class belongs to its course; changing that is set_timetable's job.
-            forLocked: t.is_class,
-          }}
-          forOptions={forOptions}
-        />
+        <>
+          {t.status === "pending" && <DoingPanel id={t.id} title={t.title} startedAt={t.started_at} steps={steps} />}
+          <TaskForm
+            task={{
+              id: t.id,
+              title: t.title,
+              date: due ? dayKey(due, tz()) : "",
+              // 23:59 is how "any time that day" is stored.
+              time: time === "23:59" ? "" : time,
+              duration: t.duration_minutes,
+              must: t.is_non_negotiable,
+              selfCare: t.is_self_care,
+              note: t.reminder_note ?? "",
+              details: t.details ?? "",
+              checklist: steps.map((st) => st.text).join("\n"),
+              habit: t.series_id !== null,
+              forValue,
+              // A timetable class belongs to its course; changing that is set_timetable's job.
+              forLocked: t.is_class,
+            }}
+            forOptions={forOptions}
+          />
+        </>
       )}
     </div>
   );

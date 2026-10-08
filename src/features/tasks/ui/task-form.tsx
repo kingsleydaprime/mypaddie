@@ -16,6 +16,8 @@ export interface TaskFormValues {
   selfCare: boolean;
   note: string;
   details: string;
+  /** One step per line. */
+  checklist: string;
   habit: boolean;
   /** "role:<id>", "course:<id>" or "" — what it's for. */
   forValue: string;
@@ -54,6 +56,10 @@ export function TaskForm({ task, forOptions }: { task: TaskFormValues; forOption
         <label className="flex flex-col gap-1 text-sm text-muted">
           Details
           <textarea name="details" rows={4} maxLength={2000} defaultValue={task.details} placeholder="Steps, links, what done looks like" className={field} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm text-muted">
+          Checklist — one step per line
+          <textarea name="checklist" rows={3} defaultValue={task.checklist} placeholder={"Outline\nDraft\nEdit"} className={field} />
         </label>
         <label className="flex flex-col gap-1 text-sm text-muted">
           Duration (minutes)

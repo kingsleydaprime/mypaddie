@@ -13,7 +13,8 @@ export function DoneButton({ taskId, title }: { taskId: string; title: string })
     startTransition(async () => {
       const result = await completeTaskAction(taskId);
       if (result.result === "completed") {
-        setLabel(`+${result.xp} XP${result.late ? " · late still counts" : ""}`);
+        const took = result.tookMinutes !== undefined ? ` · took ${result.tookMinutes >= 60 ? `${Math.floor(result.tookMinutes / 60)}h ${String(result.tookMinutes % 60).padStart(2, "0")}m` : `${result.tookMinutes}m`}` : "";
+        setLabel(`+${result.xp} XP${result.late ? " · late still counts" : ""}${took}`);
       } else {
         setLabel(result.result === "already_done" ? "Already done" : "Couldn't complete");
       }

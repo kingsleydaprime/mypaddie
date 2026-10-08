@@ -20,6 +20,7 @@ import {
   type DayRoom,
   type DayTask,
 } from "./capacity";
+import { planChecklist, readChecklist, stepsDone, tickStep, timeSpent } from "./progress";
 import { firstOccurrence, occursOn, parseRecurrence, planOccurrences, projectedOccurrences, type SeriesForSpawn, type SeriesTemplate } from "./recurrence";
 
 /** How far back catch-up looks for ignored needs and recurring templates. */
@@ -27,7 +28,7 @@ const LOOKBACK_DAYS = 14;
 const SERIES_LOOKBACK_DAYS = 60;
 
 const TASK_COLUMNS =
-  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, fun_activity_id, topic, item_id, routine_id, routine_step, routines(title), items(tier), task_pillars(pillar, weight)";
+  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, fun_activity_id, topic, item_id, routine_id, routine_step, started_at, checklist, routines(title), items(tier), commitments(title), courses(code, title), task_pillars(pillar, weight)";
 
 type TaskRow = {
   id: string;
@@ -45,8 +46,12 @@ type TaskRow = {
   item_id: string | null;
   routine_id: string | null;
   routine_step: number | null;
+  started_at: string | null;
+  checklist: Json | null;
   routines: { title: string } | null;
   items: { tier: Tier } | null;
+  commitments: { title: string } | null;
+  courses: { code: string | null; title: string } | null;
   task_pillars: PillarWeight[];
 };
 
@@ -55,6 +60,12 @@ export interface LoadedTask extends TaskForXp {
   isNonNegotiable: boolean;
   itemId: string | null;
   routine: { id: string; title: string; step: number } | null;
+  /** When they started doing it; null = not started. */
+  startedAt: Date | null;
+  /** Ticked steps of its checklist; null = no checklist. */
+  steps: { done: number; total: number } | null;
+  /** The commitment (job, role, team) or course it's for, by name. */
+  forLabel: string | null;
 }
 
 /** `now` turns a task whose must_from has passed into a non-negotiable. */
@@ -72,6 +83,9 @@ function toTask(row: TaskRow, now?: Date): LoadedTask {
       row.is_non_negotiable || (now !== undefined && row.must_from !== null && Date.parse(row.must_from) <= now.getTime()),
     itemId: row.item_id,
     routine: row.routine_id && row.routines ? { id: row.routine_id, title: row.routines.title, step: row.routine_step ?? 0 } : null,
+    startedAt: row.started_at ? new Date(row.started_at) : null,
+    steps: stepsDone(readChecklist(row.checklist)),
+    forLabel: row.commitments?.title ?? (row.courses ? row.courses.code || row.courses.title : null),
   };
 }
 
@@ -190,7 +204,17 @@ export async function catchUp(db: Db, now: Date, config = currentConfig()): Prom
 }
 
 export type CompleteResult =
-  | { result: "completed"; xp: number; late: boolean; title: string; practiceLogged?: { minutes: number; topic: string | null }; funLogged?: boolean }
+  | {
+      result: "completed";
+      xp: number;
+      late: boolean;
+      title: string;
+      practiceLogged?: { minutes: number; topic: string | null };
+      funLogged?: boolean;
+      /** Minutes from Start to Done, when it was started (and the start wasn't left running for half a day). */
+      tookMinutes?: number;
+      plannedMinutes?: number | null;
+    }
   | { result: "already_done" | "cancelled" | "not_found"; title: string | null };
 
 /**
@@ -226,10 +250,14 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = c
   await db.from("promises").update({ status: "kept", kept_at: now.toISOString() }).eq("task_id", taskId).eq("status", "open");
   await db.from("promises").update({ kept_at: now.toISOString() }).eq("task_id", taskId).eq("status", "broken").is("kept_at", null);
 
-  // Practice for a skill: record the time. No XP here — the task just paid it.
+  // How long it really took, if they pressed Start.
+  const spent = task.startedAt ? timeSpent(task.startedAt, now) : null;
+  const took = spent?.believable ? spent.minutes : undefined;
+
+  // Practice for a skill: record the time (the real time, if they timed it). No XP here — the task just paid it.
   let practiceLogged: { minutes: number; topic: string | null } | undefined;
   if (data.skill_id) {
-    const minutes = data.duration_minutes ?? DEFAULT_DURATION;
+    const minutes = took ?? data.duration_minutes ?? DEFAULT_DURATION;
     const { error: practiceError } = await db.rpc("record_learning", {
       p_skill_id: data.skill_id,
       p_topic: data.topic as string,
@@ -256,6 +284,7 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = c
   return {
     ...(practiceLogged ? { practiceLogged } : {}),
     ...(funLogged ? { funLogged } : {}),
+    ...(took !== undefined ? { tookMinutes: took, plannedMinutes: data.duration_minutes } : {}),
     result: "completed",
     xp: entries.reduce((sum, e) => sum + e.amount, 0),
     late: isLate(timed, now),
@@ -439,6 +468,8 @@ export interface NewTask {
   routine?: { id: string; step: number } | null;
   /** Looking after yourself (routines, workouts): uses the waking day, not your work hours. Default: true for a routine step, else false. */
   selfCare?: boolean;
+  /** Steps inside the task, in order, all unticked. */
+  checklist?: string[] | null;
   location?: string | null;
   /**
    * Set by others, not chosen: a class, a shift. Never refused for a full day
@@ -459,6 +490,8 @@ export type CreateResult = { result: "created"; task: { id: string; title: strin
  */
 export async function createTask(db: Db, task: NewTask, now: Date, config = currentConfig()): Promise<CreateResult> {
   validateWeights(task.weights);
+  const checklist = task.checklist ? planChecklist([], task.checklist) : null;
+  if (checklist && !checklist.ok) throw new Error(checklistProblem(checklist));
   if (task.recurrence) {
     parseRecurrence(task.recurrence);
     // Classes come with a course, not a choice: they don't use up habit slots.
@@ -527,6 +560,7 @@ export async function createTask(db: Db, task: NewTask, now: Date, config = curr
       routine_id: task.routine?.id ?? null,
       routine_step: task.routine?.step ?? null,
       is_self_care: selfCare,
+      checklist: (checklist?.ok ? checklist.steps : null) as unknown as Json,
       location: task.location?.trim() || null,
     })
     .select("id, title, due_at, recurrence")
@@ -566,6 +600,8 @@ export interface TaskChanges {
   details?: string | null;
   /** Self-care uses the waking day, not your work hours. Switching to work re-checks the day. */
   selfCare?: boolean;
+  /** The checklist's steps, in order (steps that stay keep their tick); null or [] clears it. */
+  checklist?: string[] | null;
 }
 
 export type UpdateResult =
@@ -590,7 +626,7 @@ export async function updateTask(
 ): Promise<UpdateResult> {
   const { data: task, error } = await db
     .from("tasks")
-    .select("id, status, series_id, occurs_on, due_at, recurrence, duration_minutes, is_self_care")
+    .select("id, status, series_id, occurs_on, due_at, recurrence, duration_minutes, is_self_care, checklist")
     .eq("id", taskId)
     .maybeSingle();
   if (error) fail("loading the task", error);
@@ -617,6 +653,9 @@ export async function updateTask(
   }
 
   if (changes.weights) validateWeights(changes.weights);
+  // Planned against this row's ticks; later days of a habit start unticked anyway.
+  const checklist = changes.checklist === undefined ? undefined : planChecklist(readChecklist(task.checklist), changes.checklist ?? []);
+  if (checklist && !checklist.ok) throw new Error(checklistProblem(checklist));
   if (changes.recurrence) {
     parseRecurrence(changes.recurrence);
     if (!task.series_id) throw new Error("this is a one-off task; add a new recurring task instead");
@@ -685,6 +724,11 @@ export async function updateTask(
     if (changes.courseId !== undefined) patch.course_id = changes.courseId;
     if (changes.details !== undefined) patch.details = changes.details?.trim() || null;
     if (changes.selfCare !== undefined) patch.is_self_care = changes.selfCare;
+    if (checklist?.ok) {
+      // This day keeps its ticks; later days of a habit start with every step open.
+      const steps = row.id === task.id ? checklist.steps : checklist.steps?.map((st) => ({ ...st, done: false })) ?? null;
+      patch.checklist = steps as unknown as Json;
+    }
     if (moves) patch.due_at = newDueAt(row);
     if (Object.keys(patch).length > 0) {
       const { error: e } = await db.from("tasks").update(patch).eq("id", row.id);
@@ -696,6 +740,56 @@ export async function updateTask(
     }
   }
   return { result: "updated", rows: targets.length };
+}
+
+// ─── Doing it ────────────────────────────────────────────────────────────────
+
+function checklistProblem(p: Extract<ReturnType<typeof planChecklist>, { ok: false }>): string {
+  if (p.reason === "too_many") return "a checklist can have at most 30 steps";
+  if (p.reason === "too_long") return `a step can be at most 200 characters: "${p.step!.slice(0, 40)}…"`;
+  return `"${p.step}" is in the checklist twice`;
+}
+
+export type StartResult =
+  | { result: "started" | "stopped"; title: string; startedAt: string | null }
+  | { result: "already_started"; title: string; startedAt: string }
+  | { result: "not_started" | "not_open" | "not_found"; title?: string };
+
+/**
+ * Start a task (it's in progress: its own reminders go quiet, and Done records
+ * how long it took) or stop it again (not doing it right now). Only open tasks.
+ */
+export async function startTask(db: Db, taskId: string, now: Date, stop = false): Promise<StartResult> {
+  const { data: t, error } = await db.from("tasks").select("id, title, status, started_at").eq("id", taskId).maybeSingle();
+  if (error) fail("loading the task", error);
+  if (!t) return { result: "not_found" };
+  if (t.status !== "pending") return { result: "not_open", title: t.title };
+  if (!stop && t.started_at) return { result: "already_started", title: t.title, startedAt: t.started_at };
+  if (stop && !t.started_at) return { result: "not_started", title: t.title };
+  const startedAt = stop ? null : now.toISOString();
+  // Still open at the moment it's written, or nothing happens.
+  const { data: rows, error: e } = await db.from("tasks").update({ started_at: startedAt }).eq("id", taskId).eq("status", "pending").select("id");
+  if (e) fail(stop ? "stopping the task" : "starting the task", e);
+  if (rows.length === 0) return { result: "not_open", title: t.title };
+  return { result: stop ? "stopped" : "started", title: t.title, startedAt };
+}
+
+export type TickTaskResult =
+  | { result: "ticked"; title: string; steps: { text: string; done: boolean }[]; allDone: boolean }
+  | { result: "no_checklist" | "unknown_step"; title: string; step: string }
+  | { result: "not_open" | "not_found"; title?: string };
+
+/** Tick or untick one step of a task's checklist. Ticking the last one doesn't complete the task: they still press Done. */
+export async function tickTaskStep(db: Db, taskId: string, ref: number | string, done = true): Promise<TickTaskResult> {
+  const { data: t, error } = await db.from("tasks").select("id, title, status, checklist").eq("id", taskId).maybeSingle();
+  if (error) fail("loading the task", error);
+  if (!t) return { result: "not_found" };
+  if (t.status !== "pending") return { result: "not_open", title: t.title };
+  const ticked = tickStep(readChecklist(t.checklist), ref, done);
+  if (!ticked.ok) return { result: ticked.reason, title: t.title, step: ticked.step };
+  const { error: e } = await db.from("tasks").update({ checklist: ticked.steps as unknown as Json }).eq("id", taskId).eq("status", "pending");
+  if (e) fail("ticking the step", e);
+  return { result: "ticked", title: t.title, steps: ticked.steps, allDone: ticked.allDone };
 }
 
 // ─── Delete ──────────────────────────────────────────────────────────────────

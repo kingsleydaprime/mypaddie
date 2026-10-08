@@ -121,3 +121,19 @@ describe("routines take one place", () => {
     expect(f.top).toEqual([]);
   });
 });
+
+describe("in progress", () => {
+  test("a started task comes first, even above an overdue must-do", () => {
+    const f = pickFocus([
+      task({ title: "Pray", isNonNegotiable: true, dueAt: at("2026-10-06T07:00:00") }),
+      task({ title: "Write the report", startedAt: at("2026-10-06T09:30:00") }),
+    ], now);
+    expect(titles(f.top)).toEqual(["Write the report", "Pray"]);
+    expect(f.top[0]!.startedAt).toEqual(at("2026-10-06T09:30:00"));
+  });
+
+  test("its checklist progress comes along", () => {
+    const f = pickFocus([task({ title: "Essay", steps: { done: 2, total: 5 } })], now);
+    expect(f.top[0]!.steps).toEqual({ done: 2, total: 5 });
+  });
+});

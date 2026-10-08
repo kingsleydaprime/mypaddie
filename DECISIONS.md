@@ -1384,3 +1384,27 @@ so it's only the default, and any event can be switched. Changing an event's
 kind brings the new kind's default unless self-care is set in the same edit.
 Imported Google Calendar events come in as meetings or "other", so they start
 as work.
+
+### In progress is a start time; a checklist lives inside the task
+You wanted to mark a task as being done right now, and to tick off parts of
+one. **In progress** is `tasks.started_at`, not a new status: every capacity,
+reminder, overdue and ignored-need rule reads "pending", and a started task is
+still pending, so none of them had to learn a new state. Starting quiets
+*that task's* reminders only (`collect_nudges` skips started rows); other
+must-dos still nudge, by your choice. A started task goes to the top of Today.
+Done reports how long it took (Start → Done), and a study task logs that real
+time as practice instead of the planned duration. A start left running over
+12 hours is treated as forgotten, not as time spent. Undo keeps the start
+time: tapping Done by mistake puts it back in progress.
+
+A **checklist** is `tasks.checklist` (up to 30 steps of text plus a tick), not
+a table of subtasks. Steps aren't scheduled, paid or reminded on their own, so
+rows would only add joins. XP stays on the task. Ticking the last step offers
+Done but doesn't press it, by your choice, because some tasks have steps that
+aren't the whole thing. Rewording a list keeps ticks on steps whose words
+didn't change. A habit's next day copies the steps unticked
+(`spawn_occurrence`). Considered: a status set (to do / in progress / done)
+like a project board. It makes you maintain a board, which is what the
+blueprint says not to build.
+
+Task lists now show what a task is for (its commitment or course).

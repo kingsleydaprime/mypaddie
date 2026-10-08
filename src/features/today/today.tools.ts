@@ -41,6 +41,9 @@ const item = (i: FocusItem) => ({
   due: i.dueAt ? formatLocal(i.dueAt, tz()) : null,
   overdue: i.overdue,
   nonNegotiable: i.nonNegotiable,
+  ...(i.forLabel ? { for: i.forLabel } : {}),
+  ...(i.startedAt ? { inProgressSince: formatLocal(i.startedAt, tz()) } : {}),
+  ...(i.steps ? { steps: `${i.steps.done}/${i.steps.total}` } : {}),
 });
 
 function moneySummary(m: MoneyStage) {

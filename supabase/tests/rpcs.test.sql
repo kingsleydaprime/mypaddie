@@ -5,7 +5,7 @@ create extension if not exists pgtap with schema extensions;
 -- somewhere not on this connection's search_path) and add that schema.
 select set_config('search_path', current_setting('search_path') || ', ' || n.nspname, true)
   from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgtap';
-select plan(17);
+select plan(19);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com'),
@@ -52,6 +52,18 @@ select public.spawn_occurrence('cccccccc-0000-0000-0000-000000000001', '2026-10-
 select is(
   (select is_self_care from public.tasks where occurs_on = '2026-10-08' and series_id = 'cccccccc-0000-0000-0000-000000000001'),
   true, 'the new row copies the self-care flag'
+);
+-- A checklist comes back unticked on the next day, and the next day isn't started.
+update public.tasks set checklist = '[{"text": "Pray", "done": true}, {"text": "Read", "done": false}]', started_at = '2026-10-08 06:00+00'
+  where occurs_on = '2026-10-08' and series_id = 'cccccccc-0000-0000-0000-000000000001';
+select public.spawn_occurrence('cccccccc-0000-0000-0000-000000000001', '2026-10-09', '2026-10-09 06:00:00+00');
+select is(
+  (select checklist from public.tasks where occurs_on = '2026-10-09' and series_id = 'cccccccc-0000-0000-0000-000000000001'),
+  '[{"text": "Pray", "done": false}, {"text": "Read", "done": false}]'::jsonb, 'the new row copies the checklist, every step unticked, in order'
+);
+select is(
+  (select started_at from public.tasks where occurs_on = '2026-10-09' and series_id = 'cccccccc-0000-0000-0000-000000000001'),
+  null, 'the new row is not in progress'
 );
 select is(
   public.spawn_occurrence('99999999-0000-0000-0000-000000000000', '2026-10-06', null),

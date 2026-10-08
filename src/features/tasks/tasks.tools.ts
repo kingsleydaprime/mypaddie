@@ -10,7 +10,7 @@ import { findOrCreateSkill } from "@/features/learning/learning.repo";
 import { currentConfig } from "@/shared/config";
 import { dayKey } from "@/shared/time";
 import { loadTaskOverview } from "./overview.repo";
-import { completeTask, createTask, deleteTask, habitRow, updateTask } from "./tasks.repo";
+import { completeTask, createTask, deleteTask, habitRow, startTask, tickTaskStep, updateTask } from "./tasks.repo";
 
 const weightsSchema = z
   .array(z.object({ pillar: z.enum(PILLARS), weight: z.number().int().min(1).max(100) }))
@@ -28,6 +28,10 @@ const REFUSALS =
   "plainly with the numbers, and offer to finish or drop something first, or move it to another day. `full: 'work'` " +
   "means their work hours are used up; `full: 'day'` means there's no waking time left at all. Do NOT suggest " +
   "raising capacity to squeeze it in — that's their deliberate setting (set_capacity).";
+
+const CHECKLIST =
+  "Steps inside one task, in order (an essay: outline, draft, edit). Ticked with tick_step. XP stays on the task as a " +
+  "whole; ticking the last step doesn't complete it — ask if they're done, then complete_task.";
 
 const SELF_CARE =
   "Self-care (looking after themselves: routines, workouts, hygiene, rest) takes time in the day but not from their " +
@@ -55,6 +59,7 @@ export function registerTaskTools(server: McpServer) {
         recurrence: z.string().optional(),
         non_negotiable: z.boolean().default(false),
         self_care: z.boolean().optional().describe(SELF_CARE),
+        checklist: z.array(z.string().trim().min(1).max(200)).min(1).max(30).optional().describe(CHECKLIST),
         weights: weightsSchema,
         duration_minutes: z.number().int().min(1).max(1440).optional(),
         reminders: reminders.optional(),
@@ -79,6 +84,7 @@ export function registerTaskTools(server: McpServer) {
         recurrence?: string;
         non_negotiable: boolean;
         self_care?: boolean;
+        checklist?: string[];
         weights: { pillar: (typeof PILLARS)[number]; weight: number }[];
         duration_minutes?: number;
         reminders?: ("eve" | "morning" | "30" | "10")[];
@@ -115,6 +121,7 @@ export function registerTaskTools(server: McpServer) {
             recurrence: args.recurrence ?? null,
             nonNegotiable: args.non_negotiable,
             selfCare: args.self_care,
+            checklist: args.checklist ?? null,
             weights: args.weights,
             durationMinutes: args.duration_minutes ?? null,
             reminders: args.reminders ?? null,
@@ -158,6 +165,9 @@ export function registerTaskTools(server: McpServer) {
         due_time: time.nullable().optional().describe("HH:MM Lagos, or null"),
         non_negotiable: z.boolean().optional(),
         self_care: z.boolean().optional().describe(SELF_CARE + " For a habit it applies from this day on; switching to work re-checks that day's work hours."),
+        checklist: z.array(z.string().trim().max(200)).max(30).nullable().optional().describe(
+          CHECKLIST + " Replaces the whole list in order; steps that stay keep their tick. null or [] clears it. For a habit, later days start unticked.",
+        ),
         recurrence: z.string().optional().describe("Recurring habits only, e.g. FREQ=WEEKLY;BYDAY=MO,TH"),
         weights: weightsSchema.optional(),
         duration_minutes: z.number().int().min(1).max(1440).nullable().optional(),
@@ -182,6 +192,7 @@ export function registerTaskTools(server: McpServer) {
         due_time?: string | null;
         non_negotiable?: boolean;
         self_care?: boolean;
+        checklist?: string[] | null;
         recurrence?: string;
         weights?: { pillar: (typeof PILLARS)[number]; weight: number }[];
         duration_minutes?: number | null;
@@ -216,6 +227,7 @@ export function registerTaskTools(server: McpServer) {
             dueTime: args.due_time,
             nonNegotiable: args.non_negotiable,
             selfCare: args.self_care,
+            checklist: args.checklist,
             recurrence: args.recurrence,
             weights: args.weights,
             durationMinutes: args.duration_minutes,
@@ -272,6 +284,50 @@ export function registerTaskTools(server: McpServer) {
   );
 
   server.registerTool(
+    "start_task",
+    {
+      title: "Start or stop a task",
+      description:
+        "Mark a task in progress when they say they're starting it ('starting the report now'): its own reminders go " +
+        "quiet and Today puts it first, and when they finish, complete_task reports how long it really took. stop=true " +
+        "when they stop for now without finishing. Other must-dos still nudge.",
+      inputSchema: z.object({ task_id: z.uuid().describe("From get_today"), stop: z.boolean().default(false) }),
+    },
+    async ({ task_id, stop }: { task_id: string; stop: boolean }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        const now = new Date();
+        return ok(await withMode(db, now, { ...(await startTask(db, task_id, now, stop)) }));
+      } catch (error) {
+        return toolError(`start_task failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "tick_step",
+    {
+      title: "Tick a checklist step",
+      description:
+        "Tick (or untick with done=false) one step of a task's checklist, by its number from 1 or its words. If " +
+        "`allDone` comes back true, ask whether the task itself is done — don't complete it for them.",
+      inputSchema: z.object({
+        task_id: z.uuid(),
+        step: z.union([z.number().int().min(1), z.string().trim().min(1)]),
+        done: z.boolean().default(true),
+      }),
+    },
+    async ({ task_id, step, done }: { task_id: string; step: number | string; done: boolean }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        return ok(await withMode(db, new Date(), { ...(await tickTaskStep(db, task_id, step, done)) }));
+      } catch (error) {
+        return toolError(`tick_step failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
     "delete_task",
     {
       title: "Delete task",
@@ -300,7 +356,8 @@ export function registerTaskTools(server: McpServer) {
         "Mark a task done and award its weighted XP. Late completions still earn reduced XP, so encourage doing it " +
         "late over not at all. Safe to retry: a task can't pay twice. Use the task id from get_today. For a study " +
         "task (one with a topic), ask how solid the topic feels now (1–5) and pass it as `confidence`: it decides " +
-        "when the topic comes back for review.",
+        "when the topic comes back for review. If it was started, `tookMinutes` says how long it really took " +
+        "(vs `plannedMinutes`): mention it only when it's well off the plan, as something to plan with next time.",
       inputSchema: z.object({
         task_id: z.uuid().describe("Task id from get_today"),
         confidence: z.number().int().min(1).max(5).optional().describe("Study tasks: how solid the topic feels now, 1 shaky – 5 solid"),

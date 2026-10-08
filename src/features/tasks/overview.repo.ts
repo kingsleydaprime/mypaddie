@@ -13,6 +13,8 @@ export interface UpcomingTask {
   title: string;
   dueAt: Date;
   nonNegotiable: boolean;
+  /** The commitment or course it's for. */
+  forLabel: string | null;
 }
 
 /** Everything the Tasks tab shows beyond today: routines, habits, and one-offs in the next week. */
@@ -29,7 +31,7 @@ export async function loadTaskOverview(db: Db, now: Date, config = currentConfig
     db.from("routines").select("id, title").order("created_at"),
     db
       .from("tasks")
-      .select("id, title, due_at, is_non_negotiable")
+      .select("id, title, due_at, is_non_negotiable, commitments(title), courses(code, title)")
       .is("series_id", null)
       .eq("status", "pending")
       .gte("due_at", from)
@@ -51,6 +53,12 @@ export async function loadTaskOverview(db: Db, now: Date, config = currentConfig
       routine: r.routine_id ? { id: r.routine_id, step: r.routine_step ?? 0 } : null,
       selfCare: r.is_self_care,
     }));
-  const upcoming: UpcomingTask[] = oneOffs.map((t) => ({ id: t.id, title: t.title, dueAt: new Date(t.due_at!), nonNegotiable: t.is_non_negotiable }));
+  const upcoming: UpcomingTask[] = oneOffs.map((t) => ({
+    id: t.id,
+    title: t.title,
+    dueAt: new Date(t.due_at!),
+    nonNegotiable: t.is_non_negotiable,
+    forLabel: t.commitments?.title ?? (t.courses ? t.courses.code || t.courses.title : null),
+  }));
   return { ...summariseSeries(series, routines, now, config), upcoming };
 }

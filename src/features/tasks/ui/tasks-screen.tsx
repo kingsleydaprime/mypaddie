@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { pickFocus, type FocusItem } from "@/features/today/focus";
 import { DoneButton } from "@/features/today/ui/done-button";
+import { TaskMeta } from "@/features/today/ui/task-meta";
 import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { dayKey, localTimeOf } from "@/shared/time";
@@ -37,6 +38,7 @@ function TodayRow({ item, now }: { item: FocusItem; now: Date }) {
       <div className="min-w-0 flex-1">
         <Link href={`/app/tasks/${item.id}`} className="block truncate font-semibold">{item.title}</Link>
         {item.routine && <p className="mt-0.5 text-sm">Next: {item.routine.next} <span className="text-muted">· {item.routine.done}/{item.routine.total}</span></p>}
+        <TaskMeta item={item} now={now} />
         <p className="mt-0.5 text-sm text-muted">
           <span className={item.overdue ? "font-medium text-red" : ""}>{item.overdue ? `overdue · ${label}` : label}</span>
           {item.nonNegotiable && <span className="text-gold"> · must</span>}
@@ -150,7 +152,10 @@ export async function TasksScreen({ db }: { db: Db }) {
                   return (
                     <li key={t.id}>
                       <Link href={`/app/tasks/${t.id}`} className="flex items-baseline justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
-                        <span className="truncate font-semibold">{t.title}</span>
+                        <span className="min-w-0">
+                          <span className="block truncate font-semibold">{t.title}</span>
+                          {t.forLabel && <span className="block truncate text-sm text-muted">for {t.forLabel}</span>}
+                        </span>
                         <span className="shrink-0 text-sm text-muted">{time === "23:59" ? "any time" : time}{t.nonNegotiable && <span className="text-gold"> · must</span>}</span>
                       </Link>
                     </li>

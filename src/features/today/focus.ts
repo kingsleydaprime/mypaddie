@@ -11,6 +11,12 @@ export interface TaskForFocus {
   status: "pending" | "done" | "skipped" | "cancelled";
   /** A step of a routine: shown with its routine as one item. */
   routine?: { id: string; title: string; step: number } | null;
+  /** Started and not finished: in progress. */
+  startedAt?: Date | null;
+  /** Ticked steps of its checklist. */
+  steps?: { done: number; total: number } | null;
+  /** The commitment or course it's for. */
+  forLabel?: string | null;
 }
 
 export interface FocusItem {
@@ -21,6 +27,9 @@ export interface FocusItem {
   overdue: boolean;
   nonNegotiable: boolean;
   routine?: { title: string; next: string; done: number; total: number };
+  startedAt: Date | null;
+  steps: { done: number; total: number } | null;
+  forLabel: string | null;
 }
 
 export interface Focus {
@@ -33,6 +42,7 @@ export interface Focus {
 
 /**
  * "Here are the 3 things that matter right now." Ranking, highest first:
+ *   0. whatever they've started (in progress)
  *   1. non-negotiables that are overdue      (pray, brush, food…)
  *   2. non-negotiables still to come today
  *   3. other needs, overdue then upcoming
@@ -55,6 +65,8 @@ export function pickFocus(
   );
 
   const rank = (t: TaskForFocus) => {
+    // Whatever they've started comes first: it's what they're doing.
+    if (t.startedAt) return -1;
     const overdue = t.dueAt !== null && t.dueAt.getTime() < now.getTime();
     const group = t.isNonNegotiable ? 0 : t.tier === "need" ? 1 : 2;
     return group * 2 + (overdue ? 0 : 1);
@@ -73,6 +85,9 @@ export function pickFocus(
     dueAt: t.dueAt,
     overdue: t.dueAt !== null && t.dueAt.getTime() < now.getTime(),
     nonNegotiable: t.isNonNegotiable,
+    startedAt: t.startedAt ?? null,
+    steps: t.steps ?? null,
+    forLabel: t.forLabel ?? null,
   });
 
   // A routine takes one place: its open steps collapse into a single item at

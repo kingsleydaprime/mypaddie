@@ -1,8 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireDb } from "@/shared/supabase/session";
-import { deleteTask, updateTask } from "./tasks.repo";
+import { deleteTask, startTask, tickTaskStep, updateTask } from "./tasks.repo";
 import { refusalMessage } from "./ui/refusal";
 
 export type TaskFormState = null | { error: string } | { ok: string };
@@ -37,6 +38,8 @@ export async function saveTaskAction(_prev: TaskFormState, form: FormData): Prom
       durationMinutes: minutes,
       nonNegotiable: form.get("must") === "on",
       selfCare: form.get("selfCare") === "on",
+      // One step per line; steps that stay keep their tick.
+      checklist: String(form.get("checklist") ?? "").split("\n"),
       reminderNote: String(form.get("note") ?? "").trim() || null,
       details: String(form.get("details") ?? "").slice(0, 2000).trim() || null,
       forceClash: form.get("force") === "on",
@@ -71,4 +74,23 @@ export async function taskAction(id: string, action: "cancel" | "stop" | "delete
   const r = await updateTask(db, id, {}, action);
   if (r.result === "already_done") return { error: "It's already done." };
   redirect("/app");
+}
+
+/** Start (in progress) or stop a task from its page. */
+export async function startTaskAction(id: string, stop: boolean): Promise<TaskFormState> {
+  const db = await requireDb(`/app/tasks/${id}`);
+  const r = await startTask(db, id, new Date(), stop);
+  revalidatePath(`/app/tasks/${id}`);
+  if (r.result === "not_open") return { error: "It's not open any more." };
+  if (r.result === "not_found") return { error: "Task not found." };
+  return { ok: r.result === "stopped" || r.result === "not_started" ? "Stopped." : "Started." };
+}
+
+/** Tick or untick one checklist step (1-based) from the task's page. */
+export async function tickStepAction(id: string, step: number, done: boolean): Promise<TaskFormState> {
+  const db = await requireDb(`/app/tasks/${id}`);
+  const r = await tickTaskStep(db, id, step, done);
+  revalidatePath(`/app/tasks/${id}`);
+  if (r.result !== "ticked") return { error: r.result === "not_open" ? "It's not open any more." : "That step isn't there any more — refresh." };
+  return { ok: r.allDone ? "all_done" : "ticked" };
 }
