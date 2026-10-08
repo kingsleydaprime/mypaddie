@@ -6,6 +6,8 @@ export interface Nudge {
   items: string[] | null;
   /** Local "HH:MM" the task is due, when it has a time. */
   due?: string | null;
+  /** Local "HH:MM" to start by, when the task has one before its deadline (and the deadline hasn't passed). */
+  startBy?: string | null;
   /** Events only. */
   eventKind?: string | null;
   person?: string | null;
@@ -143,8 +145,12 @@ function defaultCopy(n: Nudge): NotificationCopy {
     }
   }
   if (n.kind === "reminder") {
-    // Level = which rung of the ladder: 1 evening before, 2 morning of, 3 in 30 min, 4 in 10 min.
+    // Level = which rung of the ladder: 1 evening before, 2 morning of, 3 in 30 min, 4 in 10 min, 5 30 min before the start-by.
     const at = n.due ? ` at ${n.due}` : "";
+    if (n.level === 5) {
+      const by = n.due ? `, done by ${n.due}` : "";
+      return { title: n.startBy ? `Start at ${n.startBy}` : "Start in 30 minutes", body: `${task}. Start in 30 minutes${by}. Get ready.`, url: "/app", tag: `task-${task}` };
+    }
     const ladder: [string, string][] = [
       [`Tomorrow${at}`, `${task}. Sort what you need tonight.`],
       [`Today${at}`, `${task}. Plan the day around it.`],
@@ -159,6 +165,15 @@ function defaultCopy(n: Nudge): NotificationCopy {
   }
   if (n.kind === "checkin") {
     return { title: task, body: "Time's passed. Did you do it?", url: "/app", tag: `task-${task}` };
+  }
+
+  if (n.startBy && n.due) {
+    // Past the start-by, deadline still ahead: push to start, not "it's due".
+    const start = [
+      `Time to start ${task}. It's due at ${n.due}.`,
+      `${task} still hasn't started. Due at ${n.due}. Start now.`,
+    ];
+    return { title: "Paddie", body: start[Math.min(Math.max(n.level, 1), 2) - 1]!, url: "/app", tag: `task-${task}` };
   }
 
   const escalation = [

@@ -43,6 +43,21 @@ describe("copyFor", () => {
     expect(r(4)).toMatchObject({ title: "In 10 minutes", body: "Standup. Go." });
   });
 
+  test("start-by: 30 minutes before the start, then nudged to start while the deadline is ahead", () => {
+    expect(copyFor({ kind: "reminder", level: 5, title: "Market", items: null, due: "18:00", startBy: "16:00" })).toMatchObject({
+      title: "Start at 16:00",
+      body: "Market. Start in 30 minutes, done by 18:00. Get ready.",
+    });
+    const nudge = (level: number) => copyFor({ kind: "nudge", level, title: "Market", items: null, due: "18:00", startBy: "16:00" }).body;
+    expect(nudge(1)).toBe("Time to start Market. It's due at 18:00.");
+    expect(nudge(2)).toContain("still hasn't started");
+    expect(nudge(3)).toContain("still hasn't started");
+  });
+
+  test("once the deadline passes (no startBy), the usual escalation carries on", () => {
+    expect(copyFor({ kind: "nudge", level: 3, title: "Market", items: null, due: "18:00" }).body).toContain("Third call");
+  });
+
   test("events: a birthday morning says call them; a meeting says plan around it", () => {
     expect(copyFor({ kind: "event", level: 3, title: "Tolu's birthday", items: null, eventKind: "birthday", person: "Tolu" })).toMatchObject({
       title: "It's Tolu's birthday",

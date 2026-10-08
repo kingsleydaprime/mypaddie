@@ -54,7 +54,9 @@ export function registerTaskTools(server: McpServer) {
         "FREQ=DAILY or FREQ=WEEKLY;BYDAY=MO,WE,FR. Non-negotiables (daily essentials) get nudged until done. " +
         "Chores are low XP (about 5); normal tasks about 10. Estimate duration_minutes (the user can correct it): it " +
         "turns a timed task into a block and counts against their daily capacity. For something not urgent now but " +
-        "that becomes non-negotiable later (replying someone, updating the boss), set becomes_must_do_at. " + REFUSALS,
+        "that becomes non-negotiable later (replying someone, updating the boss), set becomes_must_do_at. " +
+        "A start-by time ('start by 4, done by 6') is the same field: due_time is the deadline, becomes_must_do_at the start " +
+        "(same day); they get a reminder 30 minutes before the start and are nudged to start from then. " + REFUSALS,
       inputSchema: z.object({
         title: z.string().trim().min(1),
         item_id: z.uuid().optional().describe("The need/goal/etc. this task serves, from add_item or list_items"),
@@ -69,7 +71,7 @@ export function registerTaskTools(server: McpServer) {
         weights: weightsSchema,
         duration_minutes: z.number().int().min(1).max(1440).optional(),
         reminders: reminders.optional(),
-        becomes_must_do_at: z.iso.datetime({ offset: true }).optional().describe("When it turns non-negotiable, e.g. 2026-10-15T09:00:00+01:00"),
+        becomes_must_do_at: z.iso.datetime({ offset: true }).optional().describe("When it turns non-negotiable, or the start-by time before a same-day deadline, e.g. 2026-10-15T16:00:00+01:00"),
         force_clash: z.boolean().default(false).describe("Only after the user confirms a double-booking"),
         skill: z.string().trim().min(1).optional().describe("Completing it logs practice time for this skill (e.g. 'LeetCode 1h' → DSA)"),
         topic: z.string().trim().min(1).max(200).optional().describe("With `skill`: the topic it covers (e.g. a course topic), recorded with the practice time"),
@@ -181,7 +183,7 @@ export function registerTaskTools(server: McpServer) {
         weights: weightsSchema.optional(),
         duration_minutes: z.number().int().min(1).max(1440).nullable().optional(),
         reminders: reminders.nullable().optional().describe("null = back to the default ladder"),
-        becomes_must_do_at: z.iso.datetime({ offset: true }).nullable().optional(),
+        becomes_must_do_at: z.iso.datetime({ offset: true }).nullable().optional().describe("When it turns non-negotiable, or the start-by time before a same-day deadline, e.g. 2026-10-15T16:00:00+01:00"),
         force_clash: z.boolean().default(false),
         skill: z.string().trim().min(1).nullable().optional().describe("null = unlink"),
         reminder_note: z.string().trim().max(200).nullable().optional().describe("null = back to the default wording"),

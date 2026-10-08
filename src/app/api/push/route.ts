@@ -19,6 +19,7 @@ const body = z.object({
       title: z.string().nullable(),
       items: z.array(z.string()).nullable(),
       due: z.string().nullable().optional(),
+      startBy: z.string().nullable().optional(),
       eventKind: z.string().nullable().optional(),
       person: z.string().nullable().optional(),
       days: z.number().int().nullable().optional(),
