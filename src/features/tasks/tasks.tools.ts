@@ -286,21 +286,40 @@ export function registerTaskTools(server: McpServer) {
   server.registerTool(
     "start_task",
     {
-      title: "Start, pause or resume a task",
+      title: "Start a task",
       description:
-        "Mark a task in progress when they say they're starting it ('starting the report now'): its own reminders go " +
-        "quiet and Today puts it first, and when they finish, complete_task reports how long it really took. pause=true " +
-        "when they stop for now without finishing ('taking a break', 'pausing that'): the time so far is kept and its " +
-        "reminders come back; starting it again resumes. Other must-dos still nudge either way.",
-      inputSchema: z.object({ task_id: z.uuid().describe("From get_today"), pause: z.boolean().default(false) }),
+        "Mark a task in progress when they say they're starting or getting back to it ('starting the report now', " +
+        "'back on it'): its own reminders go quiet and Today puts it first. A paused task resumes, keeping its time so " +
+        "far. When they finish, complete_task marks it done and reports how long it really took. Other must-dos still nudge.",
+      inputSchema: z.object({ task_id: z.uuid().describe("From get_today") }),
     },
-    async ({ task_id, pause }: { task_id: string; pause: boolean }, ctx: ToolContext) => {
+    async ({ task_id }: { task_id: string }, ctx: ToolContext) => {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        return ok(await withMode(db, now, { ...(await startTask(db, task_id, now, pause)) }));
+        return ok(await withMode(db, now, { ...(await startTask(db, task_id, now)) }));
       } catch (error) {
         return toolError(`start_task failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "pause_task",
+    {
+      title: "Pause a task",
+      description:
+        "Pause a task in progress when they stop for now without finishing ('taking a break', 'pausing that'): the time " +
+        "so far is kept, its reminders come back, and start_task resumes it. Finished instead? Use complete_task.",
+      inputSchema: z.object({ task_id: z.uuid().describe("From get_today") }),
+    },
+    async ({ task_id }: { task_id: string }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        const now = new Date();
+        return ok(await withMode(db, now, { ...(await startTask(db, task_id, now, true)) }));
+      } catch (error) {
+        return toolError(`pause_task failed: ${(error as Error).message}`);
       }
     },
   );
