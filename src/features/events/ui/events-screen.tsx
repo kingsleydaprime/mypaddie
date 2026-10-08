@@ -43,29 +43,29 @@ export async function EventsScreen({ db }: { db: Db }) {
               <p className="-mt-1 text-sm text-muted">{blurb}</p>
               <ul className="flex flex-col divide-y divide-line rounded-2xl border border-line bg-surface">
                 {list.map((v) => (
-                  <li key={v.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <li key={v.id} className="px-4 py-3">
                     <div className="min-w-0">
                       <p className="truncate font-medium">{v.title}</p>
                       <p className="text-sm text-muted">
                         {v.allDay ? formatLocal(v.at, tz()).slice(0, 10) : formatLocal(v.at, tz())} · {v.daysAway === 0 ? "today" : `in ${v.daysAway}d`}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-3">
+                    <div className="mt-2 flex gap-2">
                       {/* Today's timed one-offs: start early (its time starts it anyway), or mark done. */}
                       {v.daysAway === 0 && startable(byId.get(v.id)!) && (
                         <>
                           {!inProgress(byId.get(v.id)!, now) && (
-                            <form action={startEventAction.bind(null, v.id)}>
-                              <SubmitButton className="text-sm font-semibold text-gold" aria-label={`Start ${v.title} now`}>Start</SubmitButton>
+                            <form action={startEventAction.bind(null, v.id)} className="flex flex-1">
+                              <SubmitButton className="flex-1 rounded-xl border border-line px-3 py-2.5 text-sm font-semibold" aria-label={`Start ${v.title} now`}>Start</SubmitButton>
                             </form>
                           )}
-                          <form action={finishEventAction.bind(null, v.id, "done")}>
-                            <SubmitButton className="text-sm text-muted" aria-label={`Mark ${v.title} done`}>Done</SubmitButton>
+                          <form action={finishEventAction.bind(null, v.id, "done")} className="flex flex-1">
+                            <SubmitButton className="flex-1 rounded-xl bg-gold px-3 py-2.5 text-sm font-semibold text-on-gold" aria-label={`Mark ${v.title} done`}>Done</SubmitButton>
                           </form>
                         </>
                       )}
-                      <form action={cancelEventAction.bind(null, v.id)}>
-                        <SubmitButton className="text-sm text-muted" aria-label={`Cancel ${v.title}`}>Cancel</SubmitButton>
+                      <form action={cancelEventAction.bind(null, v.id)} className={v.daysAway === 0 && startable(byId.get(v.id)!) ? "flex flex-1" : "flex"}>
+                        <SubmitButton className="flex-1 rounded-xl border border-line px-3 py-2.5 text-sm text-muted" aria-label={`Cancel ${v.title}`}>Cancel</SubmitButton>
                       </form>
                     </div>
                   </li>

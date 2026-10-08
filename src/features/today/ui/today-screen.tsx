@@ -17,7 +17,7 @@ import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { dayKey, localTimeOf } from "@/shared/time";
 import { pickFocus, type FocusItem } from "../focus";
-import { DoneButton } from "./done-button";
+import { TaskButtons } from "./task-buttons";
 import { TaskMeta } from "./task-meta";
 import { StatusBar } from "@/features/status/ui/status-bar";
 import { loadCheckin } from "@/features/metrics/metrics.repo";
@@ -45,8 +45,8 @@ function due(item: FocusItem, now: Date) {
 
 function Row({ item, now, big, details }: { item: FocusItem; now: Date; big?: boolean; details?: string | null }) {
   return (
-    <li className={`flex items-center gap-3 rounded-2xl border border-line bg-surface ${big ? "p-4" : "px-4 py-3"}`}>
-      <div className="min-w-0 flex-1">
+    <li className={`rounded-2xl border border-line bg-surface ${big ? "p-4" : "px-4 py-3"}`}>
+      <div className="min-w-0">
         <Link href={`/app/tasks/${item.id}`} className={`block truncate font-semibold ${big ? "text-lg" : "text-base"}`}>
           {item.title}
         </Link>
@@ -63,7 +63,7 @@ function Row({ item, now, big, details }: { item: FocusItem; now: Date; big?: bo
           {item.nonNegotiable && <span className="text-gold">· must</span>}
         </p>
       </div>
-      <DoneButton taskId={item.id} title={item.routine ? item.routine.next : item.title} />
+      <TaskButtons taskId={item.id} title={item.routine ? item.routine.next : item.title} running={item.startedAt !== null} spentMinutes={item.spentMinutes} />
     </li>
   );
 }
@@ -127,17 +127,17 @@ export async function TodayScreen({ db }: { db: Db }) {
       )}
 
       {happening.map((e) => (
-        <div key={e.id} className="flex items-center gap-3 rounded-2xl border border-gold bg-surface p-4" role="status">
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold">{e.title}</p>
-            <p className="text-sm"><span className="font-medium text-gold">Happening now</span> <span className="text-muted">· until {localTimeOf(e.until, tz())}</span></p>
+        <div key={e.id} className="rounded-2xl border border-gold bg-surface p-4" role="status">
+          <p className="truncate font-semibold">{e.title}</p>
+          <p className="text-sm"><span className="font-medium text-gold">Happening now</span> <span className="text-muted">· until {localTimeOf(e.until, tz())}</span></p>
+          <div className="mt-3 flex gap-2">
+            <form action={finishEventAction.bind(null, e.id, "not_at_it")} className="flex flex-1">
+              <SubmitButton className="flex-1 rounded-xl border border-line px-4 py-3 text-base font-semibold">Not at it</SubmitButton>
+            </form>
+            <form action={finishEventAction.bind(null, e.id, "done")} className="flex flex-1">
+              <SubmitButton className="flex-1 rounded-xl bg-gold px-4 py-3 text-base font-semibold text-on-gold">Done</SubmitButton>
+            </form>
           </div>
-          <form action={finishEventAction.bind(null, e.id, "not_at_it")}>
-            <SubmitButton className="rounded-xl border border-line px-3 py-2.5 text-sm font-medium">Not at it</SubmitButton>
-          </form>
-          <form action={finishEventAction.bind(null, e.id, "done")}>
-            <SubmitButton className="rounded-xl bg-gold px-4 py-2.5 text-sm font-semibold text-on-gold">Done</SubmitButton>
-          </form>
         </div>
       ))}
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { pickFocus, type FocusItem } from "@/features/today/focus";
-import { DoneButton } from "@/features/today/ui/done-button";
+import { TaskButtons } from "@/features/today/ui/task-buttons";
 import { TaskMeta } from "@/features/today/ui/task-meta";
 import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
@@ -34,8 +34,8 @@ function TodayRow({ item, now }: { item: FocusItem; now: Date }) {
   const time = item.dueAt ? localTimeOf(item.dueAt, tz()) : null;
   const label = !time || time === "23:59" ? "any time" : dayKey(item.dueAt!, tz()) === dayKey(now, tz()) ? time : `yesterday ${time}`;
   return (
-    <li className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
-      <div className="min-w-0 flex-1">
+    <li className="rounded-2xl border border-line bg-surface px-4 py-3">
+      <div className="min-w-0">
         <Link href={`/app/tasks/${item.id}`} className="block truncate font-semibold">{item.title}</Link>
         {item.routine && <p className="mt-0.5 text-sm">Next: {item.routine.next} <span className="text-muted">· {item.routine.done}/{item.routine.total}</span></p>}
         <TaskMeta item={item} now={now} />
@@ -44,7 +44,7 @@ function TodayRow({ item, now }: { item: FocusItem; now: Date }) {
           {item.nonNegotiable && <span className="text-gold"> · must</span>}
         </p>
       </div>
-      <DoneButton taskId={item.id} title={item.routine ? item.routine.next : item.title} />
+      <TaskButtons taskId={item.id} title={item.routine ? item.routine.next : item.title} running={item.startedAt !== null} spentMinutes={item.spentMinutes} />
     </li>
   );
 }
