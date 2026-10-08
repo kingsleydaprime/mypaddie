@@ -1428,7 +1428,8 @@ An any-time **must-do** never escalated, because escalation starts at the
 due time and 23:59 is inside quiet hours. It now escalates from 15:00 that
 day (hourly, four nudges at most, never in quiet hours, like any must-do).
 That leaves the morning free, but there's still time to act before the day
-ends at quiet hours. 15:00 is fixed for now, not a setting.
+ends at quiet hours. The time is a setting ("Nudge any-time must-dos from", 15:00 by
+default), checked like the other times so it can't fall in quiet hours.
 
 ### Task priority: high, normal, low (normal by default)
 Any-time tasks had nothing to sort by, so an important one and a trivial one

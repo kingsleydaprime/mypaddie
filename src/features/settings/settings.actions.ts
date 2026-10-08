@@ -20,6 +20,7 @@ export async function saveSettingsAction(_prev: SettingsState, form: FormData): 
     funAt: get("funAt"),
     closeOut: form.get("closeOut") === "on",
     closeAt: get("closeAt"),
+    anyTimeNudgeFrom: get("anyTimeNudgeFrom"),
     phoneFreeMorning: Number(get("phoneFreeMorning")),
     phoneFreeEvening: Number(get("phoneFreeEvening")),
   });

@@ -10,7 +10,7 @@ select set_config('search_path', current_setting('search_path') || ', ' || n.nsp
 create function pg_temp.mine(t timestamptz) returns setof jsonb language sql as $$
   select n from jsonb_array_elements(private.collect_nudges(t)) n where n->>'endpoint' like 'https://push.example/%'
 $$;
-select plan(37);
+select plan(39);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com');
 -- Monday 2026-10-05 rows: a daily non-negotiable at 07:00, a Tue/Thu habit, an ordinary task at 10:00.
@@ -119,6 +119,17 @@ insert into public.tasks (id, user_id, title, due_at, recurrence, series_id, occ
 select is((select n->>'level' from pg_temp.mine('2026-10-06 16:10+01') n where n->>'title' = 'Read Bible' and n->>'kind' = 'nudge'),
   '1', 'an untimed must-do habit escalates from 15:00 too');
 update public.tasks set status = 'done', done_at = '2026-10-06 16:15+01' where id = 'aaaaaaaa-0000-0000-0000-000000000006';
+-- When that starts is their setting: at 17:00, nothing at 16:30, a nudge at 17:05.
+insert into public.settings (user_id, key, value) values ('11111111-1111-1111-1111-111111111111', 'schedule', '{"anyTimeNudgeFrom": "17:00"}')
+  on conflict (user_id, key) do update set value = public.settings.value || excluded.value;
+insert into public.tasks (id, user_id, title, due_at, is_non_negotiable) values
+  ('aaaaaaaa-0000-0000-0000-000000000007', '11111111-1111-1111-1111-111111111111', 'Call home', '2026-10-06 23:59+01', true);
+select is((select count(*)::int from pg_temp.mine('2026-10-06 16:30+01') n where n->>'title' = 'Call home' and n->>'kind' = 'nudge'),
+  0, 'before their own time, no escalation');
+select is((select n->>'level' from pg_temp.mine('2026-10-06 17:05+01') n where n->>'title' = 'Call home' and n->>'kind' = 'nudge'),
+  '1', 'from their own time, it escalates');
+update public.tasks set status = 'done', done_at = '2026-10-06 17:10+01' where id = 'aaaaaaaa-0000-0000-0000-000000000007';
+update public.settings set value = value - 'anyTimeNudgeFrom' where user_id = '11111111-1111-1111-1111-111111111111' and key = 'schedule';
 
 select is((select n->>'title' from pg_temp.mine('2026-10-06 17:50+01') n where n->>'kind' = 'reminder'),
   'Gym', '17:50: a habit gets its 10-minute reminder');

@@ -135,3 +135,15 @@ describe("lateNight", () => {
     expect(lateNight(s, "06:00")).toBeNull();
   });
 });
+
+describe("anyTimeNudgeFrom", () => {
+  test("defaults to 15:00", () => {
+    expect(readSchedule(undefined).anyTimeNudgeFrom).toBe("15:00");
+  });
+  test("can be moved", () => {
+    expect(applyScheduleChange(DEFAULT_SCHEDULE, { anyTimeNudgeFrom: "13:00" })).toMatchObject({ ok: true, schedule: { anyTimeNudgeFrom: "13:00" } });
+  });
+  test("inside quiet hours it would never arrive, so it's refused", () => {
+    expect(applyScheduleChange(DEFAULT_SCHEDULE, { anyTimeNudgeFrom: "23:00" })).toMatchObject({ ok: false });
+  });
+});

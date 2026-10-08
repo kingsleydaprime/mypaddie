@@ -28,6 +28,8 @@ export const scheduleSchema = z.object({
   /** The evening close-out push, if the day isn't closed by then. */
   closeOut: z.boolean(),
   closeAt: time,
+  /** A must-do with no set time starts escalating at this time on its day. */
+  anyTimeNudgeFrom: time,
   /** No phone for this many minutes after quiet hours end (0 = off). Nothing arrives then. */
   phoneFreeMorning: z.number().int().min(0).max(240),
   /** No phone for this many minutes before quiet hours start (0 = off). */
@@ -54,6 +56,8 @@ export const DEFAULT_SCHEDULE: Schedule = {
   closeOut: true,
   // Before the default quiet hours (22:00), after the evening reminders (20:00).
   closeAt: "21:30",
+  // The morning stays free; there's still the afternoon and evening to act.
+  anyTimeNudgeFrom: "15:00",
   phoneFreeMorning: 0,
   phoneFreeEvening: 0,
 };
@@ -117,7 +121,7 @@ export function applyScheduleChange(current: Schedule, change: ScheduleChange): 
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "invalid setting" };
   const next = { ...current, ...parsed.data };
   if (next.quietStart === next.quietEnd) return { ok: false, error: "quiet hours can't start and end at the same time" };
-  for (const [label, t] of [["morning brief", next.briefAt], ["evening reminder", next.eveningAt], ["morning reminder", next.morningAt], ["fun nudge", next.funAt], ["close-out", next.closeAt]] as const) {
+  for (const [label, t] of [["morning brief", next.briefAt], ["evening reminder", next.eveningAt], ["morning reminder", next.morningAt], ["fun nudge", next.funAt], ["close-out", next.closeAt], ["any-time must-do nudges", next.anyTimeNudgeFrom]] as const) {
     if (label === "close-out" && !next.closeOut) continue;
     if (isQuiet(t, next)) return { ok: false, error: `the ${label} at ${t} falls inside quiet hours (${next.quietStart}–${next.quietEnd}), so it would never arrive` };
     const free = phoneFreeAt(t, next);
