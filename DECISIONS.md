@@ -1310,3 +1310,28 @@ hours start), so one set up at 23:30 starts tomorrow. The capacity and clash
 check only looks at the days it really happens. A routine picks its first day
 once from its start time, so all its steps start together. Existing habits
 and one-off tasks are unchanged.
+
+### Tasks and Others replace Quests and Stats in the tab bar
+Routines were only reachable from a row of chips at the top of Quests, and a
+routine set up after its start time only appears on Today from its first day,
+so a new one could be impossible to find. Quests also mixed two jobs: the
+needs/wants/goals/wishes/dreams list, and a launcher for every other screen.
+
+The bar is now Tasks · Money · Home · Others · Settings. **Tasks** is
+everything you do: today's open tasks, each routine (today's progress, or the
+day and time it next starts), habits outside routines, and one-offs in the
+next week. **Others** (`/app/more`) is a grouped list of every other screen,
+Stats included. Stats left the bar because it's something you look at
+occasionally, not every day. Considered: keeping Stats and squeezing a sixth
+tab in (too cramped on a phone), and putting routines on Today only (Today is
+deliberately "the three things that matter now", not a catalogue).
+
+The tier list became **Life list**: "Quests" read like tasks, which is now
+what the Tasks tab is. Its URL stays `/app/quests`. Renaming it would mean
+redirects and touching every link and server action for no gain the user
+can see.
+
+"When does this habit next happen" is worked out in `tasks/overview.ts` as
+pure code: the earliest open row from today, otherwise the first day its rule
+gives after the latest row. It reuses `firstOccurrence`, so it agrees with how
+habits are created.
