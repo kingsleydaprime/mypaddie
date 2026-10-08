@@ -2,10 +2,21 @@ import { describe, expect, test } from "bun:test";
 import { consentRules, describeDestination } from "./connect";
 
 describe("describeDestination", () => {
-  test("Claude, ChatGPT and Gemini by their real addresses", () => {
+  test("Claude and ChatGPT by their real addresses", () => {
     expect(describeDestination("https://claude.ai/api/mcp/auth_callback")).toEqual({ kind: "known", host: "claude.ai", app: "Claude" });
     expect(describeDestination("https://claude.com/api/mcp/auth_callback")).toMatchObject({ kind: "known", app: "Claude" });
     expect(describeDestination("https://chatgpt.com/connector_platform_oauth_redirect")).toMatchObject({ kind: "known", app: "ChatGPT" });
+  });
+  test("Gemini by Google's relay, and only the relay's /r/ path", () => {
+    expect(describeDestination("https://oauth-redirect.googleusercontent.com/r/abc123")).toEqual({
+      kind: "relay",
+      host: "oauth-redirect.googleusercontent.com",
+      app: "Gemini",
+    });
+    expect(describeDestination("https://oauth-redirect.googleusercontent.com/other")).toMatchObject({ kind: "unknown" });
+    expect(describeDestination("https://evil.googleusercontent.com/r/abc")).toMatchObject({ kind: "unknown" });
+    expect(describeDestination("https://x.oauth-redirect.googleusercontent.com/r/abc")).toMatchObject({ kind: "unknown" });
+    expect(describeDestination("https://gemini.google.com/cb")).toMatchObject({ kind: "unknown" });
   });
   test("look-alike hosts are not trusted", () => {
     expect(describeDestination("https://claude.ai.evil.example/cb")).toMatchObject({ kind: "unknown", host: "claude.ai.evil.example" });
@@ -28,6 +39,8 @@ describe("describeDestination", () => {
 
 describe("consentRules", () => {
   test("known apps: one tap", () => expect(consentRules({ kind: "known", host: "claude.ai", app: "Claude" })).toEqual({ canApprove: true, mustConfirm: false }));
+  test("a relay (Gemini): named, but still confirmed, since anyone can sit behind it", () =>
+    expect(consentRules({ kind: "relay", host: "oauth-redirect.googleusercontent.com", app: "Gemini" })).toEqual({ canApprove: true, mustConfirm: true }));
   test("unknown or local: allowed only after confirming they started it", () => {
     expect(consentRules({ kind: "unknown", host: "x.example" })).toEqual({ canApprove: true, mustConfirm: true });
     expect(consentRules({ kind: "local", host: "localhost:6274" })).toEqual({ canApprove: true, mustConfirm: true });

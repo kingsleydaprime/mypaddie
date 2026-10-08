@@ -34,7 +34,7 @@ export default async function ConsentPage({ searchParams }: PageProps<"/oauth/co
   const dest = describeDestination(data.redirect_uri);
   const room = await aiAppRoom(supabase as Db, data.client.id);
   const rules = room.ok ? consentRules(dest) : { canApprove: false, mustConfirm: false };
-  const app = dest.kind === "known" ? dest.app : data.client.name;
+  const app = dest.kind === "known" || dest.kind === "relay" ? dest.app : data.client.name;
   return (
     <>
       <h1 className="text-2xl font-semibold">Connect {app} to MyPaddie?</h1>
@@ -46,6 +46,12 @@ export default async function ConsentPage({ searchParams }: PageProps<"/oauth/co
       {dest.kind === "known" && (
         <p className="rounded-xl border border-line bg-surface px-4 py-3 text-sm">
           ✓ Access goes to <strong>{dest.host}</strong>, {dest.app}&apos;s own address.
+        </p>
+      )}
+      {dest.kind === "relay" && (
+        <p className="rounded-xl border border-line bg-surface px-4 py-3 text-sm">
+          Access goes through <strong>{dest.host}</strong>, Google&apos;s sign-in relay for {dest.app}. Google passes it on to whichever app
+          asked, so only allow this if you just added MyPaddie in {dest.app} yourself.
         </p>
       )}
       {(dest.kind === "unknown" || dest.kind === "local") && (
