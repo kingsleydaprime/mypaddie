@@ -1,5 +1,5 @@
 import { requireRoom } from "@/features/plans/guard";
-import { createTask, updateTask, type CreateResult } from "@/features/tasks/tasks.repo";
+import { createTask, updateTask } from "@/features/tasks/tasks.repo";
 import type { PillarWeight } from "@/features/xp/split";
 import { firstOccurrence, parseRecurrence } from "@/features/tasks/recurrence";
 import type { Db } from "@/shared/supabase/token-client";
@@ -38,14 +38,13 @@ export async function createRoutine(
   const today = dayKey(now, currentConfig().timeZone);
   const firstDay = firstOccurrence(rule, input.startDate ?? today, { today, time: localTimeOf(now, currentConfig().timeZone) }, input.time ?? null);
   if (firstDay === null) throw new Error("this routine's rule ends before it ever happens — check the UNTIL date");
-  const { data: routine, error } = await db.from("routines").insert({ title: input.title.trim() }).select("id").single();
-  if (error?.code === "23505") return { result: "exists" as const, title: input.title.trim() };
-  if (error) throw new Error(`creating the routine: ${error.message}`);
-  const results: { step: string; result: CreateResult["result"] }[] = [];
+  const routine = await newRoutineRow(db, input.title.trim());
+  if (!routine) return { result: "exists" as const, title: input.title.trim() };
+  const made: string[] = [];
   let at = input.time ?? null;
   for (const [i, s] of input.steps.entries()) {
     const minutes = s.minutes ?? 10;
-    const made = await createTask(
+    const result = await createTask(
       db,
       {
         title: s.title.trim(),
@@ -64,10 +63,43 @@ export async function createRoutine(
       },
       now,
     );
-    results.push({ step: s.title, result: made.result });
+    if (result.result !== "created") {
+      // All or nothing: a routine saved with some (or none) of its steps looks
+      // made but never shows up. Undo it and say which step didn't fit, and why.
+      await discardRoutine(db, routine.id);
+      const { result: reason, ...detail } = result;
+      return { result: "refused" as const, step: s.title, reason, ...detail, saved: false };
+    }
+    made.push(result.task.title);
     if (at) at = addMinutes(at, minutes);
   }
-  return { result: "created" as const, id: routine.id, steps: results };
+  return { result: "created" as const, id: routine.id, steps: made };
+}
+
+/**
+ * The routine's row, or null if one by that name already has steps. A
+ * same-named routine with no steps (left behind before creation was all or
+ * nothing) is taken over rather than blocking the name forever.
+ */
+async function newRoutineRow(db: Db, title: string): Promise<{ id: string } | null> {
+  const { data, error } = await db.from("routines").insert({ title }).select("id").single();
+  if (!error) return data;
+  if (error.code !== "23505") throw new Error(`creating the routine: ${error.message}`);
+  const { data: existing, error: e1 } = await db.from("routines").select("id").ilike("title", title.replace(/[\\%_]/g, "\\$&")).maybeSingle();
+  // The name is unique ignoring case (routines_title_per_user), so match it the same way; % and _ are literal.
+  if (e1) throw new Error(`finding the routine: ${e1.message}`);
+  if (!existing) return null;
+  const { count, error: e2 } = await db.from("tasks").select("id", { count: "exact", head: true }).eq("routine_id", existing.id).not("series_id", "is", null);
+  if (e2) throw new Error(`checking the routine's steps: ${e2.message}`);
+  return count === 0 ? existing : null;
+}
+
+/** Remove a routine that was never finished being made: its step rows first (the link would only be nulled), then the routine. */
+async function discardRoutine(db: Db, id: string) {
+  const { error: e1 } = await db.from("tasks").delete().eq("routine_id", id);
+  if (e1) throw new Error(`undoing the routine's steps: ${e1.message}`);
+  const { error: e2 } = await db.from("routines").delete().eq("id", id);
+  if (e2) throw new Error(`undoing the routine: ${e2.message}`);
 }
 
 export async function loadRoutines(db: Db) {
@@ -181,11 +213,12 @@ export async function updateRoutine(
   const times = stepTimes(start, plan.steps.map((s) => s.minutes));
   const template = steps[0]!;
   const notes: string[] = [];
+  const refused: ({ step: string } & Record<string, unknown>)[] = [];
 
   for (const [i, p] of plan.steps.entries()) {
     if (p.kind === "add") {
       const extra = edit.add!.find((a) => a.title.trim().toLowerCase() === p.title.toLowerCase());
-      await createTask(
+      const added = await createTask(
         db,
         {
           title: p.title,
@@ -202,6 +235,10 @@ export async function updateRoutine(
         },
         now,
       );
+      if (added.result !== "created") {
+        const { result: reason, ...detail } = added;
+        refused.push({ step: p.title, reason, ...detail });
+      }
       continue;
     }
     const s = steps.find((x) => x.title === p.title)!;
@@ -218,8 +255,12 @@ export async function updateRoutine(
   return {
     result: "updated" as const,
     title: edit.title?.trim() || r.title,
-    steps: plan.steps.map((s, i) => ({ title: s.title, at: times[i] ?? "any time", minutes: s.minutes, new: s.kind === "add" })),
+    steps: plan.steps
+      .map((s, i) => ({ title: s.title, at: times[i] ?? "any time", minutes: s.minutes, new: s.kind === "add" }))
+      .filter((s) => !refused.some((x) => x.step === s.title)),
     removed: plan.removed,
+    // Steps asked for but not added (the day was full, usually): nothing was saved for these.
+    ...(refused.length > 0 ? { notAdded: refused } : {}),
     ...(notes.length > 0 ? { notes } : {}),
   };
 }

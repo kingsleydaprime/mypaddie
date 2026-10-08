@@ -15,7 +15,9 @@ export function registerRoutineTools(server: McpServer) {
       description:
         "A routine: habits that belong together (morning routine, night routine, before study), in order. Each step is " +
         "its own habit (XP and reminders per step) but Today shows the routine as one item — \"Morning routine · next: " +
-        "Brush (2/5)\" — and it counts as one habit for plan limits. With `time`, steps follow one another from then.",
+        "Brush (2/5)\" — and it counts as one habit for plan limits. With `time`, steps follow one another from then. " +
+        "All or nothing: if any step won't fit (result 'refused', with `step` and `reason`: over_capacity with that day's room, " +
+        "or clash), NOTHING was saved — tell them which step and why, and offer a fix (fewer or shorter steps, another time, more capacity).",
       inputSchema: z.object({
         title: z.string().trim().min(1).max(100),
         steps: z.array(z.object({
@@ -84,7 +86,8 @@ export function registerRoutineTools(server: McpServer) {
         "Change a routine (by title) without losing its history: rename it, remove steps (by title; their habits stop), " +
         "add steps (at the end, or wherever `order` puts them), reorder (`order` must name every remaining step once), " +
         "or move the start `time` (null = any time that day). Steps keep running back to back from the start. A " +
-        "'refused' result says which step was unknown, duplicated or missing from the order.",
+        "'refused' result says which step was unknown, duplicated or missing from the order. Steps in `notAdded` were " +
+        "turned away (the day was full, usually) and are NOT in the routine — say so; never report them as added.",
       inputSchema: z.object({
         routine: z.string().trim().min(1),
         title: z.string().trim().min(1).max(100).optional(),
