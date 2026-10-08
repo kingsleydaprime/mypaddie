@@ -1474,3 +1474,12 @@ gaps were filled inside bills rather than with new tables:
   yearly totals.
 - **In the app:** Money shows what's due this week and trials ending, and the
   bills page can pause, resume and end a bill, and add one-offs and trials.
+
+### Important events remind 10 minutes before and at the start
+Timed must-do tasks already got both: a 10-minute reminder in the default
+ladder, and their first escalation at the due time. Events stopped at 30
+minutes. Now **important** timed events also get "In 10 minutes" and
+"Starting now — are you in?". Ordinary events keep the 30-minute reminder
+only, so a day of meetings isn't a constant buzz. For an important event
+with under 10 minutes left (added late), the 10-minute reminder replaces
+the 30-minute one rather than both arriving together.

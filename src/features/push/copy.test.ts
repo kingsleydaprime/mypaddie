@@ -54,6 +54,17 @@ describe("copyFor", () => {
     expect(copyFor({ kind: "event", level: 1, title: "Wedding", items: null, eventKind: "wedding", days: 5 }).title).toBe("In 5 days");
   });
 
+  test("important events: 10 minutes before, and when they start", () => {
+    expect(copyFor({ kind: "event", level: 5, title: "Board meeting", items: null, eventKind: "meeting", due: "19:00" })).toMatchObject({
+      title: "In 10 minutes",
+      body: "Board meeting at 19:00. Get in position.",
+    });
+    expect(copyFor({ kind: "event", level: 6, title: "Board meeting", items: null, eventKind: "meeting", due: "19:00" })).toMatchObject({
+      title: "Starting now",
+      body: "Board meeting has started. Are you in?",
+    });
+  });
+
   test("a custom note becomes the body; the title still says when", () => {
     expect(copyFor({ kind: "reminder", level: 3, title: "Bank visit", items: null, due: "11:00", note: "Bring the signed form" })).toMatchObject({
       title: "In 30 minutes",

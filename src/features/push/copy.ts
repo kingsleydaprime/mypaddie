@@ -129,6 +129,10 @@ function defaultCopy(n: Nudge): NotificationCopy {
         return celebrates
           ? { title: n.eventKind === "birthday" ? `It's ${who}'s birthday` : `${task} today`, body: "Call or text. A voice note counts.", url: "/app", tag }
           : { title: `Today${at}`, body: `${task}. Plan the day around it.`, url: "/app", tag };
+      case 5:
+        return { title: "In 10 minutes", body: `${task}${at}. Get in position.`, url: "/app", tag };
+      case 6:
+        return { title: "Starting now", body: `${task} has started. Are you in?`, url: "/app", tag };
       default:
         return { title: "In 30 minutes", body: `${task}${at}. Time to move.`, url: "/app", tag };
     }

@@ -10,7 +10,7 @@ select set_config('search_path', current_setting('search_path') || ', ' || n.nsp
 create function pg_temp.mine(t timestamptz) returns setof jsonb language sql as $$
   select n from jsonb_array_elements(private.collect_nudges(t)) n where n->>'endpoint' like 'https://push.example/%'
 $$;
-select plan(39);
+select plan(44);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com');
 -- Monday 2026-10-05 rows: a daily non-negotiable at 07:00, a Tue/Thu habit, an ordinary task at 10:00.
@@ -130,6 +130,24 @@ select is((select n->>'level' from pg_temp.mine('2026-10-06 17:05+01') n where n
   '1', 'from their own time, it escalates');
 update public.tasks set status = 'done', done_at = '2026-10-06 17:10+01' where id = 'aaaaaaaa-0000-0000-0000-000000000007';
 update public.settings set value = value - 'anyTimeNudgeFrom' where user_id = '11111111-1111-1111-1111-111111111111' and key = 'schedule';
+
+-- Important timed events: 30 minutes, 10 minutes, and at the start. Ordinary ones: 30 minutes only.
+insert into public.events (user_id, title, kind, starts_at, important) values
+  ('11111111-1111-1111-1111-111111111111', 'Board meeting', 'meeting', '2026-10-06 19:00+01', true),
+  ('11111111-1111-1111-1111-111111111111', 'Standup', 'meeting', '2026-10-06 19:00+01', false);
+select is((select string_agg(n->>'title' || '/' || (n->>'level'), ',' order by n->>'title') from pg_temp.mine('2026-10-06 18:35+01') n where n->>'kind' = 'event'),
+  'Board meeting/4,Standup/4', '30 minutes before: both');
+select is((select string_agg(n->>'title' || '/' || (n->>'level'), ',') from pg_temp.mine('2026-10-06 18:51+01') n where n->>'kind' = 'event'),
+  'Board meeting/5', '10 minutes before: only the important one');
+select is((select string_agg(n->>'title' || '/' || (n->>'level'), ',') from pg_temp.mine('2026-10-06 19:01+01') n where n->>'kind' = 'event'),
+  'Board meeting/6', 'at the start: only the important one');
+select is((select count(*)::int from pg_temp.mine('2026-10-06 19:03+01') n where n->>'kind' = 'event'),
+  0, 'each one once');
+-- Added with 8 minutes to go: the 10-minute reminder, not the 30-minute one as well.
+insert into public.events (user_id, title, kind, starts_at, important) values
+  ('11111111-1111-1111-1111-111111111111', 'Call with Ada', 'meeting', '2026-10-06 19:20+01', true);
+select is((select string_agg(n->>'level', ',') from pg_temp.mine('2026-10-06 19:12+01') n where n->>'title' = 'Call with Ada'),
+  '5', 'a late-added important event gets the 10-minute reminder alone');
 
 select is((select n->>'title' from pg_temp.mine('2026-10-06 17:50+01') n where n->>'kind' = 'reminder'),
   'Gym', '17:50: a habit gets its 10-minute reminder');

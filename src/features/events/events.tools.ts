@@ -43,7 +43,8 @@ export function registerEventTools(server: McpServer) {
       description:
         "Something to attend or remember — a meeting, party, birthday, anniversary, wedding, appointment. (Things " +
         "to *do* are tasks.) Ask whether it's important if unclear: important ones are reminded a week ahead and " +
-        "the morning of; all are reminded the evening before and 30 min before. Birthdays/anniversaries repeat " +
+        "the morning of, and timed ones 10 min before and when they start; all are reminded the evening before and " +
+        "30 min before. Birthdays/anniversaries repeat " +
         "yearly. For important events that need preparation (a gift, an outfit, travel), pass prep to create a " +
         "prep task ahead of it. If `clashes` comes back non-empty, tell them what overlaps.",
       inputSchema: z.object({
