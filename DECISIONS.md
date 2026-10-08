@@ -1395,7 +1395,10 @@ must-dos still nudge, by your choice. A started task goes to the top of Today.
 Done reports how long it took (Start → Done), and a study task logs that real
 time as practice instead of the planned duration. A start left running over
 12 hours is treated as forgotten, not as time spent. Undo keeps the start
-time: tapping Done by mistake puts it back in progress.
+time: tapping Done by mistake puts it back in progress. **Pause** keeps the time
+already spent (`spent_minutes` banks each stretch; `started_at` is the
+current one, null while paused), its reminders come back, and starting again
+resumes. A stretch left running for half a day isn't banked.
 
 A **checklist** is `tasks.checklist` (up to 30 steps of text plus a tick), not
 a table of subtasks. Steps aren't scheduled, paid or reminded on their own, so
@@ -1408,3 +1411,15 @@ like a project board. It makes you maintain a board, which is what the
 blueprint says not to build.
 
 Task lists now show what a task is for (its commitment or course).
+
+### "Any time" ends when quiet hours start
+An any-time task (stored as 23:59, or a habit day with no time at all) used
+to be on time until midnight, or forever for an untimed habit. Your rule: the
+day's tasks belong before quiet hours. So any time now ends when quiet hours
+start (`anyTimeEndsAt`). Done after that it's late (the late share of XP,
+still worth doing), and Today shows it as overdue, including yesterday's that
+spilled over. Time blocks (tasks with a duration) are on time until the same
+moment. A task with a real time ("submit by 23:00") keeps it. Missing a need
+(the deduction) is still judged when the calendar day ends, as for timed
+tasks: the late part of the evening is for recovering, not for losing points.
+The 23:59 marker stays in the database; only how it's read changed.

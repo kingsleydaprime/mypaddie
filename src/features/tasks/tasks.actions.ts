@@ -76,14 +76,14 @@ export async function taskAction(id: string, action: "cancel" | "stop" | "delete
   redirect("/app");
 }
 
-/** Start (in progress) or stop a task from its page. */
-export async function startTaskAction(id: string, stop: boolean): Promise<TaskFormState> {
+/** Start or resume a task, or pause it, from its page. */
+export async function startTaskAction(id: string, pause: boolean): Promise<TaskFormState> {
   const db = await requireDb(`/app/tasks/${id}`);
-  const r = await startTask(db, id, new Date(), stop);
+  const r = await startTask(db, id, new Date(), pause);
   revalidatePath(`/app/tasks/${id}`);
   if (r.result === "not_open") return { error: "It's not open any more." };
   if (r.result === "not_found") return { error: "Task not found." };
-  return { ok: r.result === "stopped" || r.result === "not_started" ? "Stopped." : "Started." };
+  return { ok: r.result === "paused" || r.result === "not_started" ? "Paused." : "Started." };
 }
 
 /** Tick or untick one checklist step (1-based) from the task's page. */

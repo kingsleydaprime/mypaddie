@@ -1,6 +1,6 @@
 import { validateWeights, type PillarWeight } from "@/features/xp/split";
 import { requireRoom } from "@/features/plans/guard";
-import { completionXp, ignoredNeedDeduction, isLate, lateAfter, type SlipForXp, type TaskForXp } from "@/features/xp/xp";
+import { anyTimeEndsAt, completionXp, ignoredNeedDeduction, isLate, lateAfter, type SlipForXp, type TaskForXp } from "@/features/xp/xp";
 import { currentConfig, type EngineConfig } from "@/shared/config";
 import type { Tier } from "@/shared/domain";
 import type { Database, Json } from "@/shared/supabase/database.types";
@@ -20,7 +20,7 @@ import {
   type DayRoom,
   type DayTask,
 } from "./capacity";
-import { planChecklist, readChecklist, stepsDone, tickStep, timeSpent } from "./progress";
+import { planChecklist, readChecklist, stepsDone, tickStep, timeSpent, totalTime } from "./progress";
 import { firstOccurrence, occursOn, parseRecurrence, planOccurrences, projectedOccurrences, type SeriesForSpawn, type SeriesTemplate } from "./recurrence";
 
 /** How far back catch-up looks for ignored needs and recurring templates. */
@@ -28,7 +28,7 @@ const LOOKBACK_DAYS = 14;
 const SERIES_LOOKBACK_DAYS = 60;
 
 const TASK_COLUMNS =
-  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, fun_activity_id, topic, item_id, routine_id, routine_step, started_at, checklist, routines(title), items(tier), commitments(title), courses(code, title), task_pillars(pillar, weight)";
+  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, fun_activity_id, topic, item_id, routine_id, routine_step, started_at, spent_minutes, checklist, occurs_on, routines(title), items(tier), commitments(title), courses(code, title), task_pillars(pillar, weight)";
 
 type TaskRow = {
   id: string;
@@ -47,7 +47,9 @@ type TaskRow = {
   routine_id: string | null;
   routine_step: number | null;
   started_at: string | null;
+  spent_minutes: number;
   checklist: Json | null;
+  occurs_on: string | null;
   routines: { title: string } | null;
   items: { tier: Tier } | null;
   commitments: { title: string } | null;
@@ -60,16 +62,23 @@ export interface LoadedTask extends TaskForXp {
   isNonNegotiable: boolean;
   itemId: string | null;
   routine: { id: string; title: string; step: number } | null;
-  /** When they started doing it; null = not started. */
+  /** When the current stretch started; null = not running (never started, or paused). */
   startedAt: Date | null;
+  /** Minutes put in before the current stretch (paused time is kept). */
+  spentMinutes: number;
   /** Ticked steps of its checklist; null = no checklist. */
   steps: { done: number; total: number } | null;
   /** The commitment (job, role, team) or course it's for, by name. */
   forLabel: string | null;
+  /** For an any-time task: when its day is over (quiet hours start), so it's overdue after. Null otherwise. */
+  anyTimeEndsAt: Date | null;
 }
 
-/** `now` turns a task whose must_from has passed into a non-negotiable. */
-function toTask(row: TaskRow, now?: Date): LoadedTask {
+/**
+ * `now` turns a task whose must_from has passed into a non-negotiable.
+ * `dayEndsAt` (when quiet hours start) is when an any-time task's day is over.
+ */
+function toTask(row: TaskRow, now?: Date, dayEnds: string = "23:59", config = currentConfig()): LoadedTask {
   return {
     id: row.id,
     title: row.title,
@@ -84,8 +93,10 @@ function toTask(row: TaskRow, now?: Date): LoadedTask {
     itemId: row.item_id,
     routine: row.routine_id && row.routines ? { id: row.routine_id, title: row.routines.title, step: row.routine_step ?? 0 } : null,
     startedAt: row.started_at ? new Date(row.started_at) : null,
+    spentMinutes: row.spent_minutes,
     steps: stepsDone(readChecklist(row.checklist)),
     forLabel: row.commitments?.title ?? (row.courses ? row.courses.code || row.courses.title : null),
+    anyTimeEndsAt: anyTimeEndsAt(row.due_at ? new Date(row.due_at) : null, row.occurs_on, dayEnds, config),
   };
 }
 
@@ -109,7 +120,8 @@ export async function loadTasksAroundToday(db: Db, now: Date, config = currentCo
     .or(`and(due_at.gte.${from},due_at.lt.${to}),and(due_at.is.null,status.in.(pending,skipped))`)
     .returns<TaskRow[]>();
   if (error) fail("loading today's tasks", error);
-  return data.map((r) => toTask(r, now));
+  const dayEnds = dayEndsAt(await loadSchedule(db));
+  return data.map((r) => toTask(r, now, dayEnds, config));
 }
 
 /** Needs that were due before today and are still open — candidates for "ignored". */
@@ -211,7 +223,7 @@ export type CompleteResult =
       title: string;
       practiceLogged?: { minutes: number; topic: string | null };
       funLogged?: boolean;
-      /** Minutes from Start to Done, when it was started (and the start wasn't left running for half a day). */
+      /** Minutes it was timed for (Start to Done, minus pauses), when it was; a stretch left running for half a day doesn't count. */
       tookMinutes?: number;
       plannedMinutes?: number | null;
     }
@@ -231,8 +243,9 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = c
   if (task.status === "done") return { result: "already_done", title: task.title };
   if (task.status === "cancelled") return { result: "cancelled", title: task.title };
 
-  // A time block (workout, meeting) is on time all day; a deadline isn't.
-  const timed = { ...task, dueAt: lateAfter(task.dueAt, data.duration_minutes, config) };
+  // A time block (workout, meeting) or an any-time task is on time until quiet hours start; a deadline isn't.
+  const dayEnds = dayEndsAt(await loadSchedule(db));
+  const timed = { ...task, dueAt: lateAfter(task.dueAt, data.duration_minutes, config, { occursOn: data.occurs_on, dayEndsAt: dayEnds }) };
   const entries = completionXp(timed, now, config);
   const { data: outcome, error: rpcError } = await db.rpc("complete_task", {
     p_task_id: taskId,
@@ -250,9 +263,8 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = c
   await db.from("promises").update({ status: "kept", kept_at: now.toISOString() }).eq("task_id", taskId).eq("status", "open");
   await db.from("promises").update({ kept_at: now.toISOString() }).eq("task_id", taskId).eq("status", "broken").is("kept_at", null);
 
-  // How long it really took, if they pressed Start.
-  const spent = task.startedAt ? timeSpent(task.startedAt, now) : null;
-  const took = spent?.believable ? spent.minutes : undefined;
+  // How long it really took, if they timed it: paused stretches plus the current one.
+  const took = totalTime(task.spentMinutes, task.startedAt, now) ?? undefined;
 
   // Practice for a skill: record the time (the real time, if they timed it). No XP here — the task just paid it.
   let practiceLogged: { minutes: number; topic: string | null } | undefined;
@@ -751,27 +763,35 @@ function checklistProblem(p: Extract<ReturnType<typeof planChecklist>, { ok: fal
 }
 
 export type StartResult =
-  | { result: "started" | "stopped"; title: string; startedAt: string | null }
+  | { result: "started" | "resumed"; title: string; spentMinutes: number }
+  | { result: "paused"; title: string; spentMinutes: number }
   | { result: "already_started"; title: string; startedAt: string }
   | { result: "not_started" | "not_open" | "not_found"; title?: string };
 
 /**
- * Start a task (it's in progress: its own reminders go quiet, and Done records
- * how long it took) or stop it again (not doing it right now). Only open tasks.
+ * Start a task (in progress: its own reminders go quiet, and Done reports how
+ * long it took), or pause it (not doing it right now: reminders come back, the
+ * time so far is kept, and starting again resumes). Only open tasks.
  */
-export async function startTask(db: Db, taskId: string, now: Date, stop = false): Promise<StartResult> {
-  const { data: t, error } = await db.from("tasks").select("id, title, status, started_at").eq("id", taskId).maybeSingle();
+export async function startTask(db: Db, taskId: string, now: Date, pause = false): Promise<StartResult> {
+  const { data: t, error } = await db.from("tasks").select("id, title, status, started_at, spent_minutes").eq("id", taskId).maybeSingle();
   if (error) fail("loading the task", error);
   if (!t) return { result: "not_found" };
   if (t.status !== "pending") return { result: "not_open", title: t.title };
-  if (!stop && t.started_at) return { result: "already_started", title: t.title, startedAt: t.started_at };
-  if (stop && !t.started_at) return { result: "not_started", title: t.title };
-  const startedAt = stop ? null : now.toISOString();
-  // Still open at the moment it's written, or nothing happens.
-  const { data: rows, error: e } = await db.from("tasks").update({ started_at: startedAt }).eq("id", taskId).eq("status", "pending").select("id");
-  if (e) fail(stop ? "stopping the task" : "starting the task", e);
+  if (!pause && t.started_at) return { result: "already_started", title: t.title, startedAt: t.started_at };
+  if (pause && !t.started_at) return { result: "not_started", title: t.title };
+  // Pausing banks the stretch just finished — unless it ran for half a day, which means the start was forgotten.
+  const stretch = pause ? timeSpent(new Date(t.started_at!), now) : null;
+  const spentMinutes = t.spent_minutes + (stretch?.believable ? stretch.minutes : 0);
+  const patch = pause ? { started_at: null, spent_minutes: spentMinutes } : { started_at: now.toISOString() };
+  // Still open, and still in the state we read, at the moment it's written — or nothing happens.
+  let q = db.from("tasks").update(patch).eq("id", taskId).eq("status", "pending");
+  q = pause ? q.eq("started_at", t.started_at!) : q.is("started_at", null);
+  const { data: rows, error: e } = await q.select("id");
+  if (e) fail(pause ? "pausing the task" : "starting the task", e);
   if (rows.length === 0) return { result: "not_open", title: t.title };
-  return { result: stop ? "stopped" : "started", title: t.title, startedAt };
+  if (pause) return { result: "paused", title: t.title, spentMinutes };
+  return { result: t.spent_minutes > 0 ? "resumed" : "started", title: t.title, spentMinutes: t.spent_minutes };
 }
 
 export type TickTaskResult =

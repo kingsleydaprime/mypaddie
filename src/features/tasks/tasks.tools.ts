@@ -286,18 +286,19 @@ export function registerTaskTools(server: McpServer) {
   server.registerTool(
     "start_task",
     {
-      title: "Start or stop a task",
+      title: "Start, pause or resume a task",
       description:
         "Mark a task in progress when they say they're starting it ('starting the report now'): its own reminders go " +
-        "quiet and Today puts it first, and when they finish, complete_task reports how long it really took. stop=true " +
-        "when they stop for now without finishing. Other must-dos still nudge.",
-      inputSchema: z.object({ task_id: z.uuid().describe("From get_today"), stop: z.boolean().default(false) }),
+        "quiet and Today puts it first, and when they finish, complete_task reports how long it really took. pause=true " +
+        "when they stop for now without finishing ('taking a break', 'pausing that'): the time so far is kept and its " +
+        "reminders come back; starting it again resumes. Other must-dos still nudge either way.",
+      inputSchema: z.object({ task_id: z.uuid().describe("From get_today"), pause: z.boolean().default(false) }),
     },
-    async ({ task_id, stop }: { task_id: string; stop: boolean }, ctx: ToolContext) => {
+    async ({ task_id, pause }: { task_id: string; pause: boolean }, ctx: ToolContext) => {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        return ok(await withMode(db, now, { ...(await startTask(db, task_id, now, stop)) }));
+        return ok(await withMode(db, now, { ...(await startTask(db, task_id, now, pause)) }));
       } catch (error) {
         return toolError(`start_task failed: ${(error as Error).message}`);
       }

@@ -16,7 +16,7 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
   const db = await requireDb(`/app/tasks/${id}`);
   const { data: t } = await db
     .from("tasks")
-    .select("id, title, status, due_at, duration_minutes, is_non_negotiable, is_self_care, reminder_note, series_id, commitment_id, course_id, is_class, details, started_at, checklist")
+    .select("id, title, status, due_at, duration_minutes, is_non_negotiable, is_self_care, reminder_note, series_id, commitment_id, course_id, is_class, details, started_at, spent_minutes, checklist")
     .eq("id", id)
     .maybeSingle();
   if (!t) notFound();
@@ -48,7 +48,7 @@ export default async function TaskPage({ params }: PageProps<"/app/tasks/[id]">)
         </div>
       ) : (
         <>
-          {t.status === "pending" && <DoingPanel id={t.id} title={t.title} startedAt={t.started_at} steps={steps} />}
+          {t.status === "pending" && <DoingPanel id={t.id} title={t.title} startedAt={t.started_at} spentMinutes={t.spent_minutes} steps={steps} />}
           <TaskForm
             task={{
               id: t.id,

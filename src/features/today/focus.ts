@@ -13,10 +13,14 @@ export interface TaskForFocus {
   routine?: { id: string; title: string; step: number } | null;
   /** Started and not finished: in progress. */
   startedAt?: Date | null;
+  /** Time put in before the current stretch: a paused task has some and no startedAt. */
+  spentMinutes?: number;
   /** Ticked steps of its checklist. */
   steps?: { done: number; total: number } | null;
   /** The commitment or course it's for. */
   forLabel?: string | null;
+  /** An any-time task's day is over at this moment (quiet hours start): overdue after it. */
+  anyTimeEndsAt?: Date | null;
 }
 
 export interface FocusItem {
@@ -28,6 +32,7 @@ export interface FocusItem {
   nonNegotiable: boolean;
   routine?: { title: string; next: string; done: number; total: number };
   startedAt: Date | null;
+  spentMinutes: number;
   steps: { done: number; total: number } | null;
   forLabel: string | null;
 }
@@ -64,10 +69,16 @@ export function pickFocus(
       (t.dueAt === null || dayKey(t.dueAt, config.timeZone) <= today),
   );
 
+  // Any time means before quiet hours start; anything else is overdue once its due time passes.
+  const isOverdue = (t: TaskForFocus) => {
+    const deadline = t.anyTimeEndsAt ?? t.dueAt;
+    return deadline !== null && deadline.getTime() < now.getTime();
+  };
+
   const rank = (t: TaskForFocus) => {
     // Whatever they've started comes first: it's what they're doing.
     if (t.startedAt) return -1;
-    const overdue = t.dueAt !== null && t.dueAt.getTime() < now.getTime();
+    const overdue = isOverdue(t);
     const group = t.isNonNegotiable ? 0 : t.tier === "need" ? 1 : 2;
     return group * 2 + (overdue ? 0 : 1);
   };
@@ -83,9 +94,10 @@ export function pickFocus(
     id: t.id,
     title: t.title,
     dueAt: t.dueAt,
-    overdue: t.dueAt !== null && t.dueAt.getTime() < now.getTime(),
+    overdue: isOverdue(t),
     nonNegotiable: t.isNonNegotiable,
     startedAt: t.startedAt ?? null,
+    spentMinutes: t.spentMinutes ?? 0,
     steps: t.steps ?? null,
     forLabel: t.forLabel ?? null,
   });

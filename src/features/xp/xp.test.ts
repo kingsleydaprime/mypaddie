@@ -7,6 +7,7 @@ import {
   goalCompletionBonus,
   ignoredNeedDeduction,
   isIgnoredNeed,
+  anyTimeEndsAt,
   lateAfter,
   transactionLoggedXp,
   wishFulfilledBonus,
@@ -201,5 +202,41 @@ describe("lateAfter", () => {
   });
   test("no due time, never late", () => {
     expect(lateAfter(null, 60)).toBeNull();
+  });
+});
+
+describe("any time ends when quiet hours start", () => {
+  const quiet = { dayEndsAt: "22:00" };
+
+  test("an any-time task (stored at 23:59) is late from 22:00", () => {
+    expect(lateAfter(at("2026-10-05T23:59:00"), null, undefined, quiet)).toEqual(at("2026-10-05T22:00:00"));
+  });
+  test("an any-time habit day (no time at all) is late from 22:00 that day", () => {
+    expect(lateAfter(null, null, undefined, { ...quiet, occursOn: "2026-10-05" })).toEqual(at("2026-10-05T22:00:00"));
+  });
+  test("done at 21:30 it's on time; at 22:30 it's late but still pays the late share", () => {
+    const read = task({ tier: null, dueAt: lateAfter(null, null, undefined, { ...quiet, occursOn: "2026-10-05" }) });
+    expect(total(completionXp(read, at("2026-10-05T21:30:00")))).toBe(10);
+    expect(total(completionXp(read, at("2026-10-05T22:30:00")))).toBe(5);
+  });
+  test("a real deadline keeps its time, even after quiet hours start", () => {
+    expect(lateAfter(at("2026-10-05T23:00:00"), null, undefined, quiet)).toEqual(at("2026-10-05T23:00:00"));
+  });
+  test("a time block is on time until quiet hours start", () => {
+    expect(lateAfter(at("2026-10-05T18:00:00"), 60, undefined, quiet)).toEqual(at("2026-10-05T22:00:00"));
+  });
+  test("a block that starts after quiet hours begin has until the end of its day", () => {
+    expect(lateAfter(at("2026-10-05T22:30:00"), 60, undefined, quiet)!.toISOString()).toBe("2026-10-05T22:59:59.999Z");
+  });
+  test("quiet hours after midnight leave the whole day", () => {
+    expect(lateAfter(null, null, undefined, { dayEndsAt: "23:59", occursOn: "2026-10-05" })!.toISOString()).toBe("2026-10-05T22:59:59.999Z");
+  });
+  test("an undated one-off is never late", () => {
+    expect(lateAfter(null, null, undefined, quiet)).toBeNull();
+  });
+  test("anyTimeEndsAt: only for any-time tasks", () => {
+    expect(anyTimeEndsAt(at("2026-10-05T23:59:00"), null, "22:00")).toEqual(at("2026-10-05T22:00:00"));
+    expect(anyTimeEndsAt(at("2026-10-05T14:00:00"), null, "22:00")).toBeNull();
+    expect(anyTimeEndsAt(null, null, "22:00")).toBeNull();
   });
 });

@@ -43,6 +43,8 @@ const item = (i: FocusItem) => ({
   nonNegotiable: i.nonNegotiable,
   ...(i.forLabel ? { for: i.forLabel } : {}),
   ...(i.startedAt ? { inProgressSince: formatLocal(i.startedAt, tz()) } : {}),
+  ...(i.spentMinutes > 0 ? { minutesSpentBefore: i.spentMinutes } : {}),
+  ...(!i.startedAt && i.spentMinutes > 0 ? { paused: true } : {}),
   ...(i.steps ? { steps: `${i.steps.done}/${i.steps.total}` } : {}),
 });
 

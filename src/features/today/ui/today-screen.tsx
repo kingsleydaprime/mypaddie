@@ -34,7 +34,9 @@ const NARRATION: Record<Mode, string> = {
 
 function due(item: FocusItem, now: Date) {
   if (!item.dueAt) return "any time";
-  const time = localTimeOf(item.dueAt, tz());
+  // 23:59 is how "any time that day" is stored.
+  const at = localTimeOf(item.dueAt, tz());
+  const time = at === "23:59" ? "any time" : at;
   return dayKey(item.dueAt, tz()) === dayKey(now, tz()) ? time : `yesterday ${time}`;
 }
 

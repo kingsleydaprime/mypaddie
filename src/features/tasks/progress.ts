@@ -70,3 +70,14 @@ export function timeSpent(startedAt: Date, now: Date): { minutes: number; believ
   const minutes = Math.max(1, Math.round((now.getTime() - startedAt.getTime()) / 60_000));
   return { minutes, believable: minutes <= LONGEST_SITTING_MINUTES };
 }
+
+/**
+ * All the time put into a task so far: earlier stretches (paused) plus the
+ * current one if it's running. A current stretch left running for half a day
+ * is left out as forgotten. Null if nothing's been timed.
+ */
+export function totalTime(spentMinutes: number, startedAt: Date | null, now: Date): number | null {
+  const current = startedAt ? timeSpent(startedAt, now) : null;
+  const total = spentMinutes + (current?.believable ? current.minutes : 0);
+  return total > 0 ? total : null;
+}

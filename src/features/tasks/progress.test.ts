@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { MAX_STEPS, planChecklist, readChecklist, stepsDone, tickStep, timeSpent, type Step } from "./progress";
+import { MAX_STEPS, planChecklist, readChecklist, stepsDone, tickStep, timeSpent, totalTime, type Step } from "./progress";
 
 const steps = (...s: [string, boolean][]): Step[] => s.map(([text, done]) => ({ text, done }));
 
@@ -78,5 +78,26 @@ describe("timeSpent", () => {
   });
   test("a start left running overnight isn't believable as time spent", () => {
     expect(timeSpent(start, new Date("2026-10-09T08:00:00+01:00"))).toEqual({ minutes: 23 * 60, believable: false });
+  });
+});
+
+describe("totalTime", () => {
+  const start = new Date("2026-10-08T09:00:00+01:00");
+  const now = new Date("2026-10-08T09:20:00+01:00");
+  test("never timed: nothing", () => {
+    expect(totalTime(0, null, now)).toBeNull();
+  });
+  test("running for the first time", () => {
+    expect(totalTime(0, start, now)).toBe(20);
+  });
+  test("paused: what was spent before", () => {
+    expect(totalTime(35, null, now)).toBe(35);
+  });
+  test("resumed after a pause: before plus now", () => {
+    expect(totalTime(35, start, now)).toBe(55);
+  });
+  test("a stretch left running overnight is left out", () => {
+    expect(totalTime(35, start, new Date("2026-10-09T08:00:00+01:00"))).toBe(35);
+    expect(totalTime(0, start, new Date("2026-10-09T08:00:00+01:00"))).toBeNull();
   });
 });

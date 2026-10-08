@@ -137,3 +137,23 @@ describe("in progress", () => {
     expect(f.top[0]!.steps).toEqual({ done: 2, total: 5 });
   });
 });
+
+describe("any time ends when quiet hours start", () => {
+  test("not overdue before quiet hours", () => {
+    const f = pickFocus([task({ title: "Read", dueAt: at("2026-10-06T23:59:00"), anyTimeEndsAt: at("2026-10-06T22:00:00") })], at("2026-10-06T21:00:00"));
+    expect(f.top[0]!.overdue).toBe(false);
+  });
+  test("overdue once they start, and ranked with the overdue", () => {
+    const late = at("2026-10-06T22:30:00");
+    const f = pickFocus([
+      task({ title: "Email", dueAt: at("2026-10-06T23:30:00") }),
+      task({ title: "Read", dueAt: at("2026-10-06T23:59:00"), anyTimeEndsAt: at("2026-10-06T22:00:00") }),
+    ], late);
+    expect(titles(f.top)).toEqual(["Read", "Email"]);
+    expect(f.top[0]!.overdue).toBe(true);
+  });
+  test("yesterday's any-time habit (no time) is overdue today", () => {
+    const f = pickFocus([task({ title: "Pray", dueAt: null, anyTimeEndsAt: at("2026-10-05T22:00:00") })], now);
+    expect(f.top[0]!.overdue).toBe(true);
+  });
+});

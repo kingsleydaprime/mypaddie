@@ -6,16 +6,20 @@ import { DoneButton } from "@/features/today/ui/done-button";
 import type { Step } from "../progress";
 import { startTaskAction, tickStepAction } from "../tasks.actions";
 
-function elapsed(startedAt: string): string {
-  const m = Math.max(0, Math.round((Date.now() - Date.parse(startedAt)) / 60_000));
+function hm(m: number): string {
   return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m` : `${m}m`;
+}
+
+/** Earlier stretches plus the running one. */
+function soFar(spent: number, startedAt: string | null): number {
+  return spent + (startedAt ? Math.max(0, Math.round((Date.now() - Date.parse(startedAt)) / 60_000)) : 0);
 }
 
 /**
  * Doing the task: start or stop it, and tick its checklist. Ticking the last
  * step only offers Done — some tasks have steps that aren't the whole thing.
  */
-export function DoingPanel({ id, title, startedAt, steps }: { id: string; title: string; startedAt: string | null; steps: Step[] }) {
+export function DoingPanel({ id, title, startedAt, spentMinutes, steps }: { id: string; title: string; startedAt: string | null; spentMinutes: number; steps: Step[] }) {
   const router = useRouter();
   const [pending, run] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +36,9 @@ export function DoingPanel({ id, title, startedAt, steps }: { id: string; title:
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm">
           {startedAt ? (
-            <><span className="font-semibold text-gold">In progress</span> <span className="text-muted">· {elapsed(startedAt)} · its reminders are quiet</span></>
+            <><span className="font-semibold text-gold">In progress</span> <span className="text-muted">· {hm(soFar(spentMinutes, startedAt))} · its reminders are quiet</span></>
+          ) : spentMinutes > 0 ? (
+            <><span className="font-semibold">Paused</span> <span className="text-muted">· {hm(spentMinutes)} so far</span></>
           ) : (
             <span className="text-muted">Not started</span>
           )}
@@ -43,7 +49,7 @@ export function DoingPanel({ id, title, startedAt, steps }: { id: string; title:
           onClick={() => act(() => startTaskAction(id, startedAt !== null))}
           className={`shrink-0 rounded-xl px-4 py-2.5 font-semibold disabled:opacity-60 ${startedAt ? "border border-line" : "bg-gold text-on-gold"}`}
         >
-          {startedAt ? "Stop" : "Start"}
+          {startedAt ? "Pause" : spentMinutes > 0 ? "Resume" : "Start"}
         </button>
       </div>
 

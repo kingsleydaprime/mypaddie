@@ -1,6 +1,6 @@
 import { currentConfig, type EngineConfig } from "@/shared/config";
 import type { Pillar, Tier } from "@/shared/domain";
-import { dayKey, startOfNextDay } from "@/shared/time";
+import { dayKey, localTimeOf, startOfNextDay, zonedInstant } from "@/shared/time";
 import { splitXp, type PillarWeight } from "./split";
 
 /** Mirrors the `xp_reason` enum in Postgres. */
@@ -61,15 +61,55 @@ export function isLate(task: Pick<TaskForXp, "dueAt">, doneAt: Date): boolean {
 }
 
 /**
- * When a task starts counting as late. For a deadline ("submit by 14:00") it's
- * the due time. For a time block — a task with a duration, like a workout or a
- * meeting — the due time is when it *starts*, so finishing it any time that
- * day is on time; it's only late once its day is over.
+ * When an "any time that day" task's day is over: the moment quiet hours start
+ * (`dayEndsAt`, "HH:MM"). Any time is stored either as 23:59 on its day, or as
+ * no time at all on a habit's day (`occursOn`). Null for anything else — a
+ * real deadline, or a task with no day.
  */
-export function lateAfter(dueAt: Date | null, durationMinutes: number | null, config: EngineConfig = currentConfig()): Date | null {
+export function anyTimeEndsAt(
+  dueAt: Date | null,
+  occursOn: string | null,
+  dayEndsAt: string,
+  config: EngineConfig = currentConfig(),
+): Date | null {
+  const day = dueAt === null ? occursOn : localTimeOf(dueAt, config.timeZone) === ANY_TIME ? dayKey(dueAt, config.timeZone) : null;
+  return day === null ? null : endOfActiveDay(day, dayEndsAt, config);
+}
+
+/** "23:59" on a due time means "any time that day", not a real deadline. */
+const ANY_TIME = "23:59";
+
+function endOfActiveDay(day: string, dayEndsAt: string, config: EngineConfig): Date {
+  // Quiet hours that start after midnight leave the whole calendar day.
+  return dayEndsAt === ANY_TIME
+    ? new Date(startOfNextDay(zonedInstant(day, "12:00", config.timeZone), config.timeZone).getTime() - 1)
+    : zonedInstant(day, dayEndsAt, config.timeZone);
+}
+
+/**
+ * When a task starts counting as late.
+ *   - a deadline ("submit by 14:00"): its due time.
+ *   - a time block (a duration, like a workout or a meeting): the due time is
+ *     when it *starts*, so finishing it later that day is on time.
+ *   - any time that day (23:59, or a habit day with no time): on time all day.
+ * "That day" ends when quiet hours start (`dayEndsAt`): done after, it's done
+ * late — still worth doing, for the late share. Without `dayEndsAt`, the
+ * calendar day.
+ */
+export function lateAfter(
+  dueAt: Date | null,
+  durationMinutes: number | null,
+  config: EngineConfig = currentConfig(),
+  opts: { occursOn?: string | null; dayEndsAt?: string } = {},
+): Date | null {
+  const dayEnds = opts.dayEndsAt ?? ANY_TIME;
+  const anyTime = anyTimeEndsAt(dueAt, opts.occursOn ?? null, dayEnds, config);
+  if (anyTime) return anyTime;
   if (dueAt === null) return null;
   if (durationMinutes === null) return dueAt;
-  return new Date(startOfNextDay(dueAt, config.timeZone).getTime() - 1);
+  // A block that starts after the day "ends" (a late class) has until the end of its calendar day.
+  const end = endOfActiveDay(dayKey(dueAt, config.timeZone), dayEnds, config);
+  return end > dueAt ? end : endOfActiveDay(dayKey(dueAt, config.timeZone), ANY_TIME, config);
 }
 
 /**
