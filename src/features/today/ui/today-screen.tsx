@@ -8,6 +8,7 @@ import { loadUpcomingEvents } from "@/features/events/events.repo";
 import { loadLearning } from "@/features/learning/learning.repo";
 import { loadMode } from "@/features/mode/mode.repo";
 import { loadSchedule } from "@/features/settings/settings.repo";
+import { lateNight } from "@/features/settings/schedule";
 import type { Mode } from "@/shared/domain";
 import { catchUp, loadTasksAroundToday } from "@/features/tasks/tasks.repo";
 import { currentConfig } from "@/shared/config";
@@ -82,6 +83,8 @@ export async function TodayScreen({ db }: { db: Db }) {
   const todayEvents = soon.filter((e) => e.daysAway === 0);
   const prepare = soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now");
   const focus = pickFocus(tasks, now);
+  // Opening the app during quiet hours means they're up when they meant to be asleep.
+  const late = lateNight(schedule, localTimeOf(now, tz()));
   const shownIds = [...focus.top, ...focus.rest].map((f) => f.id);
   const { data: detailRows } = shownIds.length
     ? await db.from("tasks").select("id, details").in("id", shownIds).not("details", "is", null)
@@ -106,6 +109,15 @@ export async function TodayScreen({ db }: { db: Db }) {
           </Link>
         )}
       </header>
+
+      {late && (
+        <div className="rounded-2xl border border-gold bg-surface p-4" role="status">
+          <p className="font-semibold">It&rsquo;s {late.at}. Your quiet hours started at {late.quietSince}.</p>
+          <p className="mt-1 text-sm text-muted">
+            Close this and sleep — {Math.floor(late.sleepLeft / 60)}h{late.sleepLeft % 60 ? ` ${String(late.sleepLeft % 60).padStart(2, "0")}m` : ""} until {late.wakeAt}. It&rsquo;ll all be here in the morning.
+          </p>
+        </div>
+      )}
 
       <StatusBar db={db} />
 

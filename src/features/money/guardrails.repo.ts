@@ -18,6 +18,8 @@ import {
   nextDue,
   paidRecently,
   remaining,
+  trialDecisionDay,
+  yearlyEquivalent,
   type BillEvery,
   type CapStatus,
   type DebtDirection,
@@ -74,7 +76,7 @@ export async function setCap(db: Db, category: string, monthlyCap: number | null
 
 // ─── Bills ──────────────────────────────────────────────────────────────────
 
-const BILL_COLUMNS = "id, title, amount, category, tag, every, anchor_on, next_due, item_id, task_id, status, last_paid_at";
+const BILL_COLUMNS = "id, title, amount, category, tag, every, anchor_on, next_due, item_id, task_id, status, last_paid_at, trial_ends_on, trial_task_id";
 
 type BillRow = {
   id: string;
@@ -89,7 +91,12 @@ type BillRow = {
   task_id: string | null;
   status: string;
   last_paid_at: string | null;
+  trial_ends_on: string | null;
+  trial_task_id: string | null;
 };
+
+const EVERY_WORD: Record<BillEvery, string> = { once: "", week: "/week", month: "/month", year: "/year" };
+const shortDay = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: "short" });
 
 async function findBill(db: Db, ref: string): Promise<BillRow | null> {
   const isId = /^[0-9a-f-]{36}$/i.test(ref);
@@ -99,8 +106,17 @@ async function findBill(db: Db, ref: string): Promise<BillRow | null> {
   return (data[0] as BillRow | undefined) ?? null;
 }
 
-/** The "Pay: Data (₦5,000)" task for a bill's next due date. Fixed: a bill can't be moved for capacity. */
+/**
+ * The "Pay: Data (₦5,000)" task for a bill's next due date. Fixed: a bill can't
+ * be moved for capacity. A subscription they could drop (a want) asks, each
+ * time, whether it's still worth it — with what it costs a year.
+ */
 async function makeBillTask(db: Db, bill: BillRow, now: Date): Promise<string | null> {
+  const every = bill.every as BillEvery;
+  const checkIn =
+    bill.tag === "want" && every !== "once"
+      ? `Still using ${bill.title}? It's ${formatMoney(yearlyEquivalent(bill.amount, every))} a year. If not, cancel it instead of paying.`
+      : null;
   const made = await createTask(
     db,
     {
@@ -114,12 +130,48 @@ async function makeBillTask(db: Db, bill: BillRow, now: Date): Promise<string | 
       weights: MONEY_WEIGHTS,
       durationMinutes: 5,
       fixed: true,
+      details: checkIn,
     },
     now,
   );
   const taskId = made.result === "created" ? made.task.id : null;
   await db.from("bills").update({ task_id: taskId }).eq("id", bill.id);
   return taskId;
+}
+
+/**
+ * A free trial's "keep or cancel?" task, a couple of days before it ends: a
+ * must-do, because forgetting costs money. Nothing to make once it's over.
+ */
+async function makeTrialTask(db: Db, bill: BillRow, now: Date): Promise<string | null> {
+  const day = bill.trial_ends_on ? trialDecisionDay(bill.trial_ends_on, today(now)) : null;
+  if (!day) return null;
+  const made = await createTask(
+    db,
+    {
+      title: `Trial ends ${shortDay(bill.trial_ends_on!)}: keep or cancel ${bill.title}?`,
+      itemId: bill.item_id,
+      baseXp: 5,
+      dueDate: day,
+      dueTime: null,
+      recurrence: null,
+      nonNegotiable: true,
+      weights: MONEY_WEIGHTS,
+      durationMinutes: 5,
+      fixed: true,
+      details:
+        `Keep it: nothing to do — the first charge is ${formatMoney(bill.amount)}${EVERY_WORD[bill.every as BillEvery]} on ${shortDay(bill.next_due)}. ` +
+        `Cancel it: cancel with the provider before then, then end it in MyPaddie (Money → Bills).`,
+    },
+    now,
+  );
+  const taskId = made.result === "created" ? made.task.id : null;
+  await db.from("bills").update({ trial_task_id: taskId }).eq("id", bill.id);
+  return taskId;
+}
+
+async function dropTrialTask(db: Db, bill: BillRow, now: Date) {
+  if (bill.trial_task_id) await updateTask(db, bill.trial_task_id, {}, "cancel", now).catch(() => undefined);
 }
 
 async function dropBillTask(db: Db, bill: BillRow, now: Date) {
@@ -132,11 +184,17 @@ export interface NewBill {
   category?: string;
   tag?: "need" | "want";
   every: BillEvery;
-  firstDue: string;
+  /** The next date it's due. With a free trial, defaults to the day the trial ends (the first charge). */
+  firstDue?: string;
   itemId?: string | null;
+  /** A free trial's last day: a "keep or cancel?" task comes before it. */
+  trialEndsOn?: string | null;
 }
 
 export async function addBill(db: Db, input: NewBill, now: Date) {
+  const firstDue = input.firstDue ?? input.trialEndsOn;
+  if (!firstDue) throw new Error("a bill needs the date it's next due (or, on a free trial, the day the trial ends)");
+  if (input.trialEndsOn && input.every === "once") throw new Error("a free trial is for something that repeats — a one-off payment has no trial");
   const { data, error } = await db
     .from("bills")
     .insert({
@@ -145,16 +203,21 @@ export async function addBill(db: Db, input: NewBill, now: Date) {
       category: (input.category ?? input.title).trim(),
       tag: input.tag ?? "need",
       every: input.every,
-      anchor_on: input.firstDue,
-      next_due: input.firstDue,
+      anchor_on: firstDue,
+      next_due: firstDue,
       item_id: input.itemId ?? null,
+      trial_ends_on: input.trialEndsOn ?? null,
     })
     .select(BILL_COLUMNS)
     .single();
   if (error?.code === "23505") return { result: "exists" as const, title: input.title.trim() };
   if (error) throw new Error(`adding the bill: ${error.message}`);
   await makeBillTask(db, data as BillRow, now);
-  return { result: "added" as const, bill: { id: data.id, title: data.title, amount: data.amount, every: data.every, nextDue: data.next_due } };
+  const trialTask = await makeTrialTask(db, data as BillRow, now);
+  return {
+    result: "added" as const,
+    bill: { id: data.id, title: data.title, amount: data.amount, every: data.every, nextDue: data.next_due, ...(data.trial_ends_on ? { trialEndsOn: data.trial_ends_on, keepOrCancelTask: trialTask !== null } : {}) },
+  };
 }
 
 /**
@@ -186,13 +249,20 @@ export async function payBill(db: Db, ref: string, opts: { amount?: number; paid
   if (res.result !== "paid") return { result: res.result, title: bill.title, nextDue: bill.next_due };
 
   if (bill.task_id) await completeTask(db, bill.task_id, now).catch(() => undefined);
-  await makeBillTask(db, { ...bill, next_due: following }, now);
+  // Paying is keeping: a trial's "keep or cancel?" is answered.
+  await dropTrialTask(db, bill, now);
+  const every = bill.every as BillEvery;
+  // A one-off is finished (the database closed it); a repeating bill gets its next task.
+  if (every !== "once") await makeBillTask(db, { ...bill, next_due: following }, now);
+  else await db.from("bills").update({ task_id: null }).eq("id", bill.id);
   return {
     result: "paid" as const,
+    ...(every === "once" ? { finished: true } : {}),
+    ...(bill.tag === "want" && every !== "once" ? { checkIn: { yearly: yearlyEquivalent(bill.amount, every), question: `Still worth ${formatMoney(yearlyEquivalent(bill.amount, every))} a year?` } } : {}),
     title: bill.title,
     amount,
     paidFor: bill.next_due,
-    nextDue: following,
+    nextDue: every === "once" ? null : following,
     transactionId: res.transaction_id,
     ...(amount !== bill.amount ? { note: `Usually ${formatMoney(bill.amount)} — update_bill if the price changed for good.` } : {}),
     flags: flag ? [flag] : [],
@@ -210,6 +280,8 @@ export interface BillChanges {
   status?: "active" | "paused" | "ended";
   /** Not paying this one (a month off): move on without logging money. */
   skip?: boolean;
+  /** A free trial's last day; null = no trial. */
+  trialEndsOn?: string | null;
 }
 
 export async function updateBill(db: Db, ref: string, changes: BillChanges, now: Date) {
@@ -228,6 +300,7 @@ export async function updateBill(db: Db, ref: string, changes: BillChanges, now:
     ...(changes.category !== undefined && { category: changes.category.trim() }),
     ...(changes.tag !== undefined && { tag: changes.tag }),
     ...(changes.status !== undefined && { status: changes.status }),
+    ...(changes.trialEndsOn !== undefined && { trial_ends_on: changes.trialEndsOn }),
     every,
     anchor_on: anchor,
     next_due: next,
@@ -243,6 +316,12 @@ export async function updateBill(db: Db, ref: string, changes: BillChanges, now:
     await dropBillTask(db, bill, now);
     if (after.status === "active") await makeBillTask(db, after, now);
     else await db.from("bills").update({ task_id: null }).eq("id", bill.id);
+  }
+  // The trial's question follows the trial: gone if it's ended, paused or the trial changed; remade if still to come.
+  if (after.status !== bill.status || after.trial_ends_on !== bill.trial_ends_on || after.title !== bill.title) {
+    await dropTrialTask(db, bill, now);
+    if (after.status === "active") await makeTrialTask(db, after, now);
+    else await db.from("bills").update({ trial_task_id: null }).eq("id", bill.id);
   }
   return { result: changes.skip ? ("skipped" as const) : ("updated" as const), title: after.title, nextDue: after.next_due, status: after.status };
 }
@@ -260,12 +339,22 @@ export async function loadBills(db: Db, now: Date) {
     nextDue: b.next_due,
     status: b.status as "active" | "paused" | "ended",
     lastPaidAt: b.last_paid_at,
+    trialEndsOn: b.trial_ends_on && b.trial_ends_on >= today(now) ? b.trial_ends_on : null,
   }));
   const active = bills.filter((b) => b.status === "active");
+  // Subscriptions they could drop: the wants that repeat.
+  const subscriptions = active.filter((b) => b.tag === "want" && b.every !== "once");
   return {
     bills,
     dueSoon: billsDue(bills, today(now), 7),
     monthlyTotal: active.reduce((s, b) => s + monthlyEquivalent(b.amount, b.every), 0),
+    subscriptions: {
+      count: subscriptions.length,
+      monthly: subscriptions.reduce((s, b) => s + monthlyEquivalent(b.amount, b.every), 0),
+      yearly: subscriptions.reduce((s, b) => s + yearlyEquivalent(b.amount, b.every), 0),
+    },
+    oneOffs: active.filter((b) => b.every === "once").map((b) => ({ title: b.title, amount: b.amount, due: b.nextDue })),
+    trials: active.filter((b) => b.trialEndsOn).map((b) => ({ title: b.title, endsOn: b.trialEndsOn, thenCosts: b.amount, every: b.every })),
   };
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { applyScheduleChange, activeDay, dayEndsAt, DEFAULT_SCHEDULE, isQuiet, readSchedule } from "./schedule";
+import { applyScheduleChange, activeDay, dayEndsAt, DEFAULT_SCHEDULE, isQuiet, lateNight, readSchedule } from "./schedule";
 
 describe("isQuiet", () => {
   test("a window that crosses midnight", () => {
@@ -117,5 +117,21 @@ describe("activeDay", () => {
   });
   test("waking after the day 'ends' (night shifts): counted from midnight", () => {
     expect(activeDay({ quietStart: "14:00", quietEnd: "22:00" })).toEqual({ startsAt: "00:00", endsAt: "14:00" });
+  });
+});
+
+describe("lateNight", () => {
+  const s = { quietStart: "22:00", quietEnd: "06:00" };
+  test("awake before quiet hours: nothing", () => {
+    expect(lateNight(s, "21:59")).toBeNull();
+  });
+  test("up at 23:40: how long until they get up", () => {
+    expect(lateNight(s, "23:40")).toEqual({ at: "23:40", quietSince: "22:00", wakeAt: "06:00", sleepLeft: 380 });
+  });
+  test("past midnight", () => {
+    expect(lateNight(s, "02:15")).toMatchObject({ sleepLeft: 225 });
+  });
+  test("once quiet hours end, it's morning: nothing", () => {
+    expect(lateNight(s, "06:00")).toBeNull();
   });
 });

@@ -81,6 +81,18 @@ export function activeDay(s: Pick<Schedule, "quietStart" | "quietEnd">): { start
   return { startsAt: s.quietEnd < endsAt ? s.quietEnd : "00:00", endsAt };
 }
 
+/**
+ * Up during their quiet hours? Being active then (talking to Paddie, opening
+ * the app) is the sign they're awake when they meant to be asleep. Null
+ * outside quiet hours. `sleepLeft` is minutes until quiet hours end.
+ */
+export function lateNight(s: Pick<Schedule, "quietStart" | "quietEnd">, localTime: string): { at: string; quietSince: string; wakeAt: string; sleepLeft: number } | null {
+  if (!isQuiet(localTime, s)) return null;
+  const mins = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const sleepLeft = (mins(s.quietEnd) - mins(localTime) + 24 * 60) % (24 * 60);
+  return { at: localTime, quietSince: s.quietStart, wakeAt: s.quietEnd, sleepLeft };
+}
+
 /** Saved settings merged over the defaults; anything invalid falls back to its default. */
 export function readSchedule(saved: unknown): Schedule {
   const merged: Record<string, unknown> = { ...DEFAULT_SCHEDULE };

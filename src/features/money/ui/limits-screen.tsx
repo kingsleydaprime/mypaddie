@@ -2,15 +2,15 @@ import Link from "next/link";
 import { currencySymbol, formatMoney } from "@/shared/format";
 import type { Db } from "@/shared/supabase/token-client";
 import { SubmitButton } from "@/shared/ui/submit-button";
-import { addBillAction, addDebtAction, payBillAction, payDebtAction, setCapAction } from "../guardrails.actions";
+import { addBillAction, addDebtAction, payBillAction, payDebtAction, setBillStatusAction, setCapAction } from "../guardrails.actions";
 import { loadBills, loadCaps, loadDebts } from "../guardrails.repo";
 
 const field = "rounded-xl border border-line bg-surface px-3 py-3 text-base placeholder:text-muted";
 const card = "rounded-2xl border border-line bg-surface px-4 py-3";
-const EVERY = { week: "weekly", month: "monthly", year: "yearly" } as const;
+const EVERY = { once: "one-off", week: "weekly", month: "monthly", year: "yearly" } as const;
 const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
-/** Spending caps, recurring bills and money owed, on one page off Money. */
+/** Bills and payments due (subscriptions, trials, one-offs), spending caps and money owed, on one page off Money. */
 export async function LimitsScreen({ db, error }: { db: Db; error: string | null }) {
   const now = new Date();
   const [caps, bills, debts] = await Promise.all([loadCaps(db, now), loadBills(db, now), loadDebts(db, now)]);
@@ -22,7 +22,7 @@ export async function LimitsScreen({ db, error }: { db: Db; error: string | null
     <div className="flex flex-col gap-6">
       <header className="flex items-center gap-3">
         <Link href="/app/money" className="text-muted" aria-label="Back to money">‹ Money</Link>
-        <h1 className="text-2xl font-bold">Bills, caps &amp; debts</h1>
+        <h1 className="text-2xl font-bold">Bills, subscriptions &amp; debts</h1>
       </header>
       {error && <p className="rounded-xl border border-red px-4 py-3 text-sm text-red" role="alert">{error}</p>}
 
@@ -30,43 +30,82 @@ export async function LimitsScreen({ db, error }: { db: Db; error: string | null
         <h2 className="flex items-baseline justify-between text-lg font-bold">
           Bills <span className="text-sm font-medium text-muted">{formatMoney(bills.monthlyTotal)}/mo</span>
         </h2>
-        {bills.bills.length === 0 && <p className="text-sm text-muted">Data, rent, subscriptions — add them once, get reminded each time.</p>}
+        {bills.subscriptions.count > 0 && (
+          <p className="text-sm text-muted">
+            Subscriptions you could drop: {bills.subscriptions.count} · {formatMoney(bills.subscriptions.monthly)}/mo · <span className="font-medium text-text">{formatMoney(bills.subscriptions.yearly)} a year</span>
+          </p>
+        )}
+        {bills.bills.length === 0 && <p className="text-sm text-muted">Data, rent, subscriptions, a fee due once — add them once, get reminded each time.</p>}
         <ul className="flex flex-col gap-2">
           {bills.bills.map((b) => {
             const due = bills.dueSoon.find((d) => d.id === b.id);
             return (
-              <li key={b.id} className={`${card} flex items-center justify-between gap-3`}>
-                <div className="min-w-0">
-                  <p className="truncate font-semibold">{b.title} <span className="font-normal text-muted">· {formatMoney(b.amount)}</span></p>
-                  <p className={`text-sm ${due?.overdue ? "text-red" : "text-muted"}`}>
-                    {b.status === "paused" ? "Paused" : `${due?.overdue ? "Overdue since" : "Due"} ${day(b.nextDue)}`} · {EVERY[b.every]}{b.tag === "want" ? " · want" : ""}
-                  </p>
+              <li key={b.id} className={card}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{b.title} <span className="font-normal text-muted">· {formatMoney(b.amount)}</span></p>
+                    <p className={`text-sm ${due?.overdue ? "text-red" : "text-muted"}`}>
+                      {b.status === "paused" ? (
+                        `Paused · ${EVERY[b.every]}`
+                      ) : b.trialEndsOn ? (
+                        <><span className="font-medium text-gold">Free trial until {day(b.trialEndsOn)}</span> · then {EVERY[b.every]}</>
+                      ) : (
+                        `${due?.overdue ? "Overdue since" : "Due"} ${day(b.nextDue)} · ${EVERY[b.every]}`
+                      )}
+                      {b.tag === "want" ? " · want" : ""}
+                    </p>
+                  </div>
+                  {b.status === "active" && !b.trialEndsOn && (
+                    <form action={payBillAction}>
+                      <input type="hidden" name="id" value={b.id} />
+                      <input type="hidden" name="due" value={b.nextDue} />
+                      <SubmitButton className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${due ? "bg-gold text-on-gold" : "border border-line"}`}>Paid</SubmitButton>
+                    </form>
+                  )}
                 </div>
-                {b.status === "active" && (
-                  <form action={payBillAction}>
-                    <input type="hidden" name="id" value={b.id} />
-                    <input type="hidden" name="due" value={b.nextDue} />
-                    <SubmitButton className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${due ? "bg-gold text-on-gold" : "border border-line"}`}>Paid</SubmitButton>
-                  </form>
-                )}
+                <details className="mt-1">
+                  <summary className="cursor-pointer text-xs text-muted">More</summary>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {b.every !== "once" && (
+                      <form action={setBillStatusAction}>
+                        <input type="hidden" name="id" value={b.id} />
+                        <input type="hidden" name="status" value={b.status === "paused" ? "active" : "paused"} />
+                        <SubmitButton className="rounded-xl border border-line px-3 py-2 text-sm font-medium">{b.status === "paused" ? "Resume" : "Pause"}</SubmitButton>
+                      </form>
+                    )}
+                    <form action={setBillStatusAction}>
+                      <input type="hidden" name="id" value={b.id} />
+                      <input type="hidden" name="status" value="ended" />
+                      <SubmitButton className="rounded-xl border border-line px-3 py-2 text-sm font-medium">
+                        {b.every === "once" ? "Don't owe it any more" : b.trialEndsOn ? "Cancelled the trial" : "Cancelled it"}
+                      </SubmitButton>
+                    </form>
+                  </div>
+                </details>
               </li>
             );
           })}
         </ul>
         <details className={card}>
-          <summary className="cursor-pointer text-sm font-medium">+ Add a bill</summary>
+          <summary className="cursor-pointer text-sm font-medium">+ Add a bill, subscription or payment</summary>
           <form action={addBillAction} className="mt-3 grid grid-cols-2 gap-2">
             <input name="title" required placeholder="Data, rent, Netflix…" className={`${field} col-span-2`} />
             <input name="amount" required inputMode="numeric" placeholder={`Amount ${sym}`} className={field} />
             <select name="every" defaultValue="month" className={field} aria-label="How often">
+              <option value="once">Once</option>
               <option value="week">Weekly</option>
               <option value="month">Monthly</option>
               <option value="year">Yearly</option>
             </select>
-            <label className="col-span-2 flex flex-col gap-1 text-sm text-muted">
+            <label className="flex flex-col gap-1 text-sm text-muted">
               Next due
-              <input name="first_due" type="date" required className={field} />
+              <input name="first_due" type="date" className={field} />
             </label>
+            <label className="flex flex-col gap-1 text-sm text-muted">
+              Free trial ends (optional)
+              <input name="trial_ends_on" type="date" className={field} />
+            </label>
+            <p className="col-span-2 -mt-1 text-xs text-muted">On a free trial, leave &ldquo;next due&rdquo; empty: the first charge is when the trial ends, and you&rsquo;ll be asked to keep or cancel two days before.</p>
             <select name="tag" defaultValue="need" className={field} aria-label="Need or want">
               <option value="need">Need</option>
               <option value="want">Want</option>

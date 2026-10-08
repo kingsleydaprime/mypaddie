@@ -5,7 +5,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select set_config('search_path', current_setting('search_path') || ', ' || n.nspname, true)
   from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgtap';
-select plan(19);
+select plan(22);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'sam@example.com'),
@@ -42,6 +42,17 @@ update public.bills set status = 'paused';
 select is(
   public.pay_bill('aaaaaaaa-0000-0000-0000-000000000001', '2026-11-10', '2026-12-10', 5000, now(), '[]')->>'result',
   'paused', 'a paused bill isn''t paid');
+
+-- A one-off payment (a course fee): paid once, then it's finished.
+insert into public.bills (id, title, amount, category, every, anchor_on, next_due)
+  values ('aaaaaaaa-0000-0000-0000-000000000002', 'Course fee', 50000, 'School', 'once', '2026-11-01', '2026-11-01');
+select is(
+  public.pay_bill('aaaaaaaa-0000-0000-0000-000000000002', '2026-11-01', '2026-11-01', 50000, now(), '[]')->>'result',
+  'paid', 'a one-off payment is paid');
+select is((select status from public.bills where id = 'aaaaaaaa-0000-0000-0000-000000000002'), 'ended', 'and then it''s finished');
+select is(
+  public.pay_bill('aaaaaaaa-0000-0000-0000-000000000002', '2026-11-01', '2026-11-01', 50000, now(), '[]')->>'result',
+  'ended', 'it can''t be paid twice');
 
 -- ── debts ───────────────────────────────────────────────────────────────────
 select public.add_debt('Tobi', null, 'i_owe', 10000, 'Rent top-up', '2026-10-20', true, now()) as tobi \gset

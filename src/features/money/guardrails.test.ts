@@ -11,6 +11,8 @@ import {
   monthlyEquivalent,
   nextDue,
   paidRecently,
+  trialDecisionDay,
+  yearlyEquivalent,
 } from "./guardrails";
 
 describe("caps", () => {
@@ -128,5 +130,40 @@ describe("paidRecently", () => {
     expect(paidRecently("week", daysAgo(2), now)).toBe(true);
     expect(paidRecently("week", daysAgo(4), now)).toBe(false);
     expect(paidRecently("year", daysAgo(100), now)).toBe(true);
+  });
+});
+
+describe("one-off payments", () => {
+  test("have no next date: paying closes them", () => {
+    expect(nextDue("once", "2026-11-01", "2026-11-01")).toBe("2026-11-01");
+  });
+  test("aren't a monthly or yearly cost", () => {
+    expect(monthlyEquivalent(50000, "once")).toBe(0);
+    expect(yearlyEquivalent(50000, "once")).toBe(0);
+  });
+});
+
+describe("yearlyEquivalent", () => {
+  test.each([
+    [4500, "month", 54000],
+    [1000, "week", 52000],
+    [20000, "year", 20000],
+  ] as const)("%d %s → %d a year", (amount, every, yearly) => {
+    expect(yearlyEquivalent(amount, every)).toBe(yearly);
+  });
+});
+
+describe("trialDecisionDay", () => {
+  test("two days before the trial ends", () => {
+    expect(trialDecisionDay("2026-10-20", "2026-10-08")).toBe("2026-10-18");
+  });
+  test("set up with less than two days to go: today", () => {
+    expect(trialDecisionDay("2026-10-09", "2026-10-08")).toBe("2026-10-08");
+  });
+  test("ends today: still today", () => {
+    expect(trialDecisionDay("2026-10-08", "2026-10-08")).toBe("2026-10-08");
+  });
+  test("already over: nothing to decide", () => {
+    expect(trialDecisionDay("2026-10-07", "2026-10-08")).toBeNull();
   });
 });

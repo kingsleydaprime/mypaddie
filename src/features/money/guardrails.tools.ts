@@ -49,24 +49,28 @@ export function registerGuardrailTools(server: McpServer) {
   server.registerTool(
     "add_bill",
     {
-      title: "Add recurring bill",
+      title: "Add bill or payment due",
       description:
-        "A bill that comes round: data, rent, a subscription, school fees. `every` week, month or year from `first_due` " +
-        "(a bill on the 31st lands on the last day of shorter months). Each due date becomes a 'Pay: …' task with " +
-        "reminders; pay it with pay_bill. Tag 'need' (default) or 'want' — a subscription they could drop is a want. " +
+        "Something to pay: a bill that comes round (data, rent, a subscription, school fees) — `every` week, month or " +
+        "year from `first_due` (a bill on the 31st lands on the last day of shorter months) — or a one-off payment due " +
+        "on a date (`every: once`: a course fee, a deposit), which is finished once paid. Each due date becomes a " +
+        "'Pay: …' task with reminders; pay it with pay_bill. Tag 'need' (default) or 'want' — a subscription they could " +
+        "drop is a want, and its Pay task asks whether it's still worth it. On a free trial, pass `trial_ends_on` (and " +
+        "first_due can be left out: the first charge is due then): a must-do 'keep or cancel?' task comes 2 days before. " +
         "Link item_id when it's the bill behind a need from list_items.",
       inputSchema: z.object({
         title: z.string().trim().min(1).max(100),
         amount,
-        every: z.enum(["week", "month", "year"]),
-        first_due: date.describe("YYYY-MM-DD, the next date it's due"),
+        every: z.enum(["once", "week", "month", "year"]),
+        first_due: date.optional().describe("YYYY-MM-DD, the next date it's due. Needed unless trial_ends_on is given"),
+        trial_ends_on: date.optional().describe("YYYY-MM-DD, a free trial's last day (subscriptions only)"),
         category: category.optional().describe("Defaults to the title"),
         tag: z.enum(["need", "want"]).optional(),
         item_id: z.uuid().optional(),
       }),
     },
-    run("add_bill", async (a: { title: string; amount: number; every: "week" | "month" | "year"; first_due: string; category?: string; tag?: "need" | "want"; item_id?: string }, ctx, now) => ({
-      ...(await addBill(dbFrom(ctx), { title: a.title, amount: a.amount, every: a.every, firstDue: a.first_due, category: a.category, tag: a.tag, itemId: a.item_id }, now)),
+    run("add_bill", async (a: { title: string; amount: number; every: "once" | "week" | "month" | "year"; first_due?: string; trial_ends_on?: string; category?: string; tag?: "need" | "want"; item_id?: string }, ctx, now) => ({
+      ...(await addBill(dbFrom(ctx), { title: a.title, amount: a.amount, every: a.every, firstDue: a.first_due, trialEndsOn: a.trial_ends_on, category: a.category, tag: a.tag, itemId: a.item_id }, now)),
     })),
   );
 
@@ -79,7 +83,9 @@ export function registerGuardrailTools(server: McpServer) {
         "the next due date. Pass `amount` if it cost something different this time. Paying the same due date twice " +
         "pays once. If it was paid in the last half-period the result is 'recently_paid' and nothing happens: it's " +
           "probably a repeat — only if they really are paying the next one early, call again with ahead=true. If it's " +
-          "overdue by more than one period, each call pays the oldest.",
+          "overdue by more than one period, each call pays the oldest. A one-off comes back `finished`. A want " +
+          "subscription comes back with `checkIn` (what it costs a year): ask once, lightly, whether it's still worth " +
+          "it — if not, update_bill status ended once they've cancelled with the provider.",
       inputSchema: z.object({ bill: z.string().trim().min(1), amount: amount.optional(), paid_on: date.optional(), ahead: z.boolean().optional() }),
     },
     run("pay_bill", async (a: { bill: string; amount?: number; paid_on?: string; ahead?: boolean }, ctx, now) => ({ ...(await payBill(dbFrom(ctx), a.bill, { amount: a.amount, paidOn: a.paid_on, ahead: a.ahead }, now)) })),
@@ -92,22 +98,24 @@ export function registerGuardrailTools(server: McpServer) {
       description:
         "Change a bill: amount (a price rise), title, category, tag, how often, or `next_due` (moves the day it repeats " +
         "on too). `skip: true` = not paying this one (a month off): moves on without logging money. `status` paused " +
-        "(stops reminders, keeps it), active, or ended (cancelled the subscription — a win worth naming).",
+        "(stops reminders, keeps it), active, or ended (cancelled the subscription — a win worth naming). " +
+        "`trial_ends_on` sets or (null) clears a free trial; ending a bill on trial also clears its 'keep or cancel?' task.",
       inputSchema: z.object({
         bill: z.string().trim().min(1),
         title: z.string().trim().min(1).max(100).optional(),
         amount: amount.optional(),
         category: category.optional(),
         tag: z.enum(["need", "want"]).optional(),
-        every: z.enum(["week", "month", "year"]).optional(),
+        every: z.enum(["once", "week", "month", "year"]).optional(),
         next_due: date.optional(),
+        trial_ends_on: date.nullable().optional(),
         status: z.enum(["active", "paused", "ended"]).optional(),
         skip: z.boolean().optional(),
       }),
     },
-    run("update_bill", async (a: { bill: string; title?: string; amount?: number; category?: string; tag?: "need" | "want"; every?: "week" | "month" | "year"; next_due?: string; status?: "active" | "paused" | "ended"; skip?: boolean }, ctx, now) => {
-      const { bill, next_due, ...rest } = a;
-      return { ...(await updateBill(dbFrom(ctx), bill, { ...rest, nextDue: next_due }, now)) };
+    run("update_bill", async (a: { bill: string; title?: string; amount?: number; category?: string; tag?: "need" | "want"; every?: "once" | "week" | "month" | "year"; next_due?: string; trial_ends_on?: string | null; status?: "active" | "paused" | "ended"; skip?: boolean }, ctx, now) => {
+      const { bill, next_due, trial_ends_on, ...rest } = a;
+      return { ...(await updateBill(dbFrom(ctx), bill, { ...rest, nextDue: next_due, trialEndsOn: trial_ends_on }, now)) };
     }),
   );
 
@@ -115,7 +123,10 @@ export function registerGuardrailTools(server: McpServer) {
     "list_bills",
     {
       title: "Bills",
-      description: "Their bills with next due dates, what's due in the next 7 days (overdue marked), and what bills cost a month all together.",
+      description:
+        "Their bills and payments due, with next due dates; what's due in the next 7 days (overdue marked); what " +
+        "repeating bills cost a month; their subscriptions (wants that repeat) with the monthly and yearly total; " +
+        "one-off payments still to make; and free trials still running, with when they end.",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },

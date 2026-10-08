@@ -58,13 +58,13 @@ isOneToOne: false
                   ]
                 },"bills": {
                   Row: {
-                    "amount": number,"anchor_on": string,"category": string,"created_at": string,"every": string,"id": string,"item_id": string | null,"last_paid_at": string | null,"next_due": string,"status": string,"tag": Database["public"]['Enums']["money_tag"],"task_id": string | null,"title": string,"user_id": string
+                    "amount": number,"anchor_on": string,"category": string,"created_at": string,"every": string,"id": string,"item_id": string | null,"last_paid_at": string | null,"next_due": string,"status": string,"tag": Database["public"]['Enums']["money_tag"],"task_id": string | null,"title": string,"trial_ends_on": string | null,"trial_task_id": string | null,"user_id": string
                   }
                   Insert: {
-                    "amount": number,"anchor_on": string,"category": string,"created_at"?: string,"every": string,"id"?: string,"item_id"?: string | null,"last_paid_at"?: string | null,"next_due": string,"status"?: string,"tag"?: Database["public"]['Enums']["money_tag"],"task_id"?: string | null,"title": string,"user_id"?: string
+                    "amount": number,"anchor_on": string,"category": string,"created_at"?: string,"every": string,"id"?: string,"item_id"?: string | null,"last_paid_at"?: string | null,"next_due": string,"status"?: string,"tag"?: Database["public"]['Enums']["money_tag"],"task_id"?: string | null,"title": string,"trial_ends_on"?: string | null,"trial_task_id"?: string | null,"user_id"?: string
                   }
                   Update: {
-                    "amount"?: number,"anchor_on"?: string,"category"?: string,"created_at"?: string,"every"?: string,"id"?: string,"item_id"?: string | null,"last_paid_at"?: string | null,"next_due"?: string,"status"?: string,"tag"?: Database["public"]['Enums']["money_tag"],"task_id"?: string | null,"title"?: string,"user_id"?: string
+                    "amount"?: number,"anchor_on"?: string,"category"?: string,"created_at"?: string,"every"?: string,"id"?: string,"item_id"?: string | null,"last_paid_at"?: string | null,"next_due"?: string,"status"?: string,"tag"?: Database["public"]['Enums']["money_tag"],"task_id"?: string | null,"title"?: string,"trial_ends_on"?: string | null,"trial_task_id"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -76,6 +76,12 @@ isOneToOne: false
     },{
       foreignKeyName: "bills_task_id_user_id_fkey"
       columns: ["task_id","user_id"]
+isOneToOne: false
+      referencedRelation: "tasks"
+      referencedColumns: ["id","user_id"]
+    },{
+      foreignKeyName: "bills_trial_task_id_user_id_fkey"
+      columns: ["trial_task_id","user_id"]
 isOneToOne: false
       referencedRelation: "tasks"
       referencedColumns: ["id","user_id"]

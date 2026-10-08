@@ -1441,3 +1441,29 @@ pile of any-time tasks. The usual risk with levels, everything drifting to
 default is normal, and Paddie only sets a level when you say something
 matters more or less. It's a field on add_task and update_task (like must-do
 and self-care), not a tool of its own.
+
+### Talking to Paddie in quiet hours is the "you're awake" signal
+A bedtime nudge needs to know you're awake, and the app can't tell on its own.
+But talking to Paddie, or opening the app, during your quiet hours means you
+are. So every tool reply carries `lateNight` (the time, when quiet hours
+started, when you wake, minutes of sleep left) while you're inside your quiet
+hours, and Paddie's instructions say: help briefly, then tell you to sleep,
+once per chat, never refusing and never above something urgent. Today shows
+the same nudge when it's opened then. Considered: a push at bedtime. A push
+can't know whether you're already asleep, and would wake you if you were.
+
+### Bills cover one-offs, free trials and subscription check-ins
+Subscriptions were already bills (repeating, need or want, pause, end). The
+gaps were filled inside bills rather than with new tables:
+- **One-off payments** are bills `every: once`: one Pay task, and paying
+  closes the bill (in `pay_bill`, so it can't be paid twice). They don't
+  count toward the monthly total.
+- **Free trials** set `trial_ends_on`. The first charge is due that day, and
+  a must-do "keep or cancel?" task comes 2 days before. Paying, pausing or
+  ending the bill clears it.
+- **Check-ins:** a want that repeats is a subscription you could drop. Its Pay
+  task asks "still using it?" with the yearly cost, `pay_bill` hands Paddie a
+  `checkIn` to ask once, and the bills list shows subscriptions' monthly and
+  yearly totals.
+- **In the app:** Money shows what's due this week and trials ending, and the
+  bills page can pause, resume and end a bill, and add one-offs and trials.

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { parseAmount } from "@/shared/format";
 import { requireDb } from "@/shared/supabase/session";
-import { addBill, addDebt, payBill, payDebt, setCap } from "./guardrails.repo";
+import { addBill, addDebt, payBill, payDebt, setCap, updateBill } from "./guardrails.repo";
 
 const PAGE = "/app/money/limits";
 const money = z.string().transform((v) => parseAmount(v)).pipe(z.number().int().positive("Enter an amount"));
@@ -35,15 +35,22 @@ export async function addBillAction(form: FormData) {
     .object({
       title: z.string().trim().min(1, "Name the bill"),
       amount: money,
-      every: z.enum(["week", "month", "year"]),
-      first_due: z.iso.date("Pick the next due date"),
+      every: z.enum(["once", "week", "month", "year"]),
+      first_due: optionalText.pipe(z.iso.date().nullable()),
+      trial_ends_on: optionalText.pipe(z.iso.date().nullable()),
       tag: z.enum(["need", "want"]),
       category: optionalText,
     })
     .safeParse(Object.fromEntries(form));
   if (!parsed.success) back(first(parsed.error));
   const v = parsed.data;
-  const res = await addBill(await requireDb(PAGE), { title: v.title, amount: v.amount, every: v.every, firstDue: v.first_due, tag: v.tag, category: v.category ?? undefined }, new Date());
+  if (!v.first_due && !v.trial_ends_on) back("Pick the date it's due (or when the free trial ends)");
+  if (v.trial_ends_on && v.every === "once") back("A free trial is for something that repeats");
+  const res = await addBill(
+    await requireDb(PAGE),
+    { title: v.title, amount: v.amount, every: v.every, firstDue: v.first_due ?? undefined, trialEndsOn: v.trial_ends_on, tag: v.tag, category: v.category ?? undefined },
+    new Date(),
+  );
   back(res.result === "exists" ? `You already have a bill called ${v.title}` : undefined);
 }
 
@@ -52,6 +59,13 @@ export async function payBillAction(form: FormData) {
   // forDue: the date the button showed, so a double tap can't pay next month's.
   const res = await payBill(await requireDb(PAGE), v.id, { forDue: v.due }, new Date());
   back(res.result === "paid" ? undefined : res.result === "already_paid" ? "Already paid" : "Couldn't pay that one");
+}
+
+/** Pause, resume, or end a bill (cancelled the subscription, or don't owe it any more). */
+export async function setBillStatusAction(form: FormData) {
+  const v = z.object({ id: z.uuid(), status: z.enum(["active", "paused", "ended"]) }).parse(Object.fromEntries(form));
+  const res = await updateBill(await requireDb(PAGE), v.id, { status: v.status }, new Date());
+  back(res.result === "not_found" ? "Couldn't find that one" : undefined);
 }
 
 export async function addDebtAction(form: FormData) {

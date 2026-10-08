@@ -2,7 +2,9 @@ import { loadOpenPastNeeds } from "@/features/tasks/tasks.repo";
 import { isIgnoredNeed } from "@/features/xp/xp";
 import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
-import { dayKey, withinLastDays } from "@/shared/time";
+import { dayKey, localTimeOf, withinLastDays } from "@/shared/time";
+import { lateNight } from "@/features/settings/schedule";
+import { loadSchedule } from "@/features/settings/settings.repo";
 import { computeMode, type ModeOverride, type ModeResult } from "./mode";
 
 const OVERRIDE_KEY = "mode_override";
@@ -53,7 +55,13 @@ export async function loadMode(db: Db, now: Date, config = currentConfig()): Pro
   );
 }
 
-/** Every tool reply carries the current mode, so the AI always knows how firm to be. */
+/**
+ * Every tool reply carries the current mode, so the AI always knows how firm
+ * to be — and, if they're talking to Paddie during their quiet hours,
+ * `lateNight`: they're awake when they meant to be asleep.
+ */
 export async function withMode<T extends Record<string, unknown>>(db: Db, now: Date, data: T) {
-  return { ...data, mode: await loadMode(db, now) };
+  const [mode, schedule] = await Promise.all([loadMode(db, now), loadSchedule(db)]);
+  const late = lateNight(schedule, localTimeOf(now, currentConfig().timeZone));
+  return { ...data, mode, ...(late ? { lateNight: late } : {}) };
 }

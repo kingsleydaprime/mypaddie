@@ -4,6 +4,7 @@ import { formatMoney } from "@/shared/format";
 import type { Db } from "@/shared/supabase/token-client";
 import { planDeficit } from "../deficit";
 import { loadBalance, loadBudget, type BucketName } from "../money.repo";
+import { loadBills } from "../guardrails.repo";
 import { purchaseInterestAction } from "../money.history.actions";
 import { BalanceCard } from "./balance-card";
 import { QuickLog } from "./quick-log";
@@ -21,11 +22,12 @@ const VERDICT = { yes: { label: "Yes", cls: "text-green" }, wait_24h: { label: "
 
 export async function MoneyScreen({ db, addMoney = false }: { db: Db; addMoney?: boolean }) {
   const now = new Date();
-  const [budget, recent, checks, { balance }] = await Promise.all([
+  const [budget, recent, checks, { balance }, bills] = await Promise.all([
     loadBudget(db, now),
     db.from("transactions").select("id, amount, direction, category, tag, note, at").is("voided_at", null).order("at", { ascending: false }).limit(6),
     db.from("purchase_checks").select("id, item, price, verdict, decided_at, interest").order("decided_at", { ascending: false }).limit(8),
     loadBalance(db),
+    loadBills(db, now),
   ]);
   // Not-interested checks sink to the bottom, greyed — kept, not hidden.
   const sortedChecks = [...(checks.data ?? [])].sort((a, b) => Number(a.interest === "not_interested") - Number(b.interest === "not_interested"));
@@ -36,12 +38,37 @@ export async function MoneyScreen({ db, addMoney = false }: { db: Db; addMoney?:
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Money</h1>
         <div className="flex gap-2">
-          <Link href="/app/money/limits" className="rounded-xl border border-line px-4 py-2 text-sm font-medium">Bills &amp; caps ›</Link>
+          <Link href="/app/money/limits" className="rounded-xl border border-line px-4 py-2 text-sm font-medium">Bills ›</Link>
           <Link href="/app/pantry" className="rounded-xl border border-line px-4 py-2 text-sm font-medium">Pantry ›</Link>
         </div>
       </header>
 
       <BalanceCard balance={balance} currency={currentConfig().currency} />
+
+      {/* A trial's first charge is its end date: shown once, as the trial. */}
+      {(bills.dueSoon.some((b) => !b.trialEndsOn) || bills.trials.length > 0) && (
+        <Link href="/app/money/limits" className="block rounded-2xl border border-line bg-surface p-4">
+          <p className="flex items-baseline justify-between font-semibold">
+            To pay this week <span className="text-sm font-medium text-gold">Bills ›</span>
+          </p>
+          <ul className="mt-2 flex flex-col gap-1 text-sm">
+            {bills.dueSoon.filter((b) => !b.trialEndsOn).map((b) => (
+              <li key={b.id} className="flex justify-between gap-3">
+                <span className="truncate">{b.title}</span>
+                <span className={`shrink-0 ${b.overdue ? "text-red" : "text-muted"}`}>
+                  {formatMoney(b.amount)} · {b.overdue ? "overdue" : new Date(`${b.nextDue}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric" })}
+                </span>
+              </li>
+            ))}
+            {bills.trials.map((t) => (
+              <li key={t.title} className="flex justify-between gap-3">
+                <span className="truncate">{t.title} <span className="text-gold">· free trial</span></span>
+                <span className="shrink-0 text-muted">ends {new Date(`${t.endsOn}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+              </li>
+            ))}
+          </ul>
+        </Link>
+      )}
 
       <section className="rounded-2xl border border-line bg-surface p-5">
         {s.stage === "audit" ? (

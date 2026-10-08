@@ -62,7 +62,8 @@ export function capFlag(before: CapStatus | null, amount: number): CapFlag | nul
 
 // ─── Recurring bills ────────────────────────────────────────────────────────
 
-export type BillEvery = "week" | "month" | "year";
+/** `once`: a payment due on one date (a course fee, a deposit); paying it finishes it. */
+export type BillEvery = "once" | "week" | "month" | "year";
 
 const daysInMonth = (year: number, month1: number) => new Date(Date.UTC(year, month1, 0)).getUTCDate();
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -78,6 +79,8 @@ function clampedDay(year: number, month1: number, day: number): string {
  * back on the 31st in March, instead of drifting to the 28th for good.
  */
 export function nextDue(every: BillEvery, anchor: string, due: string): string {
+  // A one-off has no next date; paying it closes it, so its date just stays.
+  if (every === "once") return due;
   if (every === "week") return addDays(due, 7);
   const anchorDay = Number(anchor.slice(8, 10));
   const year = Number(due.slice(0, 4));
@@ -87,7 +90,7 @@ export function nextDue(every: BillEvery, anchor: string, due: string): string {
 }
 
 /** Half a period: a second payment inside it is almost certainly a repeat, not next month's bill. */
-const REPEAT_WINDOW_DAYS: Record<BillEvery, number> = { week: 3, month: 14, year: 182 };
+const REPEAT_WINDOW_DAYS: Record<BillEvery, number> = { once: 0, week: 3, month: 14, year: 182 };
 
 /**
  * Was this bill paid so recently that paying again is likely a double tap or
@@ -98,11 +101,28 @@ export function paidRecently(every: BillEvery, lastPaidAt: Date | null, now: Dat
   return now.getTime() - lastPaidAt.getTime() < REPEAT_WINDOW_DAYS[every] * 86_400_000;
 }
 
-/** Roughly what a bill costs per month, for "your bills come to X a month". */
+/** Roughly what a bill costs per month, for "your bills come to X a month". A one-off isn't a monthly cost. */
 export function monthlyEquivalent(amount: number, every: BillEvery): number {
+  if (every === "once") return 0;
   if (every === "week") return Math.round((amount * 52) / 12);
   if (every === "year") return Math.round(amount / 12);
   return amount;
+}
+
+/** What a repeating bill costs over a year — the number that makes a subscription worth questioning. */
+export function yearlyEquivalent(amount: number, every: BillEvery): number {
+  if (every === "once") return 0;
+  return every === "week" ? amount * 52 : every === "month" ? amount * 12 : amount;
+}
+
+/** How many days before a free trial ends to ask "keep or cancel?". */
+export const TRIAL_WARNING_DAYS = 2;
+
+/** The day to decide on a free trial: a couple of days before it ends, or today if that's already passed. Null once it's ended. */
+export function trialDecisionDay(trialEndsOn: string, today: string): string | null {
+  if (trialEndsOn < today) return null;
+  const ask = addDays(trialEndsOn, -TRIAL_WARNING_DAYS);
+  return ask < today ? today : ask;
 }
 
 export interface BillForDue {

@@ -101,7 +101,10 @@ const handler = createMcpHandler(
       "replaces the instruction; drop the jokes entirely if they're in real distress. Every tool result includes " +
       "`mode` (curious, strict, soft, strictest, softest) with the facts behind it — set your tone from it. get_today also " +
       "returns `becoming`, their 'Who I'm becoming' profile: praise choices that fit it, push back on ones that don't, and " +
-      "never debate whether it's the right one. They can ask you to edit it (update_identity), or change their name, " +
+      "never debate whether it's the right one. If a result has `lateNight`, they're talking to you during their own " +
+      "quiet hours — awake when they meant to be asleep: help with what they asked, briefly, then tell them to sleep " +
+      "(say the time and how much sleep is left before `wakeAt`). Once per chat; after that, at most a short line at the " +
+      "end, and never refuse to help. Something urgent or real distress comes first. They can ask you to edit it (update_identity), or change their name, " +
       "time zone, currency or voice (update_profile). Money is whole units of their currency. MyPaddie has tools for a " +
       "lot more than tasks — courses, timetables and study plans, people and who to reach out to, notes about themselves " +
       "(patterns, triggers, habits, what they're healing from), their library and favourite things, their own lists " +
