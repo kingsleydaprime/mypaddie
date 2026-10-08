@@ -146,11 +146,11 @@ export function registerTaskTools(server: McpServer) {
         "applies to that day and every later day. action='cancel' skips just this one (no XP penalty — a " +
         "deliberate decision isn't ignoring it). action='stop' ends a recurring habit entirely. Done tasks can't " +
         "be changed. Pass due_time=null to make it 'any time'. Moving or lengthening a task re-checks clashes and " +
-        "capacity. To change a recurring habit, pass `habit` (its series_id from list_habits) instead of task_id: " +
+        "capacity. To change any recurring task, pass `habit` (its series_id from list_habits) instead of task_id: " +
         "it edits from the habit's next day on, even if that day isn't in the schedule yet. " + REFUSALS,
       inputSchema: z.object({
         task_id: z.uuid().optional().describe("One task (from get_today). Pass this or `habit`, not both"),
-        habit: z.uuid().optional().describe("A recurring habit's series_id from list_habits; edits from its next day on"),
+        habit: z.uuid().optional().describe("Any recurring task's series_id from list_habits; edits from its next day on"),
         action: z.enum(["edit", "cancel", "stop"]).default("edit"),
         title: z.string().trim().min(1).optional(),
         base_xp: z.number().int().min(1).max(500).optional(),
@@ -240,10 +240,11 @@ export function registerTaskTools(server: McpServer) {
   server.registerTool(
     "list_habits",
     {
-      title: "Habits",
+      title: "Recurring tasks",
       description:
-        "Their recurring habits outside routines (routine steps: list_routines): series_id, title, how often, when " +
-        "next, and whether it's self-care. To change one, call update_task with habit=<series_id>; never guess ids.",
+        "Every recurring task — anything with a repeat rule, not only habits: weekly meetings, church, classes, " +
+        "workout days, daily habits. Routine steps are listed under list_routines instead. Gives series_id, title, " +
+        "how often, when next, and whether it's self-care. To change one, call update_task with habit=<series_id>; never guess ids.",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
