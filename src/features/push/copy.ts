@@ -133,6 +133,11 @@ function defaultCopy(n: Nudge): NotificationCopy {
         return { title: "In 10 minutes", body: `${task}${at}. Get in position.`, url: "/app", tag };
       case 6:
         return { title: "Starting now", body: `${task} has started. Are you in?`, url: "/app", tag };
+      case 7: {
+        // The event started and paused the task they were on.
+        const pausedTask = n.items?.[0] ?? "Your task";
+        return { title: `Paused: ${pausedTask}`, body: `${task} has started. Your time on it is kept — resume it after, or during if you need to.`, url: "/app", tag: `paused-${pausedTask}` };
+      }
       default:
         return { title: "In 30 minutes", body: `${task}${at}. Time to move.`, url: "/app", tag };
     }

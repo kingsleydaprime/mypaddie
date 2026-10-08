@@ -65,6 +65,13 @@ describe("copyFor", () => {
     });
   });
 
+  test("an event starting says which task it paused", () => {
+    expect(copyFor({ kind: "event", level: 7, title: "Supervisor call", items: ["Essay"], eventKind: "meeting" })).toMatchObject({
+      title: "Paused: Essay",
+      body: "Supervisor call has started. Your time on it is kept — resume it after, or during if you need to.",
+    });
+  });
+
   test("a custom note becomes the body; the title still says when", () => {
     expect(copyFor({ kind: "reminder", level: 3, title: "Bank visit", items: null, due: "11:00", note: "Bring the signed form" })).toMatchObject({
       title: "In 30 minutes",

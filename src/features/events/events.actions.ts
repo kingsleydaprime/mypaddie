@@ -6,6 +6,7 @@ import { requireDb } from "@/shared/supabase/session";
 import { addEvent } from "./add-event";
 import { EVENT_KINDS } from "./events";
 import { changeEvent } from "./events.repo";
+import { finishEvent, startEvent } from "./event-progress";
 
 const optional = z.string().trim().transform((v) => v || undefined);
 const schema = z.object({
@@ -34,5 +35,21 @@ export async function addEventAction(_prev: EventFormState, form: FormData): Pro
 export async function cancelEventAction(id: string) {
   const db = await requireDb("/app/events");
   await changeEvent(db, id, "cancel");
+  revalidatePath("/app/events");
+}
+
+/** Start an event early (its own time starts it anyway); a running task pauses. */
+export async function startEventAction(id: string) {
+  const db = await requireDb("/app/events");
+  await startEvent(db, id, new Date());
+  revalidatePath("/app/events");
+  revalidatePath("/app");
+}
+
+/** Finished it, or weren't at it — either way it stops being in progress. */
+export async function finishEventAction(id: string, how: "done" | "not_at_it") {
+  const db = await requireDb("/app");
+  await finishEvent(db, id, how);
+  revalidatePath("/app");
   revalidatePath("/app/events");
 }

@@ -9,6 +9,7 @@ import { dayKey, formatLocal, zonedInstant } from "@/shared/time";
 import { EVENT_KINDS, upcoming, type EventKind } from "./events";
 import { addEvent } from "./add-event";
 import { changeEvent, loadUpcomingEvents } from "./events.repo";
+import { finishEvent, startEvent } from "./event-progress";
 
 /** The current user's time zone (read per call, never at import). */
 const tz = () => currentConfig().timeZone;
@@ -127,6 +128,46 @@ export function registerEventTools(server: McpServer) {
         return ok(await withMode(db, new Date(), { ...(await changeEvent(db, args.id, args.action, changes)) }));
       } catch (error) {
         return toolError(`update_event failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "start_event",
+    {
+      title: "Start an event",
+      description:
+        "They're in a meeting or event before its time ('the call started early'). A timed one-off event is in " +
+        "progress by itself once its time comes, so this is only for starting early. It takes over: a task that's " +
+        "running is paused (time kept) — say so. All-day and yearly events (birthdays) can't be started.",
+      inputSchema: z.object({ event_id: z.uuid().describe("From list_events or get_today") }),
+    },
+    async ({ event_id }: { event_id: string }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        const now = new Date();
+        return ok(await withMode(db, now, { ...(await startEvent(db, event_id, now)) }));
+      } catch (error) {
+        return toolError(`start_event failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "complete_event",
+    {
+      title: "Finish an event",
+      description:
+        "A meeting or event is over and they were there: mark it done. not_at_it=true when they didn't go or left it " +
+        "(it's dropped, no judgement). Either way it stops being in progress. Not for birthdays or other yearly events.",
+      inputSchema: z.object({ event_id: z.uuid(), not_at_it: z.boolean().default(false) }),
+    },
+    async ({ event_id, not_at_it }: { event_id: string; not_at_it: boolean }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        return ok(await withMode(db, new Date(), { ...(await finishEvent(db, event_id, not_at_it ? "not_at_it" : "done")) }));
+      } catch (error) {
+        return toolError(`complete_event failed: ${(error as Error).message}`);
       }
     },
   );

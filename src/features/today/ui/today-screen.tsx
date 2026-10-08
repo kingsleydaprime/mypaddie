@@ -2,7 +2,9 @@ import { syncCalendar } from "@/features/calendar/calendar.repo";
 import { currentThemes, owedReviews } from "@/features/reviews/reviews.repo";
 import { checkAchievements } from "@/features/achievements/achievements.repo";
 import { applyBrokenPromises } from "@/features/promises/promises.repo";
-import { upcoming } from "@/features/events/events";
+import { inProgress, upcoming } from "@/features/events/events";
+import { finishEventAction } from "@/features/events/events.actions";
+import { SubmitButton } from "@/shared/ui/submit-button";
 import Link from "next/link";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
 import { loadLearning } from "@/features/learning/learning.repo";
@@ -81,6 +83,11 @@ export async function TodayScreen({ db }: { db: Db }) {
     .flatMap((l) => l.summary.reviewDue.map((t) => `${t.topic} (${l.skill.name})`));
   const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
   const todayEvents = soon.filter((e) => e.daysAway === 0);
+  // Happening right now (by its time, or started early).
+  const happening = events.flatMap((e) => {
+    const p = inProgress(e, now);
+    return p ? [{ id: e.id, title: e.title, until: p.until }] : [];
+  });
   const prepare = soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now");
   const focus = pickFocus(tasks, now);
   // Opening the app during quiet hours means they're up when they meant to be asleep.
@@ -118,6 +125,21 @@ export async function TodayScreen({ db }: { db: Db }) {
           </p>
         </div>
       )}
+
+      {happening.map((e) => (
+        <div key={e.id} className="flex items-center gap-3 rounded-2xl border border-gold bg-surface p-4" role="status">
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold">{e.title}</p>
+            <p className="text-sm"><span className="font-medium text-gold">Happening now</span> <span className="text-muted">· until {localTimeOf(e.until, tz())}</span></p>
+          </div>
+          <form action={finishEventAction.bind(null, e.id, "not_at_it")}>
+            <SubmitButton className="rounded-xl border border-line px-3 py-2.5 text-sm font-medium">Not at it</SubmitButton>
+          </form>
+          <form action={finishEventAction.bind(null, e.id, "done")}>
+            <SubmitButton className="rounded-xl bg-gold px-4 py-2.5 text-sm font-semibold text-on-gold">Done</SubmitButton>
+          </form>
+        </div>
+      ))}
 
       <StatusBar db={db} />
 

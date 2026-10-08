@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { blockOn, EVENT_KINDS, nextOccurrence, quadrant, selfCareByDefault, upcoming, type EventLike } from "./events";
+import { blockOn, EVENT_KINDS, eventEnds, inProgress, nextOccurrence, quadrant, selfCareByDefault, startable, upcoming, type EventLike } from "./events";
 
 const at = (local: string) => new Date(`${local}+01:00`);
 let n = 0;
@@ -104,5 +104,37 @@ describe("selfCareByDefault", () => {
   });
   test("meetings, appointments, deadlines and exams start as work", () => {
     for (const k of ["meeting", "appointment", "deadline", "exam", "other"] as const) expect(selfCareByDefault(k)).toBe(false);
+  });
+});
+
+describe("events in progress", () => {
+  const at = (local: string) => new Date(`${local}+01:00`);
+  const meeting = (over: Partial<EventLike & { startedAt: Date | null }> = {}): EventLike & { startedAt: Date | null } => ({
+    id: "m", title: "Supervisor call", kind: "meeting", startsAt: at("2026-10-06T20:00:00"), endsAt: at("2026-10-06T21:00:00"),
+    allDay: false, important: false, yearly: false, status: "upcoming", startedAt: null, ...over,
+  });
+
+  test("only a one-off with a time can be started", () => {
+    expect(startable(meeting())).toBe(true);
+    expect(startable(meeting({ allDay: true }))).toBe(false);
+    expect(startable(meeting({ yearly: true }))).toBe(false);
+    expect(startable(meeting({ status: "done" }))).toBe(false);
+  });
+  test("before its time: not yet", () => {
+    expect(inProgress(meeting(), at("2026-10-06T19:59:00"))).toBeNull();
+  });
+  test("once its time comes, it's in progress by itself, until it ends", () => {
+    expect(inProgress(meeting(), at("2026-10-06T20:00:00"))).toEqual({ since: at("2026-10-06T20:00:00"), until: at("2026-10-06T21:00:00") });
+    expect(inProgress(meeting(), at("2026-10-06T21:00:00"))).toBeNull();
+  });
+  test("started early: in progress from then", () => {
+    expect(inProgress(meeting({ startedAt: at("2026-10-06T19:50:00") }), at("2026-10-06T19:55:00"))).toMatchObject({ since: at("2026-10-06T19:50:00") });
+  });
+  test("with no end time, it's an hour", () => {
+    expect(eventEnds(meeting({ endsAt: null }))).toEqual(at("2026-10-06T21:00:00"));
+  });
+  test("done or cancelled: not in progress", () => {
+    expect(inProgress(meeting({ status: "done" }), at("2026-10-06T20:30:00"))).toBeNull();
+    expect(inProgress(meeting({ status: "cancelled" }), at("2026-10-06T20:30:00"))).toBeNull();
   });
 });

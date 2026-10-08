@@ -773,6 +773,8 @@ function checklistProblem(p: Extract<ReturnType<typeof planChecklist>, { ok: fal
 
 export type StartResult =
   | { result: "started" | "resumed"; title: string; spentMinutes: number }
+  /** Another task is in progress: one at a time — pause or finish it first. */
+  | { result: "busy"; title: string; running: { id: string; title: string; since: string } }
   | { result: "paused"; title: string; spentMinutes: number }
   | { result: "already_started"; title: string; startedAt: string }
   | { result: "not_started" | "not_open" | "not_found"; title?: string };
@@ -789,6 +791,13 @@ export async function startTask(db: Db, taskId: string, now: Date, pause = false
   if (t.status !== "pending") return { result: "not_open", title: t.title };
   if (!pause && t.started_at) return { result: "already_started", title: t.title, startedAt: t.started_at };
   if (pause && !t.started_at) return { result: "not_started", title: t.title };
+  // One task at a time. (An event in progress doesn't count: a task can run alongside a meeting.)
+  if (!pause) {
+    const { data: running, error: re } = await db
+      .from("tasks").select("id, title, started_at").eq("status", "pending").not("started_at", "is", null).neq("id", taskId).limit(1);
+    if (re) fail("checking what's in progress", re);
+    if (running[0]) return { result: "busy", title: t.title, running: { id: running[0].id, title: running[0].title, since: running[0].started_at! } };
+  }
   // Pausing banks the stretch just finished — unless it ran for half a day, which means the start was forgotten.
   const stretch = pause ? timeSpent(new Date(t.started_at!), now) : null;
   const spentMinutes = t.spent_minutes + (stretch?.believable ? stretch.minutes : 0);

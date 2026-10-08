@@ -298,13 +298,13 @@ isOneToOne: false
                   ]
                 },"events": {
                   Row: {
-                    "all_day": boolean,"commitment_id": string | null,"created_at": string,"ends_at": string | null,"external_uid": string | null,"id": string,"important": boolean,"is_self_care": boolean,"kind": string,"location": string | null,"notes": string | null,"person": string | null,"reminder_note": string | null,"source": string,"starts_at": string,"status": string,"title": string,"user_id": string,"yearly": boolean
+                    "all_day": boolean,"commitment_id": string | null,"created_at": string,"ends_at": string | null,"external_uid": string | null,"id": string,"important": boolean,"is_self_care": boolean,"kind": string,"location": string | null,"notes": string | null,"person": string | null,"reminder_note": string | null,"source": string,"started_at": string | null,"starts_at": string,"status": string,"title": string,"user_id": string,"yearly": boolean
                   }
                   Insert: {
-                    "all_day"?: boolean,"commitment_id"?: string | null,"created_at"?: string,"ends_at"?: string | null,"external_uid"?: string | null,"id"?: string,"important"?: boolean,"is_self_care"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"reminder_note"?: string | null,"source"?: string,"starts_at": string,"status"?: string,"title": string,"user_id"?: string,"yearly"?: boolean
+                    "all_day"?: boolean,"commitment_id"?: string | null,"created_at"?: string,"ends_at"?: string | null,"external_uid"?: string | null,"id"?: string,"important"?: boolean,"is_self_care"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"reminder_note"?: string | null,"source"?: string,"started_at"?: string | null,"starts_at": string,"status"?: string,"title": string,"user_id"?: string,"yearly"?: boolean
                   }
                   Update: {
-                    "all_day"?: boolean,"commitment_id"?: string | null,"created_at"?: string,"ends_at"?: string | null,"external_uid"?: string | null,"id"?: string,"important"?: boolean,"is_self_care"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"reminder_note"?: string | null,"source"?: string,"starts_at"?: string,"status"?: string,"title"?: string,"user_id"?: string,"yearly"?: boolean
+                    "all_day"?: boolean,"commitment_id"?: string | null,"created_at"?: string,"ends_at"?: string | null,"external_uid"?: string | null,"id"?: string,"important"?: boolean,"is_self_care"?: boolean,"kind"?: string,"location"?: string | null,"notes"?: string | null,"person"?: string | null,"reminder_note"?: string | null,"source"?: string,"started_at"?: string | null,"starts_at"?: string,"status"?: string,"title"?: string,"user_id"?: string,"yearly"?: boolean
                   }
                   Relationships: [
                     {

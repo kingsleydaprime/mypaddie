@@ -1500,3 +1500,22 @@ I take this on?" check (`check_load`, and the load in `get_today`) stays on
 the **next 7 days**. A new commitment repeats every week, so it's measured
 against a full week, and late in the week a "this week" window would be two
 days long and the verdict would swing with the weekday.
+
+### One thing at a time; an event starting takes over
+Events can be in progress: a timed one-off is in progress from its start
+(or when it was started early, `events.started_at`) until it ends, an hour if
+it has no end. The automatic part is worked out from the time, not stored.
+All-day and yearly events can't be started or finished, because marking a
+birthday done would end it for every year. Finishing is done, or "not at it"
+(cancelled, no judgement).
+
+Only one **task** can be in progress: starting another is refused with
+what's running (`busy`) until it's paused or finished. That's your "no
+multitasking" rule, so it refuses rather than switching for you. An **event**
+doesn't block a task: when an event's time comes, the running task is paused
+(time kept) and you get "Paused: Essay — Supervisor call has started". You
+may resume it during the meeting, and that sticks, since the pause happens
+once per event. The pause runs in the every-minute job
+(`private.pause_for_events`, called by `send_nudges` before its push check),
+so it happens with the app closed. The message follows quiet hours and
+holds like any push.

@@ -301,7 +301,10 @@ export function registerTaskTools(server: McpServer) {
       description:
         "Mark a task in progress when they say they're starting or getting back to it ('starting the report now', " +
         "'back on it'): its own reminders go quiet and Today puts it first. A paused task resumes, keeping its time so " +
-        "far. When they finish, complete_task marks it done and reports how long it really took. Other must-dos still nudge.",
+        "far. When they finish, complete_task marks it done and reports how long it really took. Other must-dos still nudge. " +
+        "One task at a time: if another is in progress the result is 'busy' with what's running — nothing changed; ask " +
+        "whether to pause it (pause_task) or finish it (complete_task) first. A meeting or event in progress doesn't " +
+        "block it: a task can run alongside one (an event starting pauses the running task, and they may resume it).",
       inputSchema: z.object({ task_id: z.uuid().describe("From get_today") }),
     },
     async ({ task_id }: { task_id: string }, ctx: ToolContext) => {

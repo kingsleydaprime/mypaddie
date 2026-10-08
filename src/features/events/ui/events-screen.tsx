@@ -3,8 +3,8 @@ import { loadSchedule } from "@/features/settings/settings.repo";
 import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { formatLocal } from "@/shared/time";
-import { cancelEventAction } from "../events.actions";
-import { upcoming, type Quadrant } from "../events";
+import { cancelEventAction, finishEventAction, startEventAction } from "../events.actions";
+import { inProgress, startable, upcoming, type Quadrant } from "../events";
 import { loadUpcomingEvents } from "../events.repo";
 import { AddEventForm } from "./add-event-form";
 import { SubmitButton } from "@/shared/ui/submit-button";
@@ -22,6 +22,7 @@ export async function EventsScreen({ db }: { db: Db }) {
   const now = new Date();
   const [events, schedule] = await Promise.all([loadUpcomingEvents(db), loadSchedule(db)]);
   const views = upcoming(events, now, 120, undefined, schedule.eventCloseDays);
+  const byId = new Map(events.map((e) => [e.id, e]));
 
   return (
     <div className="flex flex-col gap-5">
@@ -49,9 +50,24 @@ export async function EventsScreen({ db }: { db: Db }) {
                         {v.allDay ? formatLocal(v.at, tz()).slice(0, 10) : formatLocal(v.at, tz())} · {v.daysAway === 0 ? "today" : `in ${v.daysAway}d`}
                       </p>
                     </div>
-                    <form action={cancelEventAction.bind(null, v.id)}>
-                      <SubmitButton className="text-sm text-muted" aria-label={`Cancel ${v.title}`}>Cancel</SubmitButton>
-                    </form>
+                    <div className="flex shrink-0 items-center gap-3">
+                      {/* Today's timed one-offs: start early (its time starts it anyway), or mark done. */}
+                      {v.daysAway === 0 && startable(byId.get(v.id)!) && (
+                        <>
+                          {!inProgress(byId.get(v.id)!, now) && (
+                            <form action={startEventAction.bind(null, v.id)}>
+                              <SubmitButton className="text-sm font-semibold text-gold" aria-label={`Start ${v.title} now`}>Start</SubmitButton>
+                            </form>
+                          )}
+                          <form action={finishEventAction.bind(null, v.id, "done")}>
+                            <SubmitButton className="text-sm text-muted" aria-label={`Mark ${v.title} done`}>Done</SubmitButton>
+                          </form>
+                        </>
+                      )}
+                      <form action={cancelEventAction.bind(null, v.id)}>
+                        <SubmitButton className="text-sm text-muted" aria-label={`Cancel ${v.title}`}>Cancel</SubmitButton>
+                      </form>
+                    </div>
                   </li>
                 ))}
               </ul>

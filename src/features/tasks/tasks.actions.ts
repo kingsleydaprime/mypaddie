@@ -85,6 +85,7 @@ export async function startTaskAction(id: string, pause: boolean): Promise<TaskF
   revalidatePath(`/app/tasks/${id}`);
   if (r.result === "not_open") return { error: "It's not open any more." };
   if (r.result === "not_found") return { error: "Task not found." };
+  if (r.result === "busy") return { error: `“${r.running.title}” is in progress. One at a time: pause or finish it first.` };
   return { ok: r.result === "paused" || r.result === "not_started" ? "Paused." : "Started." };
 }
 

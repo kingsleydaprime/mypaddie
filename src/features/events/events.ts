@@ -94,6 +94,32 @@ export function upcoming(
     .sort((a, b) => a.at.getTime() - b.at.getTime());
 }
 
+/**
+ * Can this event be started and finished? Only a one-off with a time: an
+ * all-day event has no moment to start, and marking a yearly one (a birthday)
+ * done would end it for every year.
+ */
+export function startable(e: Pick<EventLike, "allDay" | "yearly" | "status">): boolean {
+  return e.status === "upcoming" && !e.allDay && !e.yearly;
+}
+
+/** When an event is over: its end, or an hour after it starts without one. */
+export function eventEnds(e: Pick<EventLike, "startsAt" | "endsAt">): Date {
+  return e.endsAt ?? new Date(e.startsAt.getTime() + DEFAULT_EVENT_MINUTES * 60_000);
+}
+
+/**
+ * Is it happening now? From its start — or from when they started it early —
+ * until it ends. Nothing is stored for the automatic part: once the time
+ * comes, it's in progress. Null if not (not started, over, or not startable).
+ */
+export function inProgress(e: EventLike & { startedAt?: Date | null }, now: Date): { since: Date; until: Date } | null {
+  if (!startable(e)) return null;
+  const since = e.startedAt && e.startedAt < e.startsAt ? e.startedAt : e.startsAt;
+  const until = eventEnds(e);
+  return since <= now && now < until ? { since, until } : null;
+}
+
 /** The time block an event takes on a given day — for clashes and capacity. All-day events take none. */
 export function blockOn(e: EventLike, day: string, config: EngineConfig = currentConfig()): { start: Date; minutes: number } | null {
   if (e.status !== "upcoming" || e.allDay) return null;

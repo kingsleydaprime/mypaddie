@@ -10,7 +10,7 @@ select set_config('search_path', current_setting('search_path') || ', ' || n.nsp
 create function pg_temp.mine(t timestamptz) returns setof jsonb language sql as $$
   select n from jsonb_array_elements(private.collect_nudges(t)) n where n->>'endpoint' like 'https://push.example/%'
 $$;
-select plan(44);
+select plan(49);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com');
 -- Monday 2026-10-05 rows: a daily non-negotiable at 07:00, a Tue/Thu habit, an ordinary task at 10:00.
@@ -158,6 +158,22 @@ select is((select count(*)::int from pg_temp.mine('2026-10-06 17:51+01') n where
 update public.tasks set status = 'done', done_at = '2026-10-06 18:05+01' where series_id = 'cccccccc-0000-0000-0000-000000000002' and occurs_on = '2026-10-06';
 select is((select count(*)::int from pg_temp.mine('2026-10-06 18:30+01') n where n->>'title' = 'Gym'),
   0, 'a done task is never nudged');
+
+-- A timed event starting pauses the task that's running, once; resuming it during the event sticks.
+insert into public.tasks (id, user_id, title, due_at, started_at, spent_minutes) values
+  ('aaaaaaaa-0000-0000-0000-000000000008', '11111111-1111-1111-1111-111111111111', 'Essay', '2026-10-06 23:59+01', '2026-10-06 19:30+01', 10);
+insert into public.events (id, user_id, title, kind, starts_at) values
+  ('eeeeeeee-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Supervisor call', 'meeting', '2026-10-06 20:00+01');
+create temp table paused1 as select n from jsonb_array_elements(private.pause_for_events('2026-10-06 20:01+01')) n where n->>'endpoint' like 'https://push.example/%';
+select is((select (n->>'level') || '/' || (n->>'title') || '/' || (n->'items'->>0) from paused1), '7/Supervisor call/Essay',
+  'the event starting pauses the running task, and says so');
+select is((select started_at from public.tasks where id = 'aaaaaaaa-0000-0000-0000-000000000008'), null,
+  'the task is paused');
+select is((select spent_minutes from public.tasks where id = 'aaaaaaaa-0000-0000-0000-000000000008'), 41, 'its time so far is kept (10 + 31)');
+update public.tasks set started_at = '2026-10-06 20:05+01' where id = 'aaaaaaaa-0000-0000-0000-000000000008';
+select is(jsonb_array_length(private.pause_for_events('2026-10-06 20:06+01')), 0, 'resumed during the event: left running');
+select is((select started_at from public.tasks where id = 'aaaaaaaa-0000-0000-0000-000000000008'), '2026-10-06 20:05+01'::timestamptz, 'still running');
+update public.tasks set status = 'done', done_at = '2026-10-06 20:30+01', started_at = null where id = 'aaaaaaaa-0000-0000-0000-000000000008';
 
 select is((select coalesce(jsonb_agg(m), '[]'::jsonb) from pg_temp.mine('2026-10-06 22:05+01') m), '[]'::jsonb, 'quiet hours: nothing after 22:00');
 

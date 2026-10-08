@@ -1,7 +1,7 @@
 import type { Db } from "@/shared/supabase/token-client";
 import { blockOn, selfCareByDefault, type EventKind, type EventLike } from "./events";
 
-const COLUMNS = "id, title, kind, starts_at, ends_at, all_day, important, yearly, status, person, location, notes, reminder_note, is_self_care";
+const COLUMNS = "id, title, kind, starts_at, ends_at, all_day, important, yearly, status, person, location, notes, reminder_note, is_self_care, started_at";
 
 type Row = {
   id: string;
@@ -18,9 +18,10 @@ type Row = {
   notes: string | null;
   reminder_note: string | null;
   is_self_care: boolean;
+  started_at: string | null;
 };
 
-export type EventRecord = EventLike & { person: string | null; location: string | null; notes: string | null; reminderNote: string | null; selfCare: boolean };
+export type EventRecord = EventLike & { person: string | null; location: string | null; notes: string | null; reminderNote: string | null; selfCare: boolean; startedAt: Date | null };
 
 const toEvent = (r: Row): EventRecord => ({
   id: r.id,
@@ -37,6 +38,7 @@ const toEvent = (r: Row): EventRecord => ({
   notes: r.notes,
   reminderNote: r.reminder_note,
   selfCare: r.is_self_care,
+  startedAt: r.started_at ? new Date(r.started_at) : null,
 });
 
 /** Every upcoming event (yearly ones keep their original date; occurrences are computed). */

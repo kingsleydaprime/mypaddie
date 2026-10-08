@@ -31,6 +31,14 @@ import { hasFeature } from "@/features/plans/plans";
 import { currentPlan, currentProfile } from "@/shared/user-context";
 import { dayKey, formatLocal } from "@/shared/time";
 import { pickFocus, type FocusItem } from "./focus";
+import { inProgress } from "@/features/events/events";
+
+/** Events happening now, from the ones already loaded. */
+const inProgressEvents = (events: Parameters<typeof inProgress>[0][], now: Date) =>
+  events.flatMap((e) => {
+    const p = inProgress(e, now);
+    return p ? [{ id: e.id, title: e.title, until: p.until }] : [];
+  });
 
 /** The current user's time zone (read per call, never at import). */
 const tz = () => currentConfig().timeZone;
@@ -139,6 +147,12 @@ export function registerTodayTools(server: McpServer) {
             .filter((l) => l.skill.status === "active")
             .flatMap((l) => l.summary.reviewDue.map((t) => ({ skill: l.skill.name, topic: t.topic, confidence: t.confidence })))
             .slice(0, 5),
+          // Happening right now: a meeting in progress (by its time, or started early). Finish it with
+          // complete_event (or not_at_it); an event starting paused any running task — say so if it did.
+          ...(() => {
+            const now2 = inProgressEvents(events, now);
+            return now2.length ? { happeningNow: now2.map((e) => ({ id: e.id, title: e.title, until: formatLocal(e.until, tz()) })) } : {};
+          })(),
           // Today's events, and important ones within the week (prepare for those).
           events: {
             today: soon.filter((e) => e.daysAway === 0).map((e) => ({ title: e.title, kind: e.kind, at: e.allDay ? "all day" : formatLocal(e.at, tz()) })),
