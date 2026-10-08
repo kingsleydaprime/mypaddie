@@ -10,7 +10,7 @@ select set_config('search_path', current_setting('search_path') || ', ' || n.nsp
 create function pg_temp.mine(t timestamptz) returns setof jsonb language sql as $$
   select n from jsonb_array_elements(private.collect_nudges(t)) n where n->>'endpoint' like 'https://push.example/%'
 $$;
-select plan(51);
+select plan(53);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com');
 -- Monday 2026-10-05 rows: a daily non-negotiable at 07:00, a Tue/Thu habit, an ordinary task at 10:00.
@@ -190,6 +190,23 @@ update public.tasks set started_at = '2026-10-06 20:05+01' where id = 'aaaaaaaa-
 select is(jsonb_array_length(private.pause_for_events('2026-10-06 20:06+01')), 0, 'resumed during the event: left running');
 select is((select started_at from public.tasks where id = 'aaaaaaaa-0000-0000-0000-000000000008'), '2026-10-06 20:05+01'::timestamptz, 'still running');
 update public.tasks set status = 'done', done_at = '2026-10-06 20:30+01', started_at = null where id = 'aaaaaaaa-0000-0000-0000-000000000008';
+
+-- On a full hold (deep work), the pause still sticks: the hold's clean-up of held messages mustn't erase the marker.
+insert into public.statuses (user_id, kind, started_at, ends_at) values
+  ('11111111-1111-1111-1111-111111111111', 'deep_work', '2026-10-06 20:30+01', '2026-10-06 21:30+01');
+insert into public.tasks (id, user_id, title, due_at, started_at) values
+  ('aaaaaaaa-0000-0000-0000-000000000011', '11111111-1111-1111-1111-111111111111', 'Draft', '2026-10-06 23:59+01', '2026-10-06 20:35+01');
+insert into public.events (id, user_id, title, kind, starts_at) values
+  ('eeeeeeee-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'Check-in call', 'meeting', '2026-10-06 21:00+01');
+select private.apply_holds(private.pause_for_events('2026-10-06 21:01+01'), '2026-10-06 21:01+01');
+update public.tasks set started_at = '2026-10-06 21:02+01' where id = 'aaaaaaaa-0000-0000-0000-000000000011';
+select private.apply_holds(private.pause_for_events('2026-10-06 21:03+01'), '2026-10-06 21:03+01');
+select is((select started_at from public.tasks where id = 'aaaaaaaa-0000-0000-0000-000000000011'), '2026-10-06 21:02+01'::timestamptz,
+  'resumed during the event while on a hold: still running');
+select is((select count(*)::int from private.nudges where event_id = 'eeeeeeee-0000-0000-0000-000000000002' and level = 7), 1,
+  'the pause was recorded once, and kept');
+delete from public.statuses where user_id = '11111111-1111-1111-1111-111111111111';
+update public.tasks set status = 'done', done_at = '2026-10-06 21:10+01', started_at = null where id = 'aaaaaaaa-0000-0000-0000-000000000011';
 
 select is((select coalesce(jsonb_agg(m), '[]'::jsonb) from pg_temp.mine('2026-10-06 22:05+01') m), '[]'::jsonb, 'quiet hours: nothing after 22:00');
 
