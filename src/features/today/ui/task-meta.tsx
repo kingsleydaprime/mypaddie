@@ -18,7 +18,7 @@ export function TaskMeta({ item, now }: { item: Pick<FocusItem, "forLabel" | "st
     item.startedAt && <span key="p" className="font-medium text-gold">In progress · {hm(soFar(item.spentMinutes, item.startedAt, now))}</span>,
     !item.startedAt && item.spentMinutes > 0 && <span key="z">Paused · {hm(item.spentMinutes)} so far</span>,
     item.steps && <span key="s">{item.steps.done}/{item.steps.total} steps</span>,
-    item.forLabel && <span key="f">for {item.forLabel}</span>,
+    item.forLabel && <span key="f">{item.forLabel}</span>,
   ].filter(Boolean);
   if (bits.length === 0) return null;
   return (

@@ -1519,3 +1519,17 @@ once per event. The pause runs in the every-minute job
 (`private.pause_for_events`, called by `send_nudges` before its push check),
 so it happens with the app closed. The message follows quiet hours and
 holds like any push.
+
+### Far-off timed tasks wait their turn
+Routine steps are must-dos, and Today ranked "must-dos still to come today"
+first however far off, so a 21:00 evening routine topped the morning. Now a
+task with a set time more than `showTimedWithin` minutes away (a setting:
+"Show timed tasks on top from", an hour by default, 0–12 hours) is **later**.
+It waits below everything that can be done now, in the usual order among
+itself, until it's close. Never later: anything started, any-time tasks
+(they have no time to wait for), and a routine already under way (a step
+done today). The morning brief's top three use the same setting.
+
+Labels: "any time" now says "any time before 22:00" (when quiet hours
+start), in the app and to Paddie. What a task is for shows as just the role
+("Engineer · US Ghana Chamber of Commerce"), without "for".

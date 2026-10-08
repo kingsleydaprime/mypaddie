@@ -10,7 +10,7 @@ select set_config('search_path', current_setting('search_path') || ', ' || n.nsp
 create function pg_temp.mine(t timestamptz) returns setof jsonb language sql as $$
   select n from jsonb_array_elements(private.collect_nudges(t)) n where n->>'endpoint' like 'https://push.example/%'
 $$;
-select plan(49);
+select plan(51);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com');
 -- Monday 2026-10-05 rows: a daily non-negotiable at 07:00, a Tue/Thu habit, an ordinary task at 10:00.
@@ -74,6 +74,22 @@ delete from private.nudges where kind = 'brief' and user_id = '11111111-1111-111
 select is((select n->'items' from pg_temp.mine('2026-10-06 08:25+01') n where n->>'kind' = 'brief'), '["Morning reading", "Gym", "Email the lecturer"]'::jsonb,
   'high priority comes before time, after must-dos');
 update public.tasks set priority = 'normal' where series_id = 'cccccccc-0000-0000-0000-000000000002' and occurs_on = '2026-10-06';
+-- An evening must-do doesn't lead the morning brief: hours away, it waits below the rest.
+insert into public.tasks (id, user_id, title, due_at, is_non_negotiable) values
+  ('aaaaaaaa-0000-0000-0000-000000000009', '11111111-1111-1111-1111-111111111111', 'Evening prayer', '2026-10-06 21:00+01', true),
+  ('aaaaaaaa-0000-0000-0000-000000000010', '11111111-1111-1111-1111-111111111111', 'Quick call', '2026-10-06 08:50+01', false);
+delete from private.nudges where kind = 'brief' and user_id = '11111111-1111-1111-1111-111111111111';
+select is((select n->'items' from pg_temp.mine('2026-10-06 08:26+01') n where n->>'kind' = 'brief'), '["Morning reading", "Quick call", "Evening prayer"]'::jsonb,
+  'a must-do hours away comes after what can be done now (an ordinary task in 24 minutes beats it)');
+-- With "show timed tasks from" at 12 hours (the most the app allows), a 19:00 must-do counts as now at 08:27, and leads again.
+update public.tasks set due_at = '2026-10-06 19:00+01' where id = 'aaaaaaaa-0000-0000-0000-000000000009';
+insert into public.settings (user_id, key, value) values ('11111111-1111-1111-1111-111111111111', 'schedule', '{"showTimedWithin": 720}')
+  on conflict (user_id, key) do update set value = public.settings.value || excluded.value;
+delete from private.nudges where kind = 'brief' and user_id = '11111111-1111-1111-1111-111111111111';
+select is((select n->'items' from pg_temp.mine('2026-10-06 08:27+01') n where n->>'kind' = 'brief'), '["Morning reading", "Evening prayer", "Quick call"]'::jsonb,
+  'their own window decides what counts as now');
+update public.settings set value = value - 'showTimedWithin' where user_id = '11111111-1111-1111-1111-111111111111' and key = 'schedule';
+delete from public.tasks where id in ('aaaaaaaa-0000-0000-0000-000000000009', 'aaaaaaaa-0000-0000-0000-000000000010');
 
 -- 09:50: the 10:00 email task is 10 minutes away → its 10-minute reminder.
 create temp table out_h as select pg_temp.mine('2026-10-06 09:50+01') as n;

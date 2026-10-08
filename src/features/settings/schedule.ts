@@ -31,6 +31,8 @@ export const scheduleSchema = z.object({
   closeAt: time,
   /** A must-do with no set time starts escalating at this time on its day. */
   anyTimeNudgeFrom: time,
+  /** Minutes before its time a timed task moves up into "now" on Today (before that it waits below what can be done now). */
+  showTimedWithin: z.number().int().min(0).max(720),
   /** Their week: Sunday–Saturday or Monday–Sunday. Weekly reviews, trends and "this week" follow it. */
   weekStart: z.enum(WEEK_STARTS),
   /** No phone for this many minutes after quiet hours end (0 = off). Nothing arrives then. */
@@ -62,6 +64,7 @@ export const DEFAULT_SCHEDULE: Schedule = {
   // The morning stays free; there's still the afternoon and evening to act.
   anyTimeNudgeFrom: "15:00",
   weekStart: "monday",
+  showTimedWithin: 60,
   phoneFreeMorning: 0,
   phoneFreeEvening: 0,
 };
@@ -77,6 +80,11 @@ export function isQuiet(t: string, s: Pick<Schedule, "quietStart" | "quietEnd">)
  */
 export function dayEndsAt(s: Pick<Schedule, "quietStart">): string {
   return s.quietStart >= "12:00" ? s.quietStart : "23:59";
+}
+
+/** "any time before 22:00" — any time means before quiet hours start (`dayEndsAt`); quiet hours after midnight leave the whole day. */
+export function anyTimeLabel(dayEnd: string): string {
+  return dayEnd === "23:59" ? "any time" : `any time before ${dayEnd}`;
 }
 
 /**

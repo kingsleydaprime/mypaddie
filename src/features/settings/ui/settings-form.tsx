@@ -42,6 +42,10 @@ export function SettingsForm({ schedule }: { schedule: Schedule }) {
         <Time name="closeAt" label="Close out the day at" value={schedule.closeAt} />
         <Time name="anyTimeNudgeFrom" label="Nudge any-time must-dos from" value={schedule.anyTimeNudgeFrom} />
         <label className="flex items-center justify-between gap-3 text-sm">
+          <span className="text-muted">Show timed tasks on top from (minutes before)</span>
+          <input type="number" name="showTimedWithin" min={0} max={720} step={15} defaultValue={schedule.showTimedWithin} required className={`${field} w-20`} />
+        </label>
+        <label className="flex items-center justify-between gap-3 text-sm">
           <span className="text-muted">My week starts on</span>
           <select name="weekStart" defaultValue={schedule.weekStart} className={field}>
             <option value="sunday">Sunday</option>

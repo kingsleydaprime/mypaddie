@@ -19,6 +19,7 @@ import { dayKey, localTimeOf } from "@/shared/time";
 import { pickFocus, type FocusItem } from "../focus";
 import { TaskButtons } from "./task-buttons";
 import { TaskMeta } from "./task-meta";
+import { anyTimeLabel, dayEndsAt } from "@/features/settings/schedule";
 import { StatusBar } from "@/features/status/ui/status-bar";
 import { loadCheckin } from "@/features/metrics/metrics.repo";
 import { CheckinForm } from "@/features/metrics/ui/checkin-form";
@@ -35,15 +36,15 @@ const NARRATION: Record<Mode, string> = {
   softest: "Easy day. One thing done is a win.",
 };
 
-function due(item: FocusItem, now: Date) {
-  if (!item.dueAt) return "any time";
+function due(item: FocusItem, now: Date, anyTime: string) {
+  if (!item.dueAt) return anyTime;
   // 23:59 is how "any time that day" is stored.
   const at = localTimeOf(item.dueAt, tz());
-  const time = at === "23:59" ? "any time" : at;
+  const time = at === "23:59" ? anyTime : at;
   return dayKey(item.dueAt, tz()) === dayKey(now, tz()) ? time : `yesterday ${time}`;
 }
 
-function Row({ item, now, big, details }: { item: FocusItem; now: Date; big?: boolean; details?: string | null }) {
+function Row({ item, now, big, details, anyTime }: { item: FocusItem; now: Date; big?: boolean; details?: string | null; anyTime: string }) {
   return (
     <li className={`rounded-2xl border border-line bg-surface ${big ? "p-4" : "px-4 py-3"}`}>
       <div className="min-w-0">
@@ -59,7 +60,7 @@ function Row({ item, now, big, details }: { item: FocusItem; now: Date; big?: bo
           <p className={`mt-0.5 whitespace-pre-line break-words text-sm text-muted ${big ? "line-clamp-2" : "line-clamp-1"}`}>{details}</p>
         )}
         <p className="mt-0.5 flex items-center gap-2 text-sm text-muted">
-          <span className={item.overdue ? "font-medium text-red" : ""}>{item.overdue ? `overdue · ${due(item, now)}` : due(item, now)}</span>
+          <span className={item.overdue ? "font-medium text-red" : ""}>{item.overdue ? `overdue · ${due(item, now, anyTime)}` : due(item, now, anyTime)}</span>
           {item.nonNegotiable && <span className="text-gold">· must</span>}
         </p>
       </div>
@@ -89,7 +90,8 @@ export async function TodayScreen({ db }: { db: Db }) {
     return p ? [{ id: e.id, title: e.title, until: p.until }] : [];
   });
   const prepare = soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now");
-  const focus = pickFocus(tasks, now);
+  const focus = pickFocus(tasks, now, 3, undefined, schedule.showTimedWithin);
+  const anyTime = anyTimeLabel(dayEndsAt(schedule));
   // Opening the app during quiet hours means they're up when they meant to be asleep.
   const late = lateNight(schedule, localTimeOf(now, tz()));
   const shownIds = [...focus.top, ...focus.rest].map((f) => f.id);
@@ -167,7 +169,7 @@ export async function TodayScreen({ db }: { db: Db }) {
       ) : (
         <ol className="flex flex-col gap-3">
           {focus.top.map((item) => (
-            <Row key={item.id} item={item} now={now} big details={details.get(item.id)} />
+            <Row key={item.id} item={item} now={now} big details={details.get(item.id)} anyTime={anyTime} />
           ))}
         </ol>
       )}
@@ -179,7 +181,7 @@ export async function TodayScreen({ db }: { db: Db }) {
           </summary>
           <ul className="mt-3 flex flex-col gap-2">
             {focus.rest.map((item) => (
-              <Row key={item.id} item={item} now={now} details={details.get(item.id)} />
+              <Row key={item.id} item={item} now={now} details={details.get(item.id)} anyTime={anyTime} />
             ))}
           </ul>
         </details>

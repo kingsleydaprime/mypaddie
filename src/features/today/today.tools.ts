@@ -16,7 +16,7 @@ import { loadSelfForAdvice } from "@/features/self/self.repo";
 import { applyBrokenPromises, loadPromisePicture } from "@/features/promises/promises.repo";
 import { loadActiveIdentity } from "@/features/identity/identity.repo";
 import { loadLearning } from "@/features/learning/learning.repo";
-import { activeDay } from "@/features/settings/schedule";
+import { activeDay, anyTimeLabel, dayEndsAt } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { loadMode } from "@/features/mode/mode.repo";
 import { loadMoneyStage } from "@/features/money/money.repo";
@@ -29,7 +29,7 @@ import { currentConfig } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { hasFeature } from "@/features/plans/plans";
 import { currentPlan, currentProfile } from "@/shared/user-context";
-import { dayKey, formatLocal } from "@/shared/time";
+import { dayKey, formatLocal, localTimeOf } from "@/shared/time";
 import { pickFocus, type FocusItem } from "./focus";
 import { inProgress } from "@/features/events/events";
 
@@ -43,10 +43,11 @@ const inProgressEvents = (events: Parameters<typeof inProgress>[0][], now: Date)
 /** The current user's time zone (read per call, never at import). */
 const tz = () => currentConfig().timeZone;
 
-const item = (i: FocusItem) => ({
+/** One task for Paddie. Any time reads as "any time before 22:00", never as 23:59. */
+const itemWith = (anyTime: string) => (i: FocusItem) => ({
   id: i.id,
   title: i.title,
-  due: i.dueAt ? formatLocal(i.dueAt, tz()) : null,
+  due: !i.dueAt ? anyTime : localTimeOf(i.dueAt, tz()) === "23:59" ? `${dayKey(i.dueAt, tz())} ${anyTime}` : formatLocal(i.dueAt, tz()),
   overdue: i.overdue,
   nonNegotiable: i.nonNegotiable,
   ...(i.forLabel ? { for: i.forLabel } : {}),
@@ -115,7 +116,8 @@ export function registerTodayTools(server: McpServer) {
         ]);
         const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
         const room = roomOn(dayKey(now, tz()), dayTasks, capacity, now, undefined, activeDay(schedule));
-        const focus = pickFocus(tasks, now);
+        const focus = pickFocus(tasks, now, 3, undefined, schedule.showTimedWithin);
+        const item = itemWith(anyTimeLabel(dayEndsAt(schedule)));
         // Details for the top three only: what they'd read when starting one.
         const { data: detailRows } = focus.top.length
           ? await db.from("tasks").select("id, details").in("id", focus.top.map((f) => f.id)).not("details", "is", null)

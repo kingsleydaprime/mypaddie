@@ -42,6 +42,9 @@ export interface FocusItem {
 
 const PRIORITY_ORDER: Record<Priority, number> = { high: 0, normal: 1, low: 2 };
 
+/** A task with a set time further off than this waits below what can be done now (an evening routine at 08:00). Their setting; this is the default. */
+export const SOON_MINUTES = 60;
+
 export interface Focus {
   /** The 3 things that matter right now. Do one. */
   top: FocusItem[];
@@ -57,6 +60,10 @@ export interface Focus {
  *   2. non-negotiables still to come today
  *   3. other needs, overdue then upcoming
  *   4. everything else, overdue then upcoming
+ * …except that anything with a set time more than `soonMinutes` away (their
+ * "show timed tasks from" setting, an hour by default) is "later":
+ * it waits below all of that (in the same order among itself) until it's
+ * close — unless it's started, or it's a routine they've already begun.
  * Within a group, priority first (high, normal, low), then overdue before
  * upcoming, then earliest due; undated tasks go last among their equals. So a
  * must-do still outranks a high-priority ordinary task.
@@ -67,6 +74,7 @@ export function pickFocus(
   now: Date,
   limit = 3,
   config: EngineConfig = currentConfig(),
+  soonMinutes: number = SOON_MINUTES,
 ): Focus {
   const today = dayKey(now, config.timeZone);
 
@@ -82,12 +90,23 @@ export function pickFocus(
     return deadline !== null && deadline.getTime() < now.getTime();
   };
 
+  // Routines with a step already done today are under way: they stay up, whatever the next step's time.
+  const begun = new Set(
+    tasks.filter((t) => t.routine && t.status === "done" && t.dueAt !== null && dayKey(t.dueAt, config.timeZone) === today).map((t) => t.routine!.id),
+  );
+  const isLater = (t: TaskForFocus) =>
+    !t.startedAt &&
+    !t.anyTimeEndsAt &&
+    t.dueAt !== null &&
+    t.dueAt.getTime() - now.getTime() > soonMinutes * 60_000 &&
+    !(t.routine && begun.has(t.routine.id));
+
   const rank = (t: TaskForFocus) => {
     // Whatever they've started comes first: it's what they're doing.
     if (t.startedAt) return -1;
     const group = t.isNonNegotiable ? 0 : t.tier === "need" ? 1 : 2;
     const priority = PRIORITY_ORDER[t.priority ?? "normal"];
-    return group * 6 + priority * 2 + (isOverdue(t) ? 0 : 1);
+    return (isLater(t) ? 100 : 0) + group * 6 + priority * 2 + (isOverdue(t) ? 0 : 1);
   };
 
   const sorted = [...open].sort(

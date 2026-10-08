@@ -22,6 +22,7 @@ export async function saveSettingsAction(_prev: SettingsState, form: FormData): 
     closeAt: get("closeAt"),
     anyTimeNudgeFrom: get("anyTimeNudgeFrom"),
     weekStart: get("weekStart") as "sunday" | "monday",
+    showTimedWithin: Number(get("showTimedWithin")),
     phoneFreeMorning: Number(get("phoneFreeMorning")),
     phoneFreeEvening: Number(get("phoneFreeEvening")),
   });

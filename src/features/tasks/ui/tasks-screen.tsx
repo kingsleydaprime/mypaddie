@@ -2,6 +2,8 @@ import Link from "next/link";
 import { pickFocus, type FocusItem } from "@/features/today/focus";
 import { TaskButtons } from "@/features/today/ui/task-buttons";
 import { TaskMeta } from "@/features/today/ui/task-meta";
+import { anyTimeLabel, dayEndsAt } from "@/features/settings/schedule";
+import { loadSchedule } from "@/features/settings/settings.repo";
 import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
 import { dayKey, localTimeOf } from "@/shared/time";
@@ -12,7 +14,7 @@ import { catchUp, loadTasksAroundToday } from "../tasks.repo";
 /** The current user's time zone (read per call, never at import). */
 const tz = () => currentConfig().timeZone;
 
-const when = (n: NextAt, today: string) => `${dayLabel(n.day, today)}${n.time ? ` · ${n.time}` : " · any time"}`;
+const when = (n: NextAt, today: string, anyTime: string) => `${dayLabel(n.day, today)} · ${n.time ?? anyTime}`;
 
 function Section({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
   return (
@@ -30,9 +32,9 @@ const Empty = ({ children }: { children: React.ReactNode }) => (
   <p className="rounded-2xl border border-dashed border-line px-4 py-3 text-sm text-muted">{children}</p>
 );
 
-function TodayRow({ item, now }: { item: FocusItem; now: Date }) {
+function TodayRow({ item, now, anyTime }: { item: FocusItem; now: Date; anyTime: string }) {
   const time = item.dueAt ? localTimeOf(item.dueAt, tz()) : null;
-  const label = !time || time === "23:59" ? "any time" : dayKey(item.dueAt!, tz()) === dayKey(now, tz()) ? time : `yesterday ${time}`;
+  const label = !time || time === "23:59" ? anyTime : dayKey(item.dueAt!, tz()) === dayKey(now, tz()) ? time : `yesterday ${time}`;
   return (
     <li className="rounded-2xl border border-line bg-surface px-4 py-3">
       <div className="min-w-0">
@@ -49,12 +51,12 @@ function TodayRow({ item, now }: { item: FocusItem; now: Date }) {
   );
 }
 
-function RoutineCard({ r, today }: { r: RoutineSummary; today: string }) {
+function RoutineCard({ r, today, anyTime }: { r: RoutineSummary; today: string; anyTime: string }) {
   let status: React.ReactNode;
   if (r.steps.length === 0) status = <span className="text-red">No steps yet — ask Paddie to add some.</span>;
   else if (r.today?.nextStep) status = <>Today · {r.today.done}/{r.today.total} done · next: <span className="text-text">{r.today.nextStep}</span></>;
-  else if (r.today && r.next) status = <>Done today · next: {when(r.next, today)}</>;
-  else if (r.next) status = <>Next: {when(r.next, today)}</>;
+  else if (r.today && r.next) status = <>Done today · next: {when(r.next, today, anyTime)}</>;
+  else if (r.next) status = <>Next: {when(r.next, today, anyTime)}</>;
   else status = r.today ? "Done today" : "Not scheduled";
   return (
     <li>
@@ -72,8 +74,9 @@ function RoutineCard({ r, today }: { r: RoutineSummary; today: string }) {
 export async function TasksScreen({ db }: { db: Db }) {
   const now = new Date();
   await catchUp(db, now);
-  const [around, overview] = await Promise.all([loadTasksAroundToday(db, now), loadTaskOverview(db, now)]);
-  const focus = pickFocus(around, now);
+  const [around, overview, schedule] = await Promise.all([loadTasksAroundToday(db, now), loadTaskOverview(db, now), loadSchedule(db)]);
+  const anyTime = anyTimeLabel(dayEndsAt(schedule));
+  const focus = pickFocus(around, now, 3, undefined, schedule.showTimedWithin);
   const open = [...focus.top, ...focus.rest];
   const today = dayKey(now, tz());
 
@@ -95,7 +98,7 @@ export async function TasksScreen({ db }: { db: Db }) {
           <Empty>Nothing open today.{focus.doneToday > 0 ? ` ${focus.doneToday} done.` : ""}</Empty>
         ) : (
           <ul className="flex flex-col gap-2">
-            {open.map((item) => <TodayRow key={item.id} item={item} now={now} />)}
+            {open.map((item) => <TodayRow key={item.id} item={item} now={now} anyTime={anyTime} />)}
           </ul>
         )}
         {focus.doneToday > 0 && open.length > 0 && (
@@ -108,7 +111,7 @@ export async function TasksScreen({ db }: { db: Db }) {
           <Empty>None yet. Try: &ldquo;my morning routine is pray, read, brush, bath — from 6am&rdquo;.</Empty>
         ) : (
           <ul className="flex flex-col gap-2">
-            {overview.routines.map((r) => <RoutineCard key={r.id} r={r} today={today} />)}
+            {overview.routines.map((r) => <RoutineCard key={r.id} r={r} today={today} anyTime={anyTime} />)}
           </ul>
         )}
       </Section>
@@ -122,7 +125,7 @@ export async function TasksScreen({ db }: { db: Db }) {
               const body = (
                 <>
                   <p className="font-semibold">{h.title}</p>
-                  <p className="mt-0.5 text-sm text-muted">{h.rule}{h.next ? ` · next ${when(h.next, today)}` : ""}</p>
+                  <p className="mt-0.5 text-sm text-muted">{h.rule}{h.next ? ` · next ${when(h.next, today, anyTime)}` : ""}</p>
                 </>
               );
               return (
@@ -154,9 +157,9 @@ export async function TasksScreen({ db }: { db: Db }) {
                       <Link href={`/app/tasks/${t.id}`} className="flex items-baseline justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
                         <span className="min-w-0">
                           <span className="block truncate font-semibold">{t.title}</span>
-                          {t.forLabel && <span className="block truncate text-sm text-muted">for {t.forLabel}</span>}
+                          {t.forLabel && <span className="block truncate text-sm text-muted">{t.forLabel}</span>}
                         </span>
-                        <span className="shrink-0 text-sm text-muted">{time === "23:59" ? "any time" : time}{t.nonNegotiable && <span className="text-gold"> · must</span>}</span>
+                        <span className="shrink-0 text-sm text-muted">{time === "23:59" ? anyTime : time}{t.nonNegotiable && <span className="text-gold"> · must</span>}</span>
                       </Link>
                     </li>
                   );

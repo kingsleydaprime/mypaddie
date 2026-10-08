@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { applyScheduleChange, activeDay, dayEndsAt, DEFAULT_SCHEDULE, isQuiet, lateNight, readSchedule } from "./schedule";
+import { anyTimeLabel, applyScheduleChange, activeDay, dayEndsAt, DEFAULT_SCHEDULE, isQuiet, lateNight, readSchedule } from "./schedule";
 
 describe("isQuiet", () => {
   test("a window that crosses midnight", () => {
@@ -145,5 +145,25 @@ describe("anyTimeNudgeFrom", () => {
   });
   test("inside quiet hours it would never arrive, so it's refused", () => {
     expect(applyScheduleChange(DEFAULT_SCHEDULE, { anyTimeNudgeFrom: "23:00" })).toMatchObject({ ok: false });
+  });
+});
+
+describe("showTimedWithin", () => {
+  test("defaults to an hour", () => {
+    expect(readSchedule(undefined).showTimedWithin).toBe(60);
+  });
+  test("can be anything from 0 to 12 hours", () => {
+    expect(applyScheduleChange(DEFAULT_SCHEDULE, { showTimedWithin: 180 })).toMatchObject({ ok: true, schedule: { showTimedWithin: 180 } });
+    expect(applyScheduleChange(DEFAULT_SCHEDULE, { showTimedWithin: 721 })).toMatchObject({ ok: false });
+    expect(applyScheduleChange(DEFAULT_SCHEDULE, { showTimedWithin: -5 })).toMatchObject({ ok: false });
+  });
+});
+
+describe("anyTimeLabel", () => {
+  test("says when the day ends", () => {
+    expect(anyTimeLabel("22:00")).toBe("any time before 22:00");
+  });
+  test("quiet hours after midnight: just any time", () => {
+    expect(anyTimeLabel("23:59")).toBe("any time");
   });
 });

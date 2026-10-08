@@ -45,23 +45,34 @@ describe("pickFocus", () => {
     const focus = pickFocus(
       [
         task({ title: "school reading", dueAt: at("2026-10-06T08:00:00") }),
-        task({ title: "duolingo", isNonNegotiable: true, dueAt: at("2026-10-06T20:00:00") }),
+        task({ title: "duolingo", isNonNegotiable: true, dueAt: at("2026-10-06T10:45:00") }),
       ],
       now,
     );
     expect(titles(focus.top)).toEqual(["duolingo", "school reading"]);
   });
 
-  test("within a group, earliest due first; undated last", () => {
+  test("…but not one that's hours away: that waits (see 'later')", () => {
     const focus = pickFocus(
       [
-        task({ title: "evening", tier: "need", dueAt: at("2026-10-06T21:00:00") }),
-        task({ title: "anytime", tier: "need", dueAt: null }),
-        task({ title: "noon", tier: "need", dueAt: at("2026-10-06T12:00:00") }),
+        task({ title: "school reading", dueAt: at("2026-10-06T08:00:00") }),
+        task({ title: "duolingo", isNonNegotiable: true, dueAt: at("2026-10-06T20:00:00") }),
       ],
       now,
     );
-    expect(titles(focus.top)).toEqual(["noon", "evening", "anytime"]);
+    expect(titles(focus.top)).toEqual(["school reading", "duolingo"]);
+  });
+
+  test("within a group, earliest due first; undated last", () => {
+    const focus = pickFocus(
+      [
+        task({ title: "10:50", tier: "need", dueAt: at("2026-10-06T10:50:00") }),
+        task({ title: "anytime", tier: "need", dueAt: null }),
+        task({ title: "10:20", tier: "need", dueAt: at("2026-10-06T10:20:00") }),
+      ],
+      now,
+    );
+    expect(titles(focus.top)).toEqual(["10:20", "10:50", "anytime"]);
   });
 
   test("done and cancelled tasks are not suggested", () => {
@@ -180,12 +191,60 @@ describe("priority", () => {
   test("an overdue normal task comes after an upcoming high one (priority before time)", () => {
     const f = pickFocus([
       task({ title: "Late email", dueAt: at("2026-10-06T08:00:00") }),
-      task({ title: "Pitch deck", dueAt: at("2026-10-06T16:00:00"), priority: "high" }),
+      task({ title: "Pitch deck", dueAt: at("2026-10-06T10:40:00"), priority: "high" }),
     ], now);
     expect(titles(f.top)).toEqual(["Pitch deck", "Late email"]);
   });
 
   test("it comes through on the item", () => {
     expect(pickFocus([task({ priority: "high" })], now).top[0]!.priority).toBe("high");
+  });
+});
+
+describe("later: a set time more than an hour away waits", () => {
+  const morning = at("2026-10-06T08:00:00");
+  const routineStep = (n: number, time: string, status: TaskForFocus["status"] = "pending") =>
+    task({ title: `Evening ${n}`, isNonNegotiable: true, dueAt: at(`2026-10-06T${time}:00`), status, routine: { id: "evening", title: "Evening routine", step: n } });
+
+  test("an evening routine at 21:00 doesn't top the morning", () => {
+    const f = pickFocus([routineStep(1, "21:00"), routineStep(2, "21:10"), task({ title: "Email", dueAt: null }), task({ title: "Report", dueAt: at("2026-10-06T08:30:00") })], morning);
+    expect(titles(f.top)).toEqual(["Report", "Email", "Evening routine"]);
+  });
+
+  test("within the hour, it comes up as usual", () => {
+    const f = pickFocus([routineStep(1, "21:00"), task({ title: "Email", dueAt: null })], at("2026-10-06T20:15:00"));
+    expect(titles(f.top)).toEqual(["Evening routine", "Email"]);
+  });
+
+  test("a routine already under way stays up, whatever its next step's time", () => {
+    const f = pickFocus([routineStep(1, "07:00", "done"), routineStep(2, "09:30"), task({ title: "Email", dueAt: null })], morning);
+    expect(titles(f.top)).toEqual(["Evening routine", "Email"]);
+  });
+
+  test("a started task is never later", () => {
+    const f = pickFocus([task({ title: "Deck", dueAt: at("2026-10-06T16:00:00"), startedAt: at("2026-10-06T07:50:00") }), task({ title: "Email", dueAt: null })], morning);
+    expect(titles(f.top)).toEqual(["Deck", "Email"]);
+  });
+
+  test("an any-time task is never later", () => {
+    const f = pickFocus([task({ title: "Read", dueAt: at("2026-10-06T23:59:00"), anyTimeEndsAt: at("2026-10-06T22:00:00") }), task({ title: "Pitch", dueAt: at("2026-10-06T15:00:00"), priority: "high" })], morning);
+    expect(titles(f.top)).toEqual(["Read", "Pitch"]);
+  });
+
+  test("among later things, the usual order holds", () => {
+    const f = pickFocus([task({ title: "Gym", dueAt: at("2026-10-06T18:00:00") }), task({ title: "Pray", isNonNegotiable: true, dueAt: at("2026-10-06T19:00:00") })], morning);
+    expect(titles(f.top)).toEqual(["Pray", "Gym"]);
+  });
+});
+
+describe("how soon is their setting", () => {
+  test("with 3 hours, a task at 10:30 counts as now at 08:00, so a must-do ranks above an any-time task", () => {
+    const tasks = [task({ title: "Email", dueAt: null }), task({ title: "Standup", isNonNegotiable: true, dueAt: at("2026-10-06T10:30:00") })];
+    expect(titles(pickFocus(tasks, at("2026-10-06T08:00:00")).top)).toEqual(["Email", "Standup"]);
+    expect(titles(pickFocus(tasks, at("2026-10-06T08:00:00"), 3, undefined, 180).top)).toEqual(["Standup", "Email"]);
+  });
+  test("0: only what's due now or overdue comes up", () => {
+    const tasks = [task({ title: "Email", dueAt: null }), task({ title: "Standup", isNonNegotiable: true, dueAt: at("2026-10-06T08:05:00") })];
+    expect(titles(pickFocus(tasks, at("2026-10-06T08:00:00"), 3, undefined, 0).top)).toEqual(["Email", "Standup"]);
   });
 });
