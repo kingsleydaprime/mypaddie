@@ -19,6 +19,8 @@ export interface SeriesRow {
   dueAt: Date | null;
   status: "pending" | "done" | "skipped" | "cancelled";
   routine: { id: string; step: number } | null;
+  /** Uses the waking day, not work hours. */
+  selfCare?: boolean;
 }
 
 /** When something next happens. `time` null = any time that day. */
@@ -34,6 +36,7 @@ export interface HabitSummary {
   next: NextAt | null;
   /** The open row to edit or complete, if one exists yet. */
   openId: string | null;
+  selfCare: boolean;
 }
 
 export interface RoutineSummary {
@@ -122,7 +125,7 @@ export function summariseSeries(
   for (const [seriesId, list] of bySeries) {
     const latest = latestOf(list);
     if (latest.routine) continue;
-    habits.push({ seriesId, title: latest.title, rule: describeRecurrence(latest.recurrence ?? ""), ...nextFor(list, now, tz) });
+    habits.push({ seriesId, title: latest.title, rule: describeRecurrence(latest.recurrence ?? ""), ...nextFor(list, now, tz), selfCare: latest.selfCare ?? false });
   }
 
   const summaries: RoutineSummary[] = routines.map((routine) => {

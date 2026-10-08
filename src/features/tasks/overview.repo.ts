@@ -23,7 +23,7 @@ export async function loadTaskOverview(db: Db, now: Date, config = currentConfig
   const [{ data: rows, error: e1 }, { data: routines, error: e2 }, { data: oneOffs, error: e3 }] = await Promise.all([
     db
       .from("tasks")
-      .select("id, series_id, title, recurrence, occurs_on, due_at, status, routine_id, routine_step")
+      .select("id, series_id, title, recurrence, occurs_on, due_at, status, routine_id, routine_step, is_self_care")
       .not("series_id", "is", null)
       .gte("occurs_on", addDays(today, -SERIES_LOOKBACK_DAYS)),
     db.from("routines").select("id, title").order("created_at"),
@@ -49,6 +49,7 @@ export async function loadTaskOverview(db: Db, now: Date, config = currentConfig
       dueAt: r.due_at ? new Date(r.due_at) : null,
       status: r.status,
       routine: r.routine_id ? { id: r.routine_id, step: r.routine_step ?? 0 } : null,
+      selfCare: r.is_self_care,
     }));
   const upcoming: UpcomingTask[] = oneOffs.map((t) => ({ id: t.id, title: t.title, dueAt: new Date(t.due_at!), nonNegotiable: t.is_non_negotiable }));
   return { ...summariseSeries(series, routines, now, config), upcoming };

@@ -103,7 +103,7 @@ describe("routines", () => {
 describe("habits", () => {
   test("the open row today is next, and is what you tap", () => {
     const r = row({ seriesId: "water", occursOn: "2026-10-08", dueAt: at("2026-10-08T09:00:00") });
-    expect(summariseSeries([r], [], now).habits).toEqual([{ seriesId: "water", title: "water", rule: "Every day", next: { day: "2026-10-08", time: "09:00" }, openId: r.id }]);
+    expect(summariseSeries([r], [], now).habits).toEqual([{ seriesId: "water", title: "water", rule: "Every day", next: { day: "2026-10-08", time: "09:00" }, openId: r.id, selfCare: false }]);
   });
 
   test("done this week, a weekly habit is next on its next day", () => {
@@ -135,4 +135,9 @@ describe("habits", () => {
     ];
     expect(summariseSeries(rows, [], now).habits.map((h) => h.seriesId)).toEqual(["a", "b", "anytime", "gone"]);
   });
+});
+
+test("a habit says whether it's self-care", () => {
+  const r = row({ seriesId: "church", recurrence: "FREQ=WEEKLY;BYDAY=SU", occursOn: "2026-10-04", status: "done", selfCare: true });
+  expect(summariseSeries([r], [], now).habits[0]).toMatchObject({ selfCare: true, next: { day: "2026-10-11" } });
 });

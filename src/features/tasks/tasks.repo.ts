@@ -310,6 +310,43 @@ export async function loadDayTasks(db: Db, day: string, config = currentConfig()
   return [...tasks, ...events, ...projectedOccurrences(templates, day, config)];
 }
 
+/**
+ * The row to edit a habit through: its earliest open day from today. A habit
+ * only gets a row on the morning of each day it happens, so a Sunday habit has
+ * none on a Thursday; then the next day's row is made now, the way a new habit
+ * gets its first day ahead of time, and catch-up carries on after it. Null if
+ * there's no such habit, or its rule has ended.
+ */
+export async function habitRow(db: Db, seriesId: string, now: Date, config = currentConfig()): Promise<string | null> {
+  // Today's row first, if today is one of its days (and anything missed before it).
+  await catchUp(db, now, config);
+  const today = dayKey(now, config.timeZone);
+  const open = async () => {
+    const { data, error } = await db
+      .from("tasks").select("id").eq("series_id", seriesId).eq("status", "pending").gte("occurs_on", today).order("occurs_on").limit(1);
+    if (error) fail("loading the habit", error);
+    return data[0]?.id ?? null;
+  };
+  const existing = await open();
+  if (existing) return existing;
+
+  const { data: latest, error } = await db
+    .from("tasks").select("occurs_on, due_at, recurrence").eq("series_id", seriesId).order("occurs_on", { ascending: false }).limit(1).maybeSingle();
+  if (error) fail("loading the habit", error);
+  if (!latest?.recurrence || !latest.occurs_on) return null;
+  const time = latest.due_at ? localTimeOf(new Date(latest.due_at), config.timeZone) : null;
+  const after = addDays(latest.occurs_on, 1);
+  const day = firstOccurrence(parseRecurrence(latest.recurrence), after > today ? after : today, { today, time: localTimeOf(now, config.timeZone) }, time);
+  if (day === null) return null;
+  const { error: spawnError } = await db.rpc("spawn_occurrence", {
+    p_series_id: seriesId,
+    p_occurs_on: day,
+    p_due_at: time ? zonedInstant(day, time, config.timeZone).toISOString() : (null as unknown as string),
+  });
+  if (spawnError) fail("making the habit's next day", spawnError);
+  return open();
+}
+
 /** The latest row of every recurring habit — its template for future days. */
 export async function loadSeriesTemplates(db: Db): Promise<SeriesTemplate[]> {
   const { data, error } = await db

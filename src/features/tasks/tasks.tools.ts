@@ -7,7 +7,10 @@ import { findCommitment } from "@/features/commitments/commitments.repo";
 import { findCourseRef } from "@/features/courses/courses.repo";
 import { findFun } from "@/features/fun/fun.repo";
 import { findOrCreateSkill } from "@/features/learning/learning.repo";
-import { completeTask, createTask, deleteTask, updateTask } from "./tasks.repo";
+import { currentConfig } from "@/shared/config";
+import { dayKey } from "@/shared/time";
+import { loadTaskOverview } from "./overview.repo";
+import { completeTask, createTask, deleteTask, habitRow, updateTask } from "./tasks.repo";
 
 const weightsSchema = z
   .array(z.object({ pillar: z.enum(PILLARS), weight: z.number().int().min(1).max(100) }))
@@ -143,9 +146,11 @@ export function registerTaskTools(server: McpServer) {
         "applies to that day and every later day. action='cancel' skips just this one (no XP penalty — a " +
         "deliberate decision isn't ignoring it). action='stop' ends a recurring habit entirely. Done tasks can't " +
         "be changed. Pass due_time=null to make it 'any time'. Moving or lengthening a task re-checks clashes and " +
-        "capacity. " + REFUSALS,
+        "capacity. To change a recurring habit, pass `habit` (its series_id from list_habits) instead of task_id: " +
+        "it edits from the habit's next day on, even if that day isn't in the schedule yet. " + REFUSALS,
       inputSchema: z.object({
-        task_id: z.uuid(),
+        task_id: z.uuid().optional().describe("One task (from get_today). Pass this or `habit`, not both"),
+        habit: z.uuid().optional().describe("A recurring habit's series_id from list_habits; edits from its next day on"),
         action: z.enum(["edit", "cancel", "stop"]).default("edit"),
         title: z.string().trim().min(1).optional(),
         base_xp: z.number().int().min(1).max(500).optional(),
@@ -168,7 +173,8 @@ export function registerTaskTools(server: McpServer) {
     },
     async (
       args: {
-        task_id: string;
+        task_id?: string;
+        habit?: string;
         action: "edit" | "cancel" | "stop";
         title?: string;
         base_xp?: number;
@@ -196,10 +202,13 @@ export function registerTaskTools(server: McpServer) {
         if (args.commitment && !commitment) return toolError(`update_task: no single commitment matches "${args.commitment}" — check list_commitments`);
         const course = args.course ? await findCourseRef(db, args.course) : null;
         if (args.course && !course) return toolError(`update_task: no single course matches "${args.course}" — check list_courses`);
+        if ((args.task_id === undefined) === (args.habit === undefined)) return toolError("update_task: pass either task_id or habit (from list_habits), not both or neither");
+        const taskId = args.task_id ?? (await habitRow(db, args.habit!, new Date()));
+        if (!taskId) return toolError("update_task: no such habit, or it has ended — check list_habits");
         const skillId = args.skill === undefined ? undefined : args.skill === null ? null : (await findOrCreateSkill(db, args.skill)).skill.id;
         const outcome = await updateTask(
           db,
-          args.task_id,
+          taskId,
           {
             title: args.title,
             baseXp: args.base_xp,
@@ -224,6 +233,39 @@ export function registerTaskTools(server: McpServer) {
         return ok(await withMode(db, new Date(), { ...outcome }));
       } catch (error) {
         return toolError(`update_task failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "list_habits",
+    {
+      title: "Habits",
+      description:
+        "Their recurring habits outside routines (routine steps: list_routines): series_id, title, how often, when " +
+        "next, and whether it's self-care. To change one, call update_task with habit=<series_id>; never guess ids.",
+      inputSchema: z.object({}),
+      annotations: { readOnlyHint: true },
+    },
+    async (_a: Record<string, never>, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        const now = new Date();
+        const today = dayKey(now, currentConfig().timeZone);
+        const { habits } = await loadTaskOverview(db, now);
+        return ok(
+          await withMode(db, now, {
+            habits: habits.map((h) => ({
+              series_id: h.seriesId,
+              title: h.title,
+              repeats: h.rule,
+              next: h.next ? `${h.next.day}${h.next.time ? ` ${h.next.time}` : " (any time)"}${h.next.day === today ? " — today" : ""}` : null,
+              self_care: h.selfCare,
+            })),
+          }),
+        );
+      } catch (error) {
+        return toolError(`list_habits failed: ${(error as Error).message}`);
       }
     },
   );
