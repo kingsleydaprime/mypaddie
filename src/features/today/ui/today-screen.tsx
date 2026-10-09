@@ -21,6 +21,9 @@ import { TaskButtons } from "./task-buttons";
 import { TaskMeta } from "./task-meta";
 import { ExpandableText } from "./expandable-text";
 import { RoutineSteps } from "./routine-steps";
+import { ChecklistSteps } from "./checklist-steps";
+import { Fold } from "./fold";
+import { readChecklist, type Step } from "@/features/tasks/progress";
 import { anyTimeLabel, dayEndsAt } from "@/features/settings/schedule";
 import { StatusBar } from "@/features/status/ui/status-bar";
 import { loadCheckin } from "@/features/metrics/metrics.repo";
@@ -46,7 +49,8 @@ function due(item: FocusItem, now: Date, anyTime: string) {
   return dayKey(item.dueAt, tz()) === dayKey(now, tz()) ? time : `yesterday ${time}`;
 }
 
-function Row({ item, now, big, details, anyTime }: { item: FocusItem; now: Date; big?: boolean; details?: string | null; anyTime: string }) {
+function Row({ item, now, big, details, checklist, anyTime }: { item: FocusItem; now: Date; big?: boolean; details?: string | null; checklist?: Step[]; anyTime: string }) {
+  const hasChecklist = !item.routine && checklist !== undefined && checklist.length > 0;
   return (
     <li className={`rounded-2xl border border-line bg-surface ${big ? "p-4" : "px-4 py-3"}`}>
       <div className="min-w-0">
@@ -54,13 +58,19 @@ function Row({ item, now, big, details, anyTime }: { item: FocusItem; now: Date;
         <Link href={item.routine ? "/app/routines" : `/app/tasks/${item.id}`} className={`block truncate font-semibold ${big ? "text-lg" : "text-base"}`}>
           {item.title}
         </Link>
+        {/* Steps open on the top three, folded in the list; tap the line to switch. */}
         {item.routine && (
-          <>
-            <p className="mt-0.5 text-sm text-muted">{item.routine.done}/{item.routine.total} done · next: <span className="text-text">{item.routine.next}</span></p>
+          <Fold defaultOpen={big} summary={<>{item.routine.done}/{item.routine.total} done · next: <span className="text-text">{item.routine.next}</span></>}>
             <RoutineSteps steps={item.routine.items} />
-          </>
+          </Fold>
         )}
-        <TaskMeta item={item} now={now} />
+        {/* The checklist's count moves from the meta line to its own fold. */}
+        <TaskMeta item={hasChecklist ? { ...item, steps: null } : item} now={now} />
+        {hasChecklist && (
+          <Fold defaultOpen={big} summary={`${checklist.filter((s) => s.done).length}/${checklist.length} steps`}>
+            <ChecklistSteps taskId={item.id} steps={checklist} />
+          </Fold>
+        )}
         {/* A preview: two lines on the top three, one in the list. Tap to read it all. */}
         {details && <ExpandableText text={details} lines={big ? 2 : 1} />}
         <p className="mt-0.5 flex items-center gap-2 text-sm text-muted">
@@ -100,9 +110,10 @@ export async function TodayScreen({ db }: { db: Db }) {
   const late = lateNight(schedule, localTimeOf(now, tz()));
   const shownIds = [...focus.top, ...focus.rest].map((f) => f.id);
   const { data: detailRows } = shownIds.length
-    ? await db.from("tasks").select("id, details").in("id", shownIds).not("details", "is", null)
-    : { data: [] as { id: string; details: string | null }[] };
+    ? await db.from("tasks").select("id, details, checklist").in("id", shownIds).or("details.not.is.null,checklist.not.is.null")
+    : { data: [] as { id: string; details: string | null; checklist: unknown }[] };
   const details = new Map((detailRows ?? []).map((d) => [d.id, d.details]));
+  const checklists = new Map((detailRows ?? []).map((d) => [d.id, readChecklist(d.checklist)]));
   const date = new Intl.DateTimeFormat("en-GB", { timeZone: tz(), weekday: "long", day: "numeric", month: "long" }).format(now);
 
   return (
@@ -173,7 +184,7 @@ export async function TodayScreen({ db }: { db: Db }) {
       ) : (
         <ol className="flex flex-col gap-3">
           {focus.top.map((item) => (
-            <Row key={item.id} item={item} now={now} big details={details.get(item.id)} anyTime={anyTime} />
+            <Row key={item.id} item={item} now={now} big details={details.get(item.id)} checklist={checklists.get(item.id)} anyTime={anyTime} />
           ))}
         </ol>
       )}
@@ -185,7 +196,7 @@ export async function TodayScreen({ db }: { db: Db }) {
           </summary>
           <ul className="mt-3 flex flex-col gap-2">
             {focus.rest.map((item) => (
-              <Row key={item.id} item={item} now={now} details={details.get(item.id)} anyTime={anyTime} />
+              <Row key={item.id} item={item} now={now} details={details.get(item.id)} checklist={checklists.get(item.id)} anyTime={anyTime} />
             ))}
           </ul>
         </details>

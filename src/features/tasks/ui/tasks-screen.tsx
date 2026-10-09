@@ -4,6 +4,9 @@ import { TaskButtons } from "@/features/today/ui/task-buttons";
 import { TaskMeta } from "@/features/today/ui/task-meta";
 import { ExpandableText } from "@/features/today/ui/expandable-text";
 import { RoutineSteps } from "@/features/today/ui/routine-steps";
+import { ChecklistSteps } from "@/features/today/ui/checklist-steps";
+import { Fold } from "@/features/today/ui/fold";
+import { readChecklist, type Step } from "@/features/tasks/progress";
 import { anyTimeLabel, dayEndsAt } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { currentConfig } from "@/shared/config";
@@ -34,7 +37,8 @@ const Empty = ({ children }: { children: React.ReactNode }) => (
   <p className="rounded-2xl border border-dashed border-line px-4 py-3 text-sm text-muted">{children}</p>
 );
 
-function TodayRow({ item, now, anyTime, details }: { item: FocusItem; now: Date; anyTime: string; details?: string | null }) {
+function TodayRow({ item, now, anyTime, details, checklist }: { item: FocusItem; now: Date; anyTime: string; details?: string | null; checklist?: Step[] }) {
+  const hasChecklist = !item.routine && checklist !== undefined && checklist.length > 0;
   const time = item.dueAt ? localTimeOf(item.dueAt, tz()) : null;
   const label = !time || time === "23:59" ? anyTime : dayKey(item.dueAt!, tz()) === dayKey(now, tz()) ? time : `yesterday ${time}`;
   return (
@@ -42,12 +46,16 @@ function TodayRow({ item, now, anyTime, details }: { item: FocusItem; now: Date;
       <div className="min-w-0">
         <Link href={item.routine ? "/app/routines" : `/app/tasks/${item.id}`} className="block truncate font-semibold">{item.title}</Link>
         {item.routine && (
-          <>
-            <p className="mt-0.5 text-sm text-muted">{item.routine.done}/{item.routine.total} done · next: <span className="text-text">{item.routine.next}</span></p>
+          <Fold summary={<>{item.routine.done}/{item.routine.total} done · next: <span className="text-text">{item.routine.next}</span></>}>
             <RoutineSteps steps={item.routine.items} />
-          </>
+          </Fold>
         )}
-        <TaskMeta item={item} now={now} />
+        <TaskMeta item={hasChecklist ? { ...item, steps: null } : item} now={now} />
+        {hasChecklist && (
+          <Fold summary={`${checklist.filter((s) => s.done).length}/${checklist.length} steps`}>
+            <ChecklistSteps taskId={item.id} steps={checklist} />
+          </Fold>
+        )}
         {details && <ExpandableText text={details} lines={1} />}
         <p className="mt-0.5 text-sm text-muted">
           <span className={item.overdue ? "font-medium text-red" : ""}>{item.overdue ? `overdue · ${label}` : label}</span>
@@ -88,9 +96,10 @@ export async function TasksScreen({ db }: { db: Db }) {
   const open = [...focus.top, ...focus.rest];
   const today = dayKey(now, tz());
   const { data: detailRows } = open.length
-    ? await db.from("tasks").select("id, details").in("id", open.map((f) => f.id)).not("details", "is", null)
-    : { data: [] as { id: string; details: string | null }[] };
+    ? await db.from("tasks").select("id, details, checklist").in("id", open.map((f) => f.id)).or("details.not.is.null,checklist.not.is.null")
+    : { data: [] as { id: string; details: string | null; checklist: unknown }[] };
   const details = new Map((detailRows ?? []).map((d) => [d.id, d.details]));
+  const checklists = new Map((detailRows ?? []).map((d) => [d.id, readChecklist(d.checklist)]));
 
   const byDay = new Map<string, typeof overview.upcoming>();
   for (const t of overview.upcoming) {
@@ -110,7 +119,7 @@ export async function TasksScreen({ db }: { db: Db }) {
           <Empty>Nothing open today.{focus.doneToday > 0 ? ` ${focus.doneToday} done.` : ""}</Empty>
         ) : (
           <ul className="flex flex-col gap-2">
-            {open.map((item) => <TodayRow key={item.id} item={item} now={now} anyTime={anyTime} details={details.get(item.id)} />)}
+            {open.map((item) => <TodayRow key={item.id} item={item} now={now} anyTime={anyTime} details={details.get(item.id)} checklist={checklists.get(item.id)} />)}
           </ul>
         )}
         {focus.doneToday > 0 && open.length > 0 && (
