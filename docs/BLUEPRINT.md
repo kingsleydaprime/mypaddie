@@ -52,7 +52,7 @@ XP is whole numbers, split by largest remainder, so the parts always add up to t
 
 - Any honest attempt earns XP, win or lose. That is the core of the Gamified Life.
 - Late still counts. Doing a missed need late earns reduced XP (50%), so recovering fast beats dwelling. A time block (a task with a duration) is on time all day; a deadline is late after its time.
-- Points are deducted only for ignoring a need (50% of its XP, once its local day has ended), not for trying and failing. An accepted slip protects it.
+- Points are deducted only for ignoring a need (50% of its XP, once its local day has ended), not for trying and failing. A day of a non-negotiable habit counts as a need, so each unticked step of a routine is deducted on its own while ticked steps keep their XP. An accepted slip protects it.
 - Logging a dumb purchase honestly still earns XP (+2 Financial for any transaction), so you never hide spending from paddie.
 - Wishes never deduct.
 - Bonuses: goal completion 2×, dream milestone 3×, a wish happening +50.
@@ -169,7 +169,7 @@ Paddie judges whether a reason is accepted, with a backstop: the third time the 
 
 The mode is computed by the rules engine from your recent data (skipped needs, repeated slips, logged mood) and returned with every tool result, so the AI adjusts its tone from facts rather than guessing. Your override always wins.
 
-Precedence: override > low-HP day (a check-in with energy 2/5 or lower) > strict (a repeated slip, or 3+ ignored needs in 3 days) > curious. "Go easy on me" ends at midnight; "no mercy" lasts until switched off. The mode comes back with its reasons.
+Precedence: override > low-HP day (a check-in with energy 2/5 or lower) > strict (a repeated slip, or 3+ ignored needs in 3 days; a missed routine counts once, however many steps were left) > curious. "Go easy on me" ends at midnight; "no mercy" lasts until switched off. The mode comes back with its reasons.
 
 ### Learning your challenges
 
@@ -258,7 +258,7 @@ These were added after the four-day plan, each because a real day needed it.
 - **About me.** Strengths, weak spots, what you're healing from (and how), patterns, triggers, good habits and habits to break, history. The AI keeps the advice-relevant ones in mind every chat — kindly, never to shame.
 - **Library, favourites and lists.** Books, films, series, music, podcasts and games; your favourite things; and any list you like, ticked off with a percentage. A bucket-list tick pays +50, like a wish coming true.
 - **Reviews and themes.** Weekly, monthly, quarterly and yearly reviews written from what actually happened, with the questions that matter (what did I avoid? what drained me? what changes next?). Year and month themes — "Month of Mercies" — with what to focus on and what this season says no to.
-- **Achievements, routines, decisions.** Achievements earned from what you've done (a 30-day streak, first savings, 100 workouts), recorded once with the date. Routines show on Today as one item with the next step. Decisions come back for review: did it work?
+- **Achievements, routines, decisions.** Achievements earned from what you've done (a 30-day streak, first savings, 100 workouts), recorded once with the date. Routines show on Today as one item with the next step. A habit's missed day stays overdue until its next day starts; then the new day takes its place on Today and the old one is settled at close-out (a slip, or the deduction). Decisions come back for review: did it work?
 - **Values.** What you stand on, in order, in your own words. The AI weighs big choices (a job, a purchase, a new commitment) against them and names a clash once — it never moralises. Monthly and longer reviews ask: did I live my values?
 - **Trends and experiments.** A check-in is any of energy, mood, sleep and screen time, merged through the day. Trends draw them week by week next to exercise, study, spending and promises kept, with which way each is heading. An experiment changes one thing for a while ("no phone after 10pm for 2 weeks"), compares the line it watches before and during, and asks for a verdict; what helped can become a pattern in About me.
 - **Fun list.** Things you enjoy, with rough cost, time, energy and company. "Did it" pays XP (emotional, plus social with people). Suggestions skip what you can't afford (only free fun in a deficit), what doesn't fit the gap, and high-energy fun on a soft day, and favour what you haven't done in a while. Free time in Plan my day comes with an idea.
