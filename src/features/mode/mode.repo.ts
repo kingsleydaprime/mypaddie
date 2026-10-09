@@ -2,7 +2,7 @@ import { loadOpenPastNeeds } from "@/features/tasks/tasks.repo";
 import { isIgnoredNeed } from "@/features/xp/xp";
 import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
-import { dayKey, localTimeOf, withinLastDays } from "@/shared/time";
+import { dayKey, localTimeOf, withinLastDays, zonedInstant } from "@/shared/time";
 import { lateNight } from "@/features/settings/schedule";
 import { loadSchedule } from "@/features/settings/settings.repo";
 import { computeMode, type ModeOverride, type ModeResult } from "./mode";
@@ -38,10 +38,18 @@ export async function loadMode(db: Db, now: Date, config = currentConfig()): Pro
     at: new Date(s.at),
   }));
 
-  const ignoredNeeds = pastNeeds.tasks
-    .filter((t) => isIgnoredNeed(t, pastNeeds.slips, now, config))
-    .filter((t) => withinLastDays(t.dueAt!, now, config.mode.ignoredNeedWindowDays, config.timeZone))
-    .map((t) => ({ key: t.itemId ?? t.id, dueAt: t.dueAt! }));
+  // An any-time habit day has no due time: it ends with its day. A missed
+  // routine is one ignored need, however many steps were left.
+  const ignored = new Map<string, { key: string; dueAt: Date }>();
+  for (const t of pastNeeds.tasks) {
+    if (!isIgnoredNeed(t, pastNeeds.slips, now, config)) continue;
+    const dueAt = t.dueAt ?? zonedInstant(t.occursOn!, "23:59", config.timeZone);
+    if (!withinLastDays(dueAt, now, config.mode.ignoredNeedWindowDays, config.timeZone)) continue;
+    const key = t.routine ? t.routine.id : (t.itemId ?? t.id);
+    const one = t.routine ? `${key}@${dayKey(dueAt, config.timeZone)}` : t.id;
+    if (!ignored.has(one)) ignored.set(one, { key, dueAt });
+  }
+  const ignoredNeeds = [...ignored.values()];
 
   return computeMode(
     {

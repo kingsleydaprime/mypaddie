@@ -1533,3 +1533,21 @@ done today). The morning brief's top three use the same setting.
 Labels: "any time" now says "any time before 22:00" (when quiet hours
 start), in the app and to Paddie. What a task is for shows as just the role
 ("Engineer · US Ghana Chamber of Commerce"), without "for".
+
+### A habit's missed day ends when the next one comes, and must-do habits deduct
+A missed evening routine came back the next day as "overdue" with nothing
+ticked: yesterday's open steps ranked first (overdue), while the card listed
+today's fresh steps. Now a habit day is over once a newer day of the same
+habit exists (on or before today): it leaves Today and is settled at
+close-out. A weekly habit's missed day stays overdue until its next day.
+The routine card always shows one day's steps.
+
+Unticked days of **non-negotiable habits** (routine steps, which have no item
+and so no tier) now count as ignored needs: half the step's XP is deducted
+once the day ends (5 → −3), unless an accepted slip excuses it. Ticked steps
+keep their XP. Any-time habit days are judged by `occurs_on`. Considered: one
+deduction per routine. Rejected because XP is per task, and per step means
+each step you skip counts. Only days from 2026-10-09 deduct
+(`MUST_HABITS_DEDUCT_FROM`), so shipping it didn't backdate 14 days of
+penalties. For mode, a missed routine counts as one ignored need, not one per
+step, so one bad evening doesn't flip to strict on its own.

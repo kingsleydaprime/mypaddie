@@ -9,6 +9,9 @@ export interface TaskForFocus {
   isNonNegotiable: boolean;
   dueAt: Date | null;
   status: "pending" | "done" | "skipped" | "cancelled";
+  /** The habit this row is one day of, and that day ("YYYY-MM-DD"). */
+  seriesId?: string | null;
+  occursOn?: string | null;
   /** A step of a routine: shown with its routine as one item. */
   routine?: { id: string; title: string; step: number } | null;
   /** Started and not finished: in progress. */
@@ -68,7 +71,10 @@ export interface Focus {
  * Within a group, priority first (high, normal, low), then overdue before
  * upcoming, then earliest due; undated tasks go last among their equals. So a
  * must-do still outranks a high-priority ordinary task.
- * Only today's open tasks and anything overdue are considered.
+ * Only today's open tasks and anything overdue are considered — except a
+ * habit's missed day, which is over once its next day has come: the new day
+ * takes its place, and the old one is settled at close-out (a slip, or the
+ * ignored-need deduction).
  */
 export function pickFocus(
   tasks: readonly TaskForFocus[],
@@ -78,11 +84,21 @@ export function pickFocus(
   soonMinutes: number = SOON_MINUTES,
 ): Focus {
   const today = dayKey(now, config.timeZone);
+  const dayOf = (t: TaskForFocus) => t.occursOn ?? (t.dueAt ? dayKey(t.dueAt, config.timeZone) : null);
+
+  // Each habit's newest day so far; earlier days of it are over.
+  const newest = new Map<string, string>();
+  for (const t of tasks) {
+    if (!t.seriesId || !t.occursOn || t.occursOn > today) continue;
+    if ((newest.get(t.seriesId) ?? "") < t.occursOn) newest.set(t.seriesId, t.occursOn);
+  }
+  const superseded = (t: TaskForFocus) => !!t.seriesId && !!t.occursOn && newest.get(t.seriesId)! > t.occursOn;
 
   const open = tasks.filter(
     (t) =>
       (t.status === "pending" || t.status === "skipped") &&
-      (t.dueAt === null || dayKey(t.dueAt, config.timeZone) <= today),
+      (t.dueAt === null || dayKey(t.dueAt, config.timeZone) <= today) &&
+      !superseded(t),
   );
 
   // Any time means before quiet hours start; anything else is overdue once its due time passes.
@@ -142,9 +158,14 @@ export function pickFocus(
     if (seenRoutine.has(t.routine.id)) continue;
     seenRoutine.add(t.routine.id);
     const rid = t.routine.id;
-    const isToday = (x: TaskForFocus) => x.routine?.id === rid && (x.dueAt === null || dayKey(x.dueAt, config.timeZone) === today);
-    const steps = tasks.filter((x) => isToday(x) && x.status !== "cancelled").sort((a, b) => a.routine!.step - b.routine!.step);
-    const next = open.filter((x) => x.routine?.id === rid).sort((a, b) => a.routine!.step - b.routine!.step)[0]!;
+    // The earliest open day's next step; the card shows that day's steps, never a mix of two days.
+    const next = open
+      .filter((x) => x.routine?.id === rid)
+      .sort((a, b) => (dayOf(a) ?? today).localeCompare(dayOf(b) ?? today) || a.routine!.step - b.routine!.step)[0]!;
+    const day = dayOf(next) ?? today;
+    const steps = tasks
+      .filter((x) => x.routine?.id === rid && (dayOf(x) ?? today) === day && x.status !== "cancelled")
+      .sort((a, b) => a.routine!.step - b.routine!.step);
     items.push({
       ...toItem(t),
       id: next.id,

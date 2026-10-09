@@ -36,6 +36,10 @@ export interface TaskForXp {
   dueAt: Date | null;
   doneAt: Date | null;
   weights: readonly PillarWeight[];
+  /** A must-do. On a habit day (routine steps included), skipping it loses points like a need. */
+  isNonNegotiable?: boolean;
+  /** A habit row's local day ("YYYY-MM-DD"); null for one-off tasks. */
+  occursOn?: string | null;
 }
 
 export interface SlipForXp {
@@ -129,10 +133,18 @@ export function completionXp(
 }
 
 /**
+ * Non-negotiable habit days (routine steps, brushing…) count as needs from this
+ * day on. Days before it were missed under the old rule, so they don't deduct.
+ */
+export const MUST_HABITS_DEDUCT_FROM = "2026-10-09";
+
+/**
  * A need is ignored once its due day has fully ended (in the user's zone),
  * it was never done, and no accepted slip explains it. Only needs can be
- * ignored: wants, goals, wishes and dreams never deduct. A deliberately
- * cancelled task was decided on, not ignored.
+ * ignored: wants, goals, wishes and dreams never deduct. A day of a
+ * non-negotiable habit counts as a need, whatever its item (a routine's steps
+ * have none); an any-time one is judged by its day. A deliberately cancelled
+ * task was decided on, not ignored.
  */
 export function isIgnoredNeed(
   task: TaskForXp,
@@ -140,10 +152,13 @@ export function isIgnoredNeed(
   now: Date,
   config: EngineConfig = currentConfig(),
 ): boolean {
-  if (task.tier !== "need" || task.dueAt === null) return false;
+  const day = task.dueAt ? dayKey(task.dueAt, config.timeZone) : (task.occursOn ?? null);
+  if (day === null) return false;
+  const need = task.tier === "need" && task.dueAt !== null;
+  const mustHabit = task.isNonNegotiable === true && task.occursOn != null && day >= MUST_HABITS_DEDUCT_FROM;
+  if (!need && !mustHabit) return false;
   if (task.status === "done" || task.status === "cancelled" || task.doneAt !== null) return false;
-  const dueDayOver = dayKey(task.dueAt, config.timeZone) < dayKey(now, config.timeZone);
-  if (!dueDayOver) return false;
+  if (day >= dayKey(now, config.timeZone)) return false;
   return !slips.some((s) => s.taskId === task.id && s.accepted);
 }
 

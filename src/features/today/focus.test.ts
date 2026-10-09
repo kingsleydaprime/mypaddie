@@ -256,3 +256,52 @@ describe("how soon is their setting", () => {
     expect(titles(pickFocus(tasks, at("2026-10-06T08:00:00"), 3, undefined, 0).top)).toEqual(["Email", "Standup"]);
   });
 });
+
+describe("a habit's missed day ends when its next day comes", () => {
+  // Evening routine, two steps: step 1 ticked yesterday, step 2 left undone; today's fresh rows exist.
+  const step = (n: number, day: string, status: TaskForFocus["status"] = "pending", time = "21:00") =>
+    task({
+      id: `ev${n}-${day}`,
+      title: `Evening ${n}`,
+      isNonNegotiable: true,
+      dueAt: at(`${day}T${time}:00`),
+      occursOn: day,
+      seriesId: `evening-${n}`,
+      status,
+      routine: { id: "evening", title: "Evening routine", step: n },
+    });
+  const evening = at("2026-10-06T20:30:00");
+
+  test("yesterday's open step doesn't make today's routine overdue", () => {
+    const f = pickFocus([step(1, "2026-10-05", "done"), step(2, "2026-10-05"), step(1, "2026-10-06"), step(2, "2026-10-06")], evening);
+    expect(f.top).toHaveLength(1);
+    expect(f.top[0]).toMatchObject({ id: "ev1-2026-10-06", overdue: false, routine: { next: "Evening 1", done: 0, total: 2 } });
+    expect(f.top[0]!.routine!.items.map((i) => i.id)).toEqual(["ev1-2026-10-06", "ev2-2026-10-06"]);
+  });
+
+  test("a plain daily habit shows once, today's", () => {
+    const brush = (day: string) => task({ id: `brush-${day}`, title: "Brush", dueAt: at(`${day}T07:00:00`), occursOn: day, seriesId: "brush" });
+    const f = pickFocus([brush("2026-10-05"), brush("2026-10-06")], now);
+    expect(f.top.map((i) => i.id)).toEqual(["brush-2026-10-06"]);
+  });
+
+  test("an any-time habit's old day goes too", () => {
+    const read = (day: string) => task({ id: `read-${day}`, title: "Read", dueAt: null, occursOn: day, seriesId: "read" });
+    expect(pickFocus([read("2026-10-05"), read("2026-10-06")], now).top.map((i) => i.id)).toEqual(["read-2026-10-06"]);
+  });
+
+  test("until the next day exists (a weekly habit), the missed day stays overdue", () => {
+    const f = pickFocus([step(1, "2026-10-05"), step(2, "2026-10-05")], now);
+    expect(f.top[0]).toMatchObject({ id: "ev1-2026-10-05", overdue: true, routine: { next: "Evening 1", done: 0, total: 2 } });
+  });
+
+  test("a future day doesn't end today's", () => {
+    const f = pickFocus([step(1, "2026-10-06"), step(1, "2026-10-07")], now);
+    expect(f.top.map((i) => i.id)).toEqual(["ev1-2026-10-06"]);
+  });
+
+  test("one-off tasks are untouched: overdue stays overdue", () => {
+    const f = pickFocus([task({ title: "Report", dueAt: at("2026-10-05T09:00:00") })], now);
+    expect(f.top[0]).toMatchObject({ title: "Report", overdue: true });
+  });
+});

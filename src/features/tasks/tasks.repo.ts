@@ -1,6 +1,6 @@
 import { validateWeights, type PillarWeight } from "@/features/xp/split";
 import { requireRoom } from "@/features/plans/guard";
-import { anyTimeEndsAt, completionXp, ignoredNeedDeduction, isLate, lateAfter, type SlipForXp, type TaskForXp } from "@/features/xp/xp";
+import { anyTimeEndsAt, completionXp, ignoredNeedDeduction, isLate, lateAfter, MUST_HABITS_DEDUCT_FROM, type SlipForXp, type TaskForXp } from "@/features/xp/xp";
 import { currentConfig, type EngineConfig } from "@/shared/config";
 import type { Priority, Tier } from "@/shared/domain";
 import type { Database, Json } from "@/shared/supabase/database.types";
@@ -29,7 +29,7 @@ const LOOKBACK_DAYS = 14;
 const SERIES_LOOKBACK_DAYS = 60;
 
 const TASK_COLUMNS =
-  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, fun_activity_id, topic, item_id, routine_id, routine_step, started_at, spent_minutes, checklist, occurs_on, priority, routines(title), items(tier), commitments(title, org), courses(code, title), task_pillars(pillar, weight)";
+  "id, title, status, base_xp, due_at, done_at, is_non_negotiable, must_from, duration_minutes, skill_id, fun_activity_id, topic, item_id, routine_id, routine_step, started_at, spent_minutes, checklist, occurs_on, series_id, priority, routines(title), items(tier), commitments(title, org), courses(code, title), task_pillars(pillar, weight)";
 
 type TaskRow = {
   id: string;
@@ -51,6 +51,7 @@ type TaskRow = {
   spent_minutes: number;
   checklist: Json | null;
   occurs_on: string | null;
+  series_id: string | null;
   priority: string;
   routines: { title: string } | null;
   items: { tier: Tier } | null;
@@ -63,6 +64,8 @@ export interface LoadedTask extends TaskForXp {
   title: string;
   isNonNegotiable: boolean;
   itemId: string | null;
+  /** The habit this row is one day of; null for one-off tasks. */
+  seriesId: string | null;
   routine: { id: string; title: string; step: number } | null;
   /** When the current stretch started; null = not running (never started, or paused). */
   startedAt: Date | null;
@@ -94,6 +97,8 @@ function toTask(row: TaskRow, now?: Date, dayEnds: string = "23:59", config = cu
     isNonNegotiable:
       row.is_non_negotiable || (now !== undefined && row.must_from !== null && Date.parse(row.must_from) <= now.getTime()),
     itemId: row.item_id,
+    seriesId: row.series_id,
+    occursOn: row.occurs_on,
     routine: row.routine_id && row.routines ? { id: row.routine_id, title: row.routines.title, step: row.routine_step ?? 0 } : null,
     startedAt: row.started_at ? new Date(row.started_at) : null,
     spentMinutes: row.spent_minutes,
@@ -128,7 +133,10 @@ export async function loadTasksAroundToday(db: Db, now: Date, config = currentCo
   return data.map((r) => toTask(r, now, dayEnds, config));
 }
 
-/** Needs that were due before today and are still open — candidates for "ignored". */
+/**
+ * Needs that were due before today and are still open — candidates for
+ * "ignored". Past days of non-negotiable habits (routine steps) count too.
+ */
 export async function loadOpenPastNeeds(
   db: Db,
   now: Date,
@@ -136,17 +144,33 @@ export async function loadOpenPastNeeds(
 ): Promise<{ tasks: LoadedTask[]; slips: SlipForXp[] }> {
   const todayStart = startOfToday(now, config);
   const since = new Date(todayStart.getTime() - LOOKBACK_DAYS * 86_400_000);
-  const { data, error } = await db
-    .from("tasks")
-    .select(TASK_COLUMNS.replace("items(tier)", "items!inner(tier)"))
-    .eq("items.tier", "need")
-    .in("status", ["pending", "skipped"])
-    .gte("due_at", since.toISOString())
-    .lt("due_at", todayStart.toISOString())
-    .returns<TaskRow[]>();
-  if (error) fail("loading past needs", error);
+  const today = dayKey(now, config.timeZone);
+  const sinceDay = addDays(today, -LOOKBACK_DAYS);
+  const [needs, musts] = await Promise.all([
+    db
+      .from("tasks")
+      .select(TASK_COLUMNS.replace("items(tier)", "items!inner(tier)"))
+      .eq("items.tier", "need")
+      .in("status", ["pending", "skipped"])
+      .gte("due_at", since.toISOString())
+      .lt("due_at", todayStart.toISOString())
+      .returns<TaskRow[]>(),
+    db
+      .from("tasks")
+      .select(TASK_COLUMNS)
+      .eq("is_non_negotiable", true)
+      .not("series_id", "is", null)
+      .in("status", ["pending", "skipped"])
+      .gte("occurs_on", sinceDay > MUST_HABITS_DEDUCT_FROM ? sinceDay : MUST_HABITS_DEDUCT_FROM)
+      .lt("occurs_on", today)
+      .returns<TaskRow[]>(),
+  ]);
+  if (needs.error) fail("loading past needs", needs.error);
+  if (musts.error) fail("loading past must-do habit days", musts.error);
 
-  const tasks = data.map((r) => toTask(r));
+  // A must-do habit tied to a need item comes back from both.
+  const rows = new Map([...needs.data, ...musts.data].map((r) => [r.id, r]));
+  const tasks = [...rows.values()].map((r) => toTask(r));
   if (tasks.length === 0) return { tasks, slips: [] };
 
   const { data: slips, error: slipError } = await db

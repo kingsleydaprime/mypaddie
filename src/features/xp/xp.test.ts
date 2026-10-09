@@ -148,6 +148,43 @@ describe("isIgnoredNeed / ignoredNeedDeduction", () => {
     expect(isIgnoredNeed(task({ dueAt: null }), [], at("2027-01-01T00:00:00"))).toBe(false);
   });
 
+  describe("non-negotiable habit days (routine steps)", () => {
+    // A routine step: no item, so no tier — the must-do flag is what counts.
+    const step = (o: Partial<TaskForXp> = {}) =>
+      task({ tier: null, baseXp: 5, isNonNegotiable: true, occursOn: "2026-10-10", dueAt: at("2026-10-10T21:00:00"), ...o });
+
+    test("an unticked step loses half its XP once its day is over", () => {
+      expect(isIgnoredNeed(step(), [], at("2026-10-10T23:59:00"))).toBe(false);
+      expect(total(ignoredNeedDeduction(step(), [], at("2026-10-11T00:01:00")))).toBe(-3);
+    });
+
+    test("a ticked step keeps what it earned", () => {
+      expect(isIgnoredNeed(step({ status: "done", doneAt: at("2026-10-10T21:05:00") }), [], at("2026-10-11T08:00:00"))).toBe(false);
+    });
+
+    test("an any-time step is judged by its day", () => {
+      expect(isIgnoredNeed(step({ dueAt: null }), [], at("2026-10-10T23:00:00"))).toBe(false);
+      expect(isIgnoredNeed(step({ dueAt: null }), [], at("2026-10-11T00:01:00"))).toBe(true);
+    });
+
+    test("an accepted slip excuses it", () => {
+      expect(isIgnoredNeed(step(), [{ taskId: "task-1", accepted: true }], at("2026-10-11T08:00:00"))).toBe(false);
+    });
+
+    test("an ordinary habit (not a must-do) still never deducts", () => {
+      expect(isIgnoredNeed(step({ isNonNegotiable: false }), [], at("2026-10-11T08:00:00"))).toBe(false);
+    });
+
+    test("a one-off must-do isn't a habit day: it can be moved, so it doesn't deduct", () => {
+      expect(isIgnoredNeed(step({ occursOn: null }), [], at("2026-10-11T08:00:00"))).toBe(false);
+    });
+
+    test("days before the rule started don't deduct", () => {
+      const old = step({ occursOn: "2026-10-08", dueAt: at("2026-10-08T21:00:00") });
+      expect(isIgnoredNeed(old, [], at("2026-10-11T08:00:00"))).toBe(false);
+    });
+  });
+
   test("the deduction is never more than the reward was", () => {
     const reward = total(completionXp(task({ baseXp: 7 }), at("2026-10-05T06:00:00")));
     const penalty = total(ignoredNeedDeduction(task({ baseXp: 7 }), [], nextMorning));
