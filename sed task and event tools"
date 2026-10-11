@@ -1,0 +1,161 @@
+[1mdiff --git a/src/features/events/events.tools.ts b/src/features/events/events.tools.ts[m
+[1mindex 9ab8e97..0059f83 100644[m
+[1m--- a/src/features/events/events.tools.ts[m
+[1m+++ b/src/features/events/events.tools.ts[m
+[36m@@ -3,8 +3,11 @@[m [mimport { z } from "zod";[m
+ import { findCommitment } from "@/features/commitments/commitments.repo";[m
+ import { withMode } from "@/features/mode/mode.repo";[m
+ import { loadSchedule } from "@/features/settings/settings.repo";[m
+[32m+[m[32mimport { honestyBonus, missedTaskPenalty } from "@/features/xp/xp";[m
+[32m+[m[32mimport type { PillarWeight } from "@/features/xp/split";[m
+ import { currentConfig } from "@/shared/config";[m
+ import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";[m
+[32m+[m[32mimport type { Json } from "@/shared/supabase/database.types";[m
+ import { dayKey, formatLocal, zonedInstant } from "@/shared/time";[m
+ import { EVENT_KINDS, upcoming, type EventKind } from "./events";[m
+ import { addEvent } from "./add-event";[m
+[36m@@ -172,6 +175,60 @@[m [mexport function registerEventTools(server: McpServer) {[m
+     },[m
+   );[m
+ [m
+[32m+[m[32m  server.registerTool([m
+[32m+[m[32m    "mark_event_missed",[m
+[32m+[m[32m    {[m
+[32m+[m[32m      title: "Mark an event as missed",[m
+[32m+[m[32m      description:[m
+[32m+[m[32m        "Self-report that an event was missed. Use this when they were supposed to be there and didn't go, with a brief " +[m
+[32m+[m[32m        "reason. This follows the same honesty rule as task misses: a self-reported miss gets a smaller honesty bonus, " +[m
+[32m+[m[32m        "and the miss penalty remains larger than a clean completion would have been, so it never pays to fake a miss.",[m
+[32m+[m[32m      inputSchema: z.object({[m
+[32m+[m[32m        event_id: z.uuid(),[m
+[32m+[m[32m        reason: z.string().trim().min(1).max(300),[m
+[32m+[m[32m        self_reported: z.boolean().default(true),[m
+[32m+[m[32m      }),[m
+[32m+[m[32m    },[m
+[32m+[m[32m    async ({ event_id, reason, self_reported }: { event_id: string; reason: string; self_reported: boolean }, ctx: ToolContext) => {[m
+[32m+[m[32m      try {[m
+[32m+[m[32m        const db = dbFrom(ctx);[m
+[32m+[m[32m        const { data: event, error } = await db.from("events").select("id, title").eq("id", event_id).maybeSingle();[m
+[32m+[m[32m        if (error) return toolError(`mark_event_missed failed: ${error.message}`);[m
+[32m+[m[32m        if (!event) return toolError("mark_event_missed failed: no such event");[m
+[32m+[m
+[32m+[m[32m        const fallbackWeights: PillarWeight[] = [{ pillar: "character", weight: 100 }];[m
+[32m+[m[32m        const penalty = missedTaskPenalty({ baseXp: 10, weights: fallbackWeights });[m
+[32m+[m[32m        const bonus = self_reported ? honestyBonus({ baseXp: 10, weights: fallbackWeights }) : [];[m
+[32m+[m
+[32m+[m[32m        const { data: result, error: rpcError } = await db.rpc("record_miss", {[m
+[32m+[m[32m          p_event_id: event_id,[m
+[32m+[m[32m          p_reason: reason,[m
+[32m+[m[32m          p_penalty_entries: penalty as unknown as Json,[m
+[32m+[m[32m          p_honesty_entries: bonus as unknown as Json,[m
+[32m+[m[32m          p_self_reported: self_reported,[m
+[32m+[m[32m        } as any);[m
+[32m+[m
+[32m+[m[32m        if (rpcError) return toolError(`mark_event_missed failed: ${rpcError.message}`);[m
+[32m+[m[32m        const rpcResult = result as { result?: string } | null;[m
+[32m+[m[32m        if (rpcResult?.result === "already_missed") return toolError("mark_event_missed failed: already marked missed");[m
+[32m+[m[32m        if (rpcResult?.result === "not_found") return toolError("mark_event_missed failed: no such event");[m
+[32m+[m
+[32m+[m[32m        return ok({[m
+[32m+[m[32m          event_id,[m
+[32m+[m[32m          title: event.title,[m
+[32m+[m[32m          reason,[m
+[32m+[m[32m          self_reported,[m
+[32m+[m[32m          penalty,[m
+[32m+[m[32m          honesty: bonus,[m
+[32m+[m[32m          result: rpcResult?.result ?? "recorded",[m
+[32m+[m[32m          next: "The event is marked missed and the honesty/penalty XP is recorded.",[m
+[32m+[m[32m        });[m
+[32m+[m[32m      } catch (error) {[m
+[32m+[m[32m        return toolError(`mark_event_missed failed: ${(error as Error).message}`);[m
+[32m+[m[32m      }[m
+[32m+[m[32m    },[m
+[32m+[m[32m  );[m
+[32m+[m
+   server.registerTool([m
+     "list_events",[m
+     {[m
+[1mdiff --git a/src/features/slips/slips.tools.ts b/src/features/slips/slips.tools.ts[m
+[1mindex 95aa7f9..6ca8c5f 100644[m
+[1m--- a/src/features/slips/slips.tools.ts[m
+[1m+++ b/src/features/slips/slips.tools.ts[m
+[36m@@ -1,7 +1,10 @@[m
+ import type { McpServer } from "@modelcontextprotocol/server";[m
+ import { z } from "zod";[m
+ import { withMode } from "@/features/mode/mode.repo";[m
+[32m+[m[32mimport { honestyBonus, missedTaskPenalty } from "@/features/xp/xp";[m
+[32m+[m[32mimport type { PillarWeight } from "@/features/xp/split";[m
+ import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";[m
+[32m+[m[32mimport type { Json } from "@/shared/supabase/database.types";[m
+ import { recordSlip } from "./slips.repo";[m
+ [m
+ export function registerSlipTools(server: McpServer) {[m
+[36m@@ -45,4 +48,68 @@[m [mexport function registerSlipTools(server: McpServer) {[m
+       }[m
+     },[m
+   );[m
+[32m+[m
+[32m+[m[32m  server.registerTool([m
+[32m+[m[32m    "mark_task_missed",[m
+[32m+[m[32m    {[m
+[32m+[m[32m      title: "Mark a task as missed",[m
+[32m+[m[32m      description:[m
+[32m+[m[32m        "Self-report that a task or habit was missed. This is different from log_slip: it is a deliberate, honest " +[m
+[32m+[m[32m        "self-report and should include a brief why. The rule is: the miss penalty is harsher than a normal completion, " +[m
+[32m+[m[32m        "and the honesty bonus is smaller than the penalty, so a miss never pays a net gain if they report it honestly. " +[m
+[32m+[m[32m        "The bonus only applies when they report it themselves. `self_reported` should usually be true unless the app " +[m
+[32m+[m[32m        "already caught it first.",[m
+[32m+[m[32m      inputSchema: z.object({[m
+[32m+[m[32m        task_id: z.uuid(),[m
+[32m+[m[32m        reason: z.string().trim().min(1).max(300).describe("Why it was missed, as a short honest note"),[m
+[32m+[m[32m        self_reported: z.boolean().default(true),[m
+[32m+[m[32m      }),[m
+[32m+[m[32m    },[m
+[32m+[m[32m    async ({ task_id, reason, self_reported }: { task_id: string; reason: string; self_reported: boolean }, ctx: ToolContext) => {[m
+[32m+[m[32m      try {[m
+[32m+[m[32m        const db = dbFrom(ctx);[m
+[32m+[m[32m        const now = new Date();[m
+[32m+[m[32m        const { data: task, error } = await db[m
+[32m+[m[32m          .from("tasks")[m
+[32m+[m[32m          .select("id, title, base_xp, task_pillars(pillar, weight)")[m
+[32m+[m[32m          .eq("id", task_id)[m
+[32m+[m[32m          .maybeSingle<{ id: string; title: string; base_xp: number; task_pillars: { pillar: string; weight: number }[] }>();[m
+[32m+[m
+[32m+[m[32m        if (error) return toolError(`mark_task_missed failed: ${error.message}`);[m
+[32m+[m[32m        if (!task) return toolError("mark_task_missed failed: no such task");[m
+[32m+[m
+[32m+[m[32m        const weights: PillarWeight[] = Array.isArray(task.task_pillars) && task.task_pillars.length > 0 ? (task.task_pillars as PillarWeight[]) : [{ pillar: "character", weight: 100 }];[m
+[32m+[m[32m        const penalty = missedTaskPenalty({ baseXp: task.base_xp, weights });[m
+[32m+[m[32m        const bonus = self_reported ? honestyBonus({ baseXp: task.base_xp, weights }) : [];[m
+[32m+[m
+[32m+[m[32m        const { data: result, error: rpcError } = await db.rpc("record_miss", {[m
+[32m+[m[32m          p_task_id: task_id,[m
+[32m+[m[32m          p_reason: reason,[m
+[32m+[m[32m          p_penalty_entries: penalty as unknown as Json,[m
+[32m+[m[32m          p_honesty_entries: bonus as unknown as Json,[m
+[32m+[m[32m          p_self_reported: self_reported,[m
+[32m+[m[32m        } as any);[m
+[32m+[m
+[32m+[m[32m        if (rpcError) return toolError(`mark_task_missed failed: ${rpcError.message}`);[m
+[32m+[m[32m        const rpcResult = result as { result?: string } | null;[m
+[32m+[m[32m        if (rpcResult?.result === "already_missed") return toolError("mark_task_missed failed: already marked missed");[m
+[32m+[m[32m        if (rpcResult?.result === "not_found") return toolError("mark_task_missed failed: no such task");[m
+[32m+[m
+[32m+[m[32m        return ok([m
+[32m+[m[32m          await withMode(db, now, {[m
+[32m+[m[32m            task_id,[m
+[32m+[m[32m            title: task.title,[m
+[32m+[m[32m            reason,[m
+[32m+[m[32m            self_reported,[m
+[32m+[m[32m            penalty,[m
+[32m+[m[32m            honesty: bonus,[m
+[32m+[m[32m            result: rpcResult?.result ?? "recorded",[m
+[32m+[m[32m            next: "It is now marked missed and the penalty/honesty XP has been applied.",[m
+[32m+[m[32m          }),[m
+[32m+[m[32m        );[m
+[32m+[m[32m      } catch (error) {[m
+[32m+[m[32m        return toolError(`mark_task_missed failed: ${(error as Error).message}`);[m
+[32m+[m[32m      }[m
+[32m+[m[32m    },[m
+[32m+[m[32m  );[m
+ }[m

@@ -3,8 +3,11 @@ import { z } from "zod";
 import { findCommitment } from "@/features/commitments/commitments.repo";
 import { withMode } from "@/features/mode/mode.repo";
 import { loadSchedule } from "@/features/settings/settings.repo";
+import { honestyBonus, missedTaskPenalty } from "@/features/xp/xp";
+import type { PillarWeight } from "@/features/xp/split";
 import { currentConfig } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
+import type { Json } from "@/shared/supabase/database.types";
 import { dayKey, formatLocal, zonedInstant } from "@/shared/time";
 import { EVENT_KINDS, upcoming, type EventKind } from "./events";
 import { addEvent } from "./add-event";
@@ -168,6 +171,60 @@ export function registerEventTools(server: McpServer) {
         return ok(await withMode(db, new Date(), { ...(await finishEvent(db, event_id, not_at_it ? "not_at_it" : "done")) }));
       } catch (error) {
         return toolError(`complete_event failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "mark_event_missed",
+    {
+      title: "Mark an event as missed",
+      description:
+        "Self-report that an event was missed. Use this when they were supposed to be there and didn't go, with a brief " +
+        "reason. This follows the same honesty rule as task misses: a self-reported miss gets a smaller honesty bonus, " +
+        "and the miss penalty remains larger than a clean completion would have been, so it never pays to fake a miss.",
+      inputSchema: z.object({
+        event_id: z.uuid(),
+        reason: z.string().trim().min(1).max(300),
+        self_reported: z.boolean().default(true),
+      }),
+    },
+    async ({ event_id, reason, self_reported }: { event_id: string; reason: string; self_reported: boolean }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        const { data: event, error } = await db.from("events").select("id, title").eq("id", event_id).maybeSingle();
+        if (error) return toolError(`mark_event_missed failed: ${error.message}`);
+        if (!event) return toolError("mark_event_missed failed: no such event");
+
+        const fallbackWeights: PillarWeight[] = [{ pillar: "character", weight: 100 }];
+        const penalty = missedTaskPenalty({ baseXp: 10, weights: fallbackWeights });
+        const bonus = self_reported ? honestyBonus({ baseXp: 10, weights: fallbackWeights }) : [];
+
+        const { data: result, error: rpcError } = await db.rpc("record_miss", {
+          p_event_id: event_id,
+          p_reason: reason,
+          p_penalty_entries: penalty as unknown as Json,
+          p_honesty_entries: bonus as unknown as Json,
+          p_self_reported: self_reported,
+        } as any);
+
+        if (rpcError) return toolError(`mark_event_missed failed: ${rpcError.message}`);
+        const rpcResult = result as { result?: string } | null;
+        if (rpcResult?.result === "already_missed") return toolError("mark_event_missed failed: already marked missed");
+        if (rpcResult?.result === "not_found") return toolError("mark_event_missed failed: no such event");
+
+        return ok({
+          event_id,
+          title: event.title,
+          reason,
+          self_reported,
+          penalty,
+          honesty: bonus,
+          result: rpcResult?.result ?? "recorded",
+          next: "The event is marked missed and the honesty/penalty XP is recorded.",
+        });
+      } catch (error) {
+        return toolError(`mark_event_missed failed: ${(error as Error).message}`);
       }
     },
   );
