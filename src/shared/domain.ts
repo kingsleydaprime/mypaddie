@@ -29,11 +29,11 @@ export type Priority = (typeof PRIORITIES)[number];
 /** Modes in the blueprint's table. `strictest`/`softest` only come from an override. */
 export type Mode = "curious" | "strict" | "soft" | "strictest" | "softest";
 
-/** Whole units of the user's currency (the name is from when it was naira-only). Integers only, so money maths never meets floating point. */
+/** Units of the user's currency. Can include fractional amounts (kobo / cents). */
 export type Naira = number;
 
 export function assertNaira(value: number, label: string): void {
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new RangeError(`${label} must be a non-negative whole amount, got ${value}`);
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`${label} must be a non-negative amount, got ${value}`);
   }
 }

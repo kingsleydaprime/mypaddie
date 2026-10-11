@@ -5,7 +5,7 @@ import { PILLARS, TIERS } from "@/shared/domain";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { addItem, completeItem, deleteItem, listItems, setItemStatus, updateItem } from "./items.repo";
 
-const amount = z.number().int().nonnegative();
+const amount = z.number().nonnegative();
 const weightsSchema = z
   .array(z.object({ pillar: z.enum(PILLARS), weight: z.number().int().min(1).max(100) }))
   .min(1)

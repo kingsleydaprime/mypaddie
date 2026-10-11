@@ -4,7 +4,7 @@ import { withMode } from "@/features/mode/mode.repo";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { addBill, addDebt, forgiveDebt, loadBills, loadCaps, loadDebts, payBill, payDebt, setCap, updateBill } from "./guardrails.repo";
 
-const amount = z.number().int().positive();
+const amount = z.number().positive();
 const category = z.string().trim().min(1).max(60);
 const date = z.iso.date();
 

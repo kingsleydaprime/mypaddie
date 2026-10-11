@@ -31,8 +31,11 @@ describe("correctionFor", () => {
   test("already right: nothing to record", () => {
     expect(correctionFor(80_500, 80_500, true)).toBeNull();
   });
-  test("rejects negative or fractional amounts", () => {
+  test("handles decimal amounts correctly", () => {
+    expect(correctionFor(29164.73, 0, false)).toEqual({ kind: "opening", direction: "in", amount: 29164.73 });
+    expect(correctionFor(29164.73, 29000, true)).toEqual({ kind: "adjustment", direction: "in", amount: 164.73 });
+  });
+  test("rejects negative amounts", () => {
     expect(() => correctionFor(-1, 0, false)).toThrow(RangeError);
-    expect(() => correctionFor(10.5, 0, false)).toThrow(RangeError);
   });
 });

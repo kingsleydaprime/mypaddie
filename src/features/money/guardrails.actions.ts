@@ -8,7 +8,7 @@ import { requireDb } from "@/shared/supabase/session";
 import { addBill, addDebt, payBill, payDebt, setCap, updateBill } from "./guardrails.repo";
 
 const PAGE = "/app/money/limits";
-const money = z.string().transform((v) => parseAmount(v)).pipe(z.number().int().positive("Enter an amount"));
+const money = z.string().transform((v) => parseAmount(v)).pipe(z.number().positive("Enter an amount"));
 const optionalText = z.string().trim().optional().transform((v) => v || null);
 
 /** Back to the page, with a message for a refusal; a success just shows the new state. */

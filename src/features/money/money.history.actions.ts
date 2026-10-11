@@ -12,7 +12,7 @@ const amountOf = (v: FormDataEntryValue | null) => parseAmount(String(v ?? ""));
 
 export async function setBalanceAction(_prev: FormState, form: FormData): Promise<FormState> {
   const amount = amountOf(form.get("amount"));
-  if (!Number.isInteger(amount) || amount < 0) return { error: "A whole amount, 0 or more" };
+  if (!Number.isFinite(amount) || amount < 0) return { error: "Amount must be 0 or more" };
   const db = await requireDb("/app/money/history");
   const r = await setBalance(db, amount, new Date());
   revalidatePath("/app/money");

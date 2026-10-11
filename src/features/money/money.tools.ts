@@ -21,7 +21,7 @@ import {
 } from "./money.repo";
 import { judgePurchase } from "./purchase";
 
-const amount = z.number().int().positive().describe("Whole units of their currency");
+const amount = z.number().positive().describe("Amount in their currency; decimals allowed (e.g. 1500.50)");
 
 function budgetSummary(b: BudgetContext) {
   const s = b.stage;
@@ -164,11 +164,11 @@ export function registerMoneyTools(server: McpServer) {
   );
 
   const amounts = z.object({
-    needs: z.number().int().nonnegative(),
-    buffer: z.number().int().nonnegative(),
-    savings: z.number().int().nonnegative(),
-    wants: z.number().int().nonnegative(),
-    flexible: z.number().int().nonnegative(),
+    needs: z.number().nonnegative(),
+    buffer: z.number().nonnegative(),
+    savings: z.number().nonnegative(),
+    wants: z.number().nonnegative(),
+    flexible: z.number().nonnegative(),
   });
 
   server.registerTool(
@@ -264,7 +264,7 @@ export function registerMoneyTools(server: McpServer) {
         "Make their balance match what's really in their account(s): 'I have 85,000'. The first time this records " +
         "their opening balance; later it records a correction for the difference (bank charges, a forgotten spend) " +
         "— mention the difference so the user can think about what wasn't logged. Never counts as income or spending.",
-      inputSchema: z.object({ amount: z.number().int().nonnegative().describe("Whole units actually in their account(s) now") }),
+      inputSchema: z.object({ amount: z.number().nonnegative().describe("Amount actually in their account(s) now; decimals allowed") }),
     },
     async ({ amount }: { amount: number }, ctx: ToolContext) => {
       try {

@@ -13,6 +13,10 @@ describe("formatMoney", () => {
   test("negative amounts", () => {
     expect(formatMoney(-3000, "NGN")).toBe("-₦3,000");
   });
+  test("amounts with decimals display 2 fraction digits", () => {
+    expect(formatMoney(29164.73, "NGN")).toBe("₦29,164.73");
+    expect(formatMoney(12.5, "USD")).toBe("$12.50");
+  });
 });
 
 describe("currencySymbol", () => {
@@ -26,7 +30,16 @@ describe("currencySymbol", () => {
 });
 
 describe("parseAmount", () => {
-  test.each([["₦85,000", 85000], ["85 000", 85000], ["$1,200", 1200], ["GH₵ 300", 300], ["-500", -500]])("%s → %d", (raw, n) => {
+  test.each([
+    ["₦85,000", 85000],
+    ["85 000", 85000],
+    ["$1,200", 1200],
+    ["GH₵ 300", 300],
+    ["-500", -500],
+    ["29164.73", 29164.73],
+    ["₦29,164.73", 29164.73],
+    ["$1,200.50", 1200.5],
+  ])("%s → %d", (raw, n) => {
     expect(parseAmount(raw)).toBe(n);
   });
   test("nothing numeric is 0, which callers reject", () => {

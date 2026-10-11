@@ -9,7 +9,7 @@ const optionalNaira = z
   .trim()
   .optional()
   .transform((v) => (!v ? null : parseAmount(v)))
-  .pipe(z.number().int().nonnegative().nullable());
+  .pipe(z.number().nonnegative().nullable());
 
 export const itemFormSchema = z.object({
   tier: z.enum(TIERS),

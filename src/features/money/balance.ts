@@ -6,9 +6,11 @@ export interface BalanceEntry {
   voided: boolean;
 }
 
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 /** Real money: everything in (opening balance included) minus everything out, ignoring voided entries. */
 export function balanceOf(entries: readonly BalanceEntry[]): number {
-  return entries.reduce((sum, e) => (e.voided ? sum : sum + (e.direction === "in" ? e.amount : -e.amount)), 0);
+  return round2(entries.reduce((sum, e) => (e.voided ? sum : sum + (e.direction === "in" ? e.amount : -e.amount)), 0));
 }
 
 export type Correction = { kind: "opening" | "adjustment"; direction: "in" | "out"; amount: Naira } | null;
@@ -21,7 +23,7 @@ export type Correction = { kind: "opening" | "adjustment"; direction: "in" | "ou
  */
 export function correctionFor(actual: Naira, current: number, hasHistory: boolean): Correction {
   assertNaira(actual, "balance");
-  const diff = actual - current;
+  const diff = round2(actual - current);
   if (diff === 0) return null;
   return { kind: hasHistory ? "adjustment" : "opening", direction: diff > 0 ? "in" : "out", amount: Math.abs(diff) };
 }

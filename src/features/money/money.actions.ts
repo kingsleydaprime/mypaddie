@@ -12,7 +12,7 @@ const schema = z.object({
   amount: z
     .string()
     .transform((v) => parseAmount(v))
-    .pipe(z.number({ message: "Enter an amount" }).int("Whole amounts only").positive("Enter an amount")),
+    .pipe(z.number({ message: "Enter an amount" }).positive("Enter an amount")),
   direction: z.enum(["in", "out"]),
   tag: z.enum(["need", "want", "unsure"]).optional(),
   category: z.string().trim().min(1, "What was it for?"),
