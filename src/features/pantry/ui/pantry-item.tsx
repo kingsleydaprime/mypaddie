@@ -41,8 +41,12 @@ export function PantryItemRow({ item }: { item: PantryItem }) {
       {editing && (
         <form action={save} className="mt-2 grid grid-cols-2 gap-2">
           <input type="hidden" name="name" value={item.name} />
-          <label className="flex flex-col gap-1 text-xs text-muted">Amount ({item.unit})<input name="quantity" type="number" step="any" min={0} defaultValue={item.quantity} className={field} /></label>
+          <label className="flex flex-col gap-1 text-xs text-muted">Amount<input name="quantity" type="number" step="any" min={0} defaultValue={item.quantity} className={field} /></label>
           <label className="flex flex-col gap-1 text-xs text-muted">Low at<input name="low_at" type="number" step="any" min={0} defaultValue={item.lowAt ?? ""} placeholder="—" className={field} /></label>
+          <label className="flex flex-col gap-1 text-xs text-muted">
+            Unit
+            <input name="unit" type="text" defaultValue={item.unit} className={field} />
+          </label>
           <label className="col-span-2 flex flex-col gap-1 text-xs text-muted">
             Category
             <select name="category" defaultValue={item.category} className={field}>
@@ -51,7 +55,7 @@ export function PantryItemRow({ item }: { item: PantryItem }) {
           </label>
           {state && "error" in state && <p className="col-span-2 text-sm text-red" role="alert">{state.error}</p>}
           <SubmitButton disabled={saving} className="rounded-lg bg-gold px-3 py-2 font-semibold text-on-gold disabled:opacity-60">Save</SubmitButton>
-          <button type="button" onClick={() => start(() => removeItemAction(item.name))} className="rounded-lg border border-red/40 px-3 py-2 text-red">Remove</button>
+          <button type="button" onClick={() => start(() => removeItemAction(item.name))} className="rounded-lg border border-red/40 px-3 py-2 text-red">Delete</button>
         </form>
       )}
     </li>

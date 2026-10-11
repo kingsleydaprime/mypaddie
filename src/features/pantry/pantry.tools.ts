@@ -4,7 +4,7 @@ import { afterCooking } from "./meals.repo";
 import { withMode } from "@/features/mode/mode.repo";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import { byCategory, shoppingList } from "./pantry";
-import { adjustPantry, cookMeal, loadPantry, recentMeals } from "./pantry.repo";
+import { adjustPantry, cookMeal, loadPantry, recentMeals, removePantryItem } from "./pantry.repo";
 
 const quantity = z.number().nonnegative();
 
@@ -108,6 +108,28 @@ export function registerPantryTools(server: McpServer) {
         return ok(await withMode(db, now, { ...cooked, ...plan, shoppingList: list }));
       } catch (error) {
         return toolError(`cook_meal failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "delete_pantry_item",
+    {
+      title: "Delete pantry item",
+      description:
+        "Permanently remove a pantry item by name. Use when the user asks to delete, remove, or get rid of " +
+        "an item entirely — not just to zero out its quantity. This is irreversible.",
+      inputSchema: z.object({
+        name: z.string().trim().min(1).describe("Name of the item to delete (case-insensitive)"),
+      }),
+    },
+    async ({ name }: { name: string }, ctx: ToolContext) => {
+      try {
+        const db = dbFrom(ctx);
+        await removePantryItem(db, name);
+        return ok({ deleted: name });
+      } catch (error) {
+        return toolError(`delete_pantry_item failed: ${(error as Error).message}`);
       }
     },
   );
