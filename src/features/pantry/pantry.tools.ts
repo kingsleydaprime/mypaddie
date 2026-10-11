@@ -15,10 +15,11 @@ export function registerPantryTools(server: McpServer) {
       title: "Update pantry",
       description:
         "Change food stock — a shopping trip, using something up, or a stock-take. delta adds (+) or uses (−); set " +
-        "is the exact amount now. Each item keeps one unit (kg, g, l, ml, pieces, tins, cups, packs, bags…); " +
-        "convert to it if the user uses another (500g of something stored in kg → 0.5). New items need a unit and a " +
-        "category (grains, protein, vegetables, fruit, spices, oils, drinks, snacks, other). Set low_at for things " +
-        "the user never wants to run out of. When the user logs a food purchase, offer to add it here too.",
+        "is the exact amount now. Each item has a unit (kg, g, l, ml, pieces, tins, cups, packs, bags…). " +
+        "To change an item's unit or re-measure it, provide `set` with the new unit (e.g. { name: 'Rice', set: 5, unit: 'kg' }). " +
+        "For delta adjustments, keep to the stored unit (or convert: 500g of something stored in kg → delta: 0.5). " +
+        "New items need a unit and a category (grains, protein, vegetables, fruit, spices, oils, drinks, snacks, other). " +
+        "Set low_at for things the user never wants to run out of. When the user logs a food purchase, offer to add it here too.",
       inputSchema: z.object({
         changes: z
           .array(
