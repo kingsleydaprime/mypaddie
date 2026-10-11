@@ -8,8 +8,11 @@ import { findCourseRef } from "@/features/courses/courses.repo";
 import { findFun } from "@/features/fun/fun.repo";
 import { findOrCreateSkill } from "@/features/learning/learning.repo";
 import { currentConfig } from "@/shared/config";
-import { dayKey } from "@/shared/time";
+import { dayEndsAt } from "@/features/settings/schedule";
+import { loadSchedule } from "@/features/settings/settings.repo";
+import { addDays, dayKey, daysBetween, zonedInstant } from "@/shared/time";
 import { loadTaskOverview } from "./overview.repo";
+import { matchesTaskHistoryStatus, taskHistoryRecord, type TaskHistoryFilter, type TaskHistoryRow } from "./history";
 import { completeTask, createTask, deleteTask, habitRow, startTask, tickTaskStep, updateTask } from "./tasks.repo";
 
 const weightsSchema = z
@@ -292,6 +295,92 @@ export function registerTaskTools(server: McpServer) {
         );
       } catch (error) {
         return toolError(`list_habits failed: ${(error as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    "get_task_history",
+    {
+      title: "Get task history",
+      description:
+        "Read task occurrences within an inclusive local-date range. Date means occurrence date for a recurring task, " +
+        "otherwise scheduled date, completion date, or creation date (in that order). Returns each task's stored status, " +
+        "plus outcomes for slips and late completion. A task may have more than one outcome (for example, slipped " +
+        "then completed late). Slip details include both the original why and the why_category label; explicit misses " +
+        "include their own reason. Recurring tasks appear once per occurrence. Use status='slipped' or 'late' to filter " +
+        "those outcomes, or a stored status to filter pending/done/missed/skipped/cancelled. Results are paginated; " +
+        "continue with next_offset until it is null. Dates use the user's time zone.",
+      inputSchema: z.object({
+        from: z.iso.date().describe("Inclusive local date, YYYY-MM-DD"),
+        to: z.iso.date().describe("Inclusive local date, YYYY-MM-DD"),
+        status: z.enum(["pending", "done", "missed", "skipped", "cancelled", "slipped", "late"]).optional(),
+        limit: z.number().int().min(1).max(100).default(50),
+        offset: z.number().int().min(0).default(0),
+      }),
+    },
+    async (
+      args: { from: string; to: string; status?: TaskHistoryFilter; limit: number; offset: number },
+      ctx: ToolContext,
+    ) => {
+      try {
+        const db = dbFrom(ctx);
+        const now = new Date();
+        const config = currentConfig();
+        const schedule = await loadSchedule(db);
+        const start = zonedInstant(args.from, "00:00", config.timeZone).toISOString();
+        const end = zonedInstant(addDays(args.to, 1), "00:00", config.timeZone).toISOString();
+        const rangeDays = daysBetween(new Date(`${args.from}T00:00:00Z`), new Date(`${args.to}T00:00:00Z`), "UTC");
+        if (rangeDays < 0) return toolError("get_task_history failed: from must be on or before to");
+        if (rangeDays > 365) return toolError("get_task_history failed: date range cannot exceed 366 days");
+
+        const dateFilter = [
+          `and(occurs_on.gte.${args.from},occurs_on.lte.${args.to})`,
+          `and(occurs_on.is.null,due_at.gte.${start},due_at.lt.${end})`,
+          `and(occurs_on.is.null,due_at.is.null,done_at.gte.${start},done_at.lt.${end})`,
+          `and(occurs_on.is.null,due_at.is.null,done_at.is.null,created_at.gte.${start},created_at.lt.${end})`,
+        ].join(",");
+        const { data: tasks, error } = await db
+          .from("tasks")
+          .select("id, title, status, due_at, done_at, created_at, occurs_on, duration_minutes, routine_step, routines(title)")
+          .or(dateFilter)
+          .order("occurs_on", { ascending: true, nullsFirst: true })
+          .order("due_at", { ascending: true, nullsFirst: true })
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(args.offset, args.offset + args.limit - 1);
+
+        if (error) return toolError(`get_task_history failed: ${error.message}`);
+        const rows = (tasks ?? []) as unknown as TaskHistoryRow[];
+        const ids = rows.map((task) => task.id);
+        const [slipResult, missResult] = ids.length
+          ? await Promise.all([
+              db.from("slips").select("task_id, why, why_category, accepted, at").in("task_id", ids).order("at", { ascending: true }),
+              db.from("missed_tasks").select("task_id, reason, at, self_reported").in("task_id", ids),
+            ])
+          : [{ data: [], error: null }, { data: [], error: null }];
+        if (slipResult.error) return toolError(`get_task_history failed loading slips: ${slipResult.error.message}`);
+        if (missResult.error) return toolError(`get_task_history failed loading miss reasons: ${missResult.error.message}`);
+
+        const slipsByTask = new Map<string, NonNullable<typeof slipResult.data>>();
+        for (const slip of slipResult.data ?? []) {
+          slipsByTask.set(slip.task_id, [...(slipsByTask.get(slip.task_id) ?? []), slip]);
+        }
+        const missesByTask = new Map((missResult.data ?? []).filter((miss) => miss.task_id).map((miss) => [miss.task_id!, miss]));
+        const records = rows
+          .map((task) => taskHistoryRecord(task, slipsByTask.get(task.id) ?? [], missesByTask.get(task.id) ?? null, config.timeZone, dayEndsAt(schedule), config))
+          .filter((record) => matchesTaskHistoryStatus(record, args.status));
+        const nextOffset = rows.length === args.limit ? args.offset + rows.length : null;
+
+        return ok(await withMode(db, now, {
+          from: args.from,
+          to: args.to,
+          status_filter: args.status ?? null,
+          tasks: records,
+          next_offset: nextOffset,
+        }));
+      } catch (error) {
+        return toolError(`get_task_history failed: ${(error as Error).message}`);
       }
     },
   );
