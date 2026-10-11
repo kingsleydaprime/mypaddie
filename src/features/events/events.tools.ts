@@ -201,6 +201,7 @@ export function registerEventTools(server: McpServer) {
         const bonus = self_reported ? honestyBonus({ baseXp: 10, weights: fallbackWeights }) : [];
 
         const { data: result, error: rpcError } = await db.rpc("record_miss", {
+          p_task_id: null,
           p_event_id: event_id,
           p_reason: reason,
           p_penalty_entries: penalty as unknown as Json,

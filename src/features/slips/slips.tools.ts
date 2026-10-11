@@ -84,6 +84,7 @@ export function registerSlipTools(server: McpServer) {
 
         const { data: result, error: rpcError } = await db.rpc("record_miss", {
           p_task_id: task_id,
+          p_event_id: null,
           p_reason: reason,
           p_penalty_entries: penalty as unknown as Json,
           p_honesty_entries: bonus as unknown as Json,
