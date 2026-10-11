@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select set_config('search_path', current_setting('search_path') || ', ' || n.nspname, true)
   from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgtap';
-select plan(13);
+select plan(15);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'kingsley@example.com'),
@@ -29,6 +29,9 @@ select is((select quantity from public.pantry_items where name = 'Eggs'), 0.00, 
 
 select lives_ok($$select public.adjust_pantry('[{"name":"Rice","set":1.5}]')$$, 'a stock-take sets the exact amount');
 select is((select quantity from public.pantry_items where name = 'Rice'), 1.50, 'quantity is what was counted');
+
+select lives_ok($$select public.adjust_pantry('[{"name":"Rice","set":5,"unit":"bags"}]')$$, 'a stock-take can change the stored unit');
+select is((select unit from public.pantry_items where name = 'Rice'), 'bags', 'unit is updated to bags');
 
 create temp table cooked as select public.cook_meal('Jollof', '[
   {"name":"Rice","quantity":0.5,"unit":"kg"},{"name":"tomato paste","quantity":1,"unit":"tins"},{"name":"Pepper","quantity":3,"unit":"pieces"}]',
