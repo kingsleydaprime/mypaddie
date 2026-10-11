@@ -46,14 +46,35 @@ export function registerRoutineTools(server: McpServer) {
     "list_routines",
     {
       title: "Routines",
-      description: "Their routines and steps. To add, remove, reorder or retime steps or rename it, use update_routine; to change one step's details (title, length, pillars), update_task on that step.",
+      description:
+        "Their routines and steps. Each step has a step_number, habit_id, and today's task occurrence (task_id, date, " +
+        "status) when one exists. Match the routine and step by name; use step_number if names repeat. Use the occurrence " +
+        "task_id for one-day actions such as complete_task, mark_task_missed, or update_task(task_id=...). Use habit_id " +
+        "with update_task(habit=...) to edit or stop the recurring step. To add, remove, reorder or retime steps or rename " +
+        "the routine, use update_routine.",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
     async (_a: Record<string, never>, ctx: ToolContext) => {
       try {
         const db = dbFrom(ctx);
-        return ok(await withMode(db, new Date(), { routines: await loadRoutines(db) }));
+        const now = new Date();
+        const routines = await loadRoutines(db);
+        return ok(await withMode(db, now, {
+          routines: routines.map((routine) => ({
+            id: routine.id,
+            title: routine.title,
+            recurrence: routine.recurrence,
+            steps: routine.steps,
+            step_refs: routine.stepRefs.map((step) => ({
+              step_number: step.stepNumber,
+              title: step.title,
+              habit_id: step.habitId,
+              today: step.today ? { task_id: step.today.taskId, on: step.today.on, status: step.today.status } : null,
+              next: step.next ? { task_id: step.next.taskId, on: step.next.on } : null,
+            })),
+          })),
+        }));
       } catch (error) {
         return toolError(`list_routines failed: ${(error as Error).message}`);
       }

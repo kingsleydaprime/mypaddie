@@ -44,7 +44,7 @@ const inProgressEvents = (events: Parameters<typeof inProgress>[0][], now: Date)
 const tz = () => currentConfig().timeZone;
 
 /** One task for Paddie. Any time reads as "any time before 22:00", never as 23:59. */
-const itemWith = (anyTime: string) => (i: FocusItem) => ({
+export const itemWith = (anyTime: string) => (i: FocusItem) => ({
   id: i.id,
   title: i.title,
   due: !i.dueAt ? anyTime : localTimeOf(i.dueAt, tz()) === "23:59" ? `${dayKey(i.dueAt, tz())} ${anyTime}` : formatLocal(i.dueAt, tz()),
@@ -56,6 +56,22 @@ const itemWith = (anyTime: string) => (i: FocusItem) => ({
   ...(i.spentMinutes > 0 ? { minutesSpentBefore: i.spentMinutes } : {}),
   ...(!i.startedAt && i.spentMinutes > 0 ? { paused: true } : {}),
   ...(i.steps ? { steps: `${i.steps.done}/${i.steps.total}` } : {}),
+  ...(i.routine ? {
+    routine: {
+      title: i.routine.title,
+      next: i.routine.next,
+      done: i.routine.done,
+      total: i.routine.total,
+      items: i.routine.items.map((step) => ({
+        task_id: step.id,
+        step_number: step.stepNumber,
+        title: step.title,
+        status: step.status,
+        done: step.done,
+        habit_id: step.habitId,
+      })),
+    },
+  } : {}),
 });
 
 function moneySummary(m: MoneyStage) {
@@ -78,7 +94,7 @@ export function registerTodayTools(server: McpServer) {
       title: "Get today",
       description:
         "Call at the start of every chat. Returns the 3 things that matter right now (lead with these and ask the user " +
-        "to do one), the rest of today's open tasks, money status, the current coaching mode with the facts " +
+        "to do one), the rest of today's open tasks, routine step task_ids/statuses for individual actions, money status, the current coaching mode with the facts " +
         "behind it, and their 'Who I'm becoming' profile (`becoming`) — measure choices against it all chat. Follow the returned mode. Don't recite stats unless asked.",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: false, idempotentHint: true },

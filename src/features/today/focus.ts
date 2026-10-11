@@ -36,7 +36,13 @@ export interface FocusItem {
   overdue: boolean;
   nonNegotiable: boolean;
   /** `items`: today's steps in order, each tickable on its own. */
-  routine?: { title: string; next: string; done: number; total: number; items: { id: string; title: string; done: boolean }[] };
+  routine?: {
+    title: string;
+    next: string;
+    done: number;
+    total: number;
+    items: { id: string; title: string; done: boolean; status: TaskForFocus["status"]; stepNumber: number; habitId: string | null }[];
+  };
   startedAt: Date | null;
   spentMinutes: number;
   steps: { done: number; total: number } | null;
@@ -175,7 +181,14 @@ export function pickFocus(
         next: next.title,
         done: steps.filter((x) => x.status === "done").length,
         total: steps.length,
-        items: steps.map((x) => ({ id: x.id, title: x.title, done: x.status === "done" })),
+        items: steps.map((x) => ({
+          id: x.id,
+          title: x.title,
+          done: x.status === "done",
+          status: x.status,
+          stepNumber: x.routine!.step,
+          habitId: x.seriesId ?? null,
+        })),
       },
     });
   }

@@ -58,7 +58,8 @@ export function registerSlipTools(server: McpServer) {
         "self-report and should include a brief why. The rule is: the miss penalty is harsher than a normal completion, " +
         "and the honesty bonus is smaller than the penalty, so a miss never pays a net gain if they report it honestly. " +
         "The bonus only applies when they report it themselves. `self_reported` should usually be true unless the app " +
-        "already caught it first.",
+        "already caught it first. For a routine step, use that step's task_id from get_today.routine.items or " +
+        "list_routines.step_refs.today; this marks only that occurrence missed, not the whole routine.",
       inputSchema: z.object({
         task_id: z.uuid(),
         reason: z.string().trim().min(1).max(300).describe("Why it was missed, as a short honest note"),

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { routineStepReferences } from "./routines.repo";
 import { planRoutineEdit, stepTimes } from "./routines";
 
 const morning = [
@@ -50,5 +51,33 @@ describe("stepTimes", () => {
   });
   test("no start time: any time that day", () => {
     expect(stepTimes(null, [15, 5])).toEqual([null, null]);
+  });
+});
+
+describe("routineStepReferences", () => {
+  test("resolves today's occurrence and the recurring step independently", () => {
+    const rows = [
+      { id: "pray-today", routine_id: "morning", routine_step: 1, title: "Pray", series_id: "pray-series", occurs_on: "2026-10-11", status: "done" as const },
+      { id: "pray-next", routine_id: "morning", routine_step: 1, title: "Pray", series_id: "pray-series", occurs_on: "2026-10-12", status: "pending" as const },
+      { id: "brush-today", routine_id: "morning", routine_step: 2, title: "Brush", series_id: "brush-series", occurs_on: "2026-10-11", status: "pending" as const },
+      { id: "other-routine", routine_id: "evening", routine_step: 1, title: "Pray", series_id: "evening-pray", occurs_on: "2026-10-11", status: "pending" as const },
+    ];
+
+    expect(routineStepReferences(rows, "morning", "2026-10-11")).toEqual([
+      {
+        stepNumber: 1,
+        title: "Pray",
+        habitId: "pray-series",
+        today: { taskId: "pray-today", on: "2026-10-11", status: "done" },
+        next: { taskId: "pray-next", on: "2026-10-12" },
+      },
+      {
+        stepNumber: 2,
+        title: "Brush",
+        habitId: "brush-series",
+        today: { taskId: "brush-today", on: "2026-10-11", status: "pending" },
+        next: { taskId: "brush-today", on: "2026-10-11" },
+      },
+    ]);
   });
 });

@@ -116,8 +116,9 @@ describe("pickFocus", () => {
 describe("routines take one place", () => {
   const at = (local: string) => new Date(`${local}+01:00`);
   const now = at("2026-10-14T07:30:00");
-  const step = (title: string, n: number, status: "pending" | "done" = "pending") => ({
+  const step = (title: string, n: number, status: "pending" | "done" | "missed" = "pending") => ({
     id: `r${n}`, title, tier: null, isNonNegotiable: true, dueAt: at("2026-10-14T07:00:00"), status,
+    seriesId: `morning-${n}`,
     routine: { id: "morning", title: "Morning routine", step: n },
   });
   test("open steps collapse into one item: the next step, with progress", () => {
@@ -128,11 +129,11 @@ describe("routines take one place", () => {
     expect(f.top[0]).toMatchObject({ id: "r2", routine: { next: "Read", done: 1, total: 4 } });
   });
   test("each of today's steps comes along, in order, ticked or not", () => {
-    const f = pickFocus([step("Read", 2), step("Pray", 1, "done"), step("Brush", 3)], now);
+    const f = pickFocus([step("Read", 2), step("Pray", 1, "done"), step("Brush", 3, "missed")], now);
     expect(f.top[0]!.routine!.items).toEqual([
-      { id: "r1", title: "Pray", done: true },
-      { id: "r2", title: "Read", done: false },
-      { id: "r3", title: "Brush", done: false },
+      { id: "r1", title: "Pray", done: true, status: "done", stepNumber: 1, habitId: "morning-1" },
+      { id: "r2", title: "Read", done: false, status: "pending", stepNumber: 2, habitId: "morning-2" },
+      { id: "r3", title: "Brush", done: false, status: "missed", stepNumber: 3, habitId: "morning-3" },
     ]);
   });
   test("a finished routine disappears", () => {

@@ -15,6 +15,55 @@ export interface StepInput {
 
 const DEFAULT_WEIGHTS: PillarWeight[] = [{ pillar: "character", weight: 50 }, { pillar: "physical", weight: 50 }];
 
+type RoutineStepStatus = "pending" | "done" | "skipped" | "cancelled" | "missed";
+
+interface RoutineStepRow {
+  id: string;
+  routine_id: string | null;
+  routine_step: number | null;
+  title: string;
+  series_id: string | null;
+  occurs_on: string | null;
+  status: RoutineStepStatus;
+}
+
+export function routineStepReferences(rows: readonly RoutineStepRow[], routineId: string, today: string) {
+  const bySeries = new Map<string, RoutineStepRow[]>();
+  for (const row of rows) {
+    if (row.routine_id !== routineId || !row.series_id || !row.occurs_on) continue;
+    const occurrences = bySeries.get(row.series_id) ?? [];
+    occurrences.push(row);
+    bySeries.set(row.series_id, occurrences);
+  }
+
+  return [...bySeries.entries()]
+    .map(([habitId, occurrences]) => {
+      let latest = occurrences[0]!;
+      let todayOccurrence: RoutineStepRow | null = null;
+      let nextOccurrence: RoutineStepRow | null = null;
+      for (const occurrence of occurrences) {
+        if (occurrence.occurs_on! > latest.occurs_on!) latest = occurrence;
+        if (occurrence.occurs_on === today) todayOccurrence = occurrence;
+        if (
+          occurrence.status === "pending" &&
+          occurrence.occurs_on! >= today &&
+          (!nextOccurrence || occurrence.occurs_on! < nextOccurrence.occurs_on!)
+        ) {
+          nextOccurrence = occurrence;
+        }
+      }
+
+      return {
+        stepNumber: latest.routine_step ?? 0,
+        title: latest.title,
+        habitId,
+        today: todayOccurrence ? { taskId: todayOccurrence.id, on: todayOccurrence.occurs_on!, status: todayOccurrence.status } : null,
+        next: nextOccurrence ? { taskId: nextOccurrence.id, on: nextOccurrence.occurs_on! } : null,
+      };
+    })
+    .sort((a, b) => a.stepNumber - b.stepNumber);
+}
+
 const addMinutes = (hhmm: string, m: number) => {
   const t = Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5)) + m;
   return `${String(Math.floor(t / 60) % 24).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
@@ -103,14 +152,22 @@ async function discardRoutine(db: Db, id: string) {
 }
 
 export async function loadRoutines(db: Db) {
+  const today = dayKey(new Date(), currentConfig().timeZone);
   const [{ data: routines }, { data: steps }] = await Promise.all([
     db.from("routines").select("id, title").order("created_at"),
-    db.from("tasks").select("routine_id, routine_step, title, series_id, recurrence, occurs_on").not("routine_id", "is", null).not("recurrence", "is", null).order("occurs_on", { ascending: false }),
+    db.from("tasks").select("id, routine_id, routine_step, title, series_id, recurrence, occurs_on, status").not("routine_id", "is", null).not("recurrence", "is", null).order("occurs_on", { ascending: false }),
   ]);
   return (routines ?? []).map((r) => {
     const seen = new Set<string>();
     const mine = (steps ?? []).filter((s) => s.routine_id === r.id && s.series_id && !seen.has(s.series_id) && seen.add(s.series_id));
-    return { id: r.id, title: r.title, recurrence: mine[0]?.recurrence ?? null, steps: mine.sort((a, b) => (a.routine_step ?? 0) - (b.routine_step ?? 0)).map((s) => s.title) };
+    const stepRefs = routineStepReferences(steps ?? [], r.id, today);
+    return {
+      id: r.id,
+      title: r.title,
+      recurrence: mine[0]?.recurrence ?? null,
+      steps: stepRefs.map((step) => step.title),
+      stepRefs,
+    };
   });
 }
 
