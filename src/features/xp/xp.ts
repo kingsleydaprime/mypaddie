@@ -8,6 +8,8 @@ export type XpReason =
   | "completion"
   | "late_completion"
   | "ignored_need"
+  | "miss_penalty"
+  | "honesty_bonus"
   | "goal_completion"
   | "wish_fulfilled"
   | "dream_milestone"
@@ -25,7 +27,7 @@ export interface XpEntry {
 }
 
 /** Mirrors the `task_status` enum in Postgres. */
-export type TaskStatus = "pending" | "done" | "skipped" | "cancelled";
+export type TaskStatus = "pending" | "done" | "skipped" | "cancelled" | "missed";
 
 export interface TaskForXp {
   id: string;
@@ -157,7 +159,7 @@ export function isIgnoredNeed(
   const need = task.tier === "need" && task.dueAt !== null;
   const mustHabit = task.isNonNegotiable === true && task.occursOn != null && day >= MUST_HABITS_DEDUCT_FROM;
   if (!need && !mustHabit) return false;
-  if (task.status === "done" || task.status === "cancelled" || task.doneAt !== null) return false;
+  if (task.status === "done" || task.status === "cancelled" || task.status === "missed" || task.doneAt !== null) return false;
   if (day >= dayKey(now, config.timeZone)) return false;
   return !slips.some((s) => s.taskId === task.id && s.accepted);
 }
@@ -171,6 +173,32 @@ export function ignoredNeedDeduction(
 ): XpEntry[] {
   if (!isIgnoredNeed(task, slips, now, config)) return [];
   return entries(-scale(task.baseXp, config.xp.ignoredNeedPenalty), task.weights, "ignored_need");
+}
+
+/** A miss earns a penalty that is harsher than a clean completion, but a self-reported miss also gets a smaller honesty bonus. */
+export function missedTaskPenalty(
+  task: Pick<TaskForXp, "baseXp" | "weights">,
+  config: EngineConfig = currentConfig(),
+): XpEntry[] {
+  return entries(-scale(task.baseXp, config.xp.missPenaltyMultiplier), task.weights, "miss_penalty");
+}
+
+export function honestyBonus(
+  task: Pick<TaskForXp, "baseXp" | "weights">,
+  config: EngineConfig = currentConfig(),
+): XpEntry[] {
+  return entries(scale(task.baseXp, config.xp.honestyBonusMultiplier), task.weights, "honesty_bonus");
+}
+
+export function missedTaskXp(
+  task: Pick<TaskForXp, "baseXp" | "weights">,
+  selfReported = true,
+  config: EngineConfig = currentConfig(),
+): { penalty: XpEntry[]; honesty: XpEntry[] } {
+  return {
+    penalty: missedTaskPenalty(task, config),
+    honesty: selfReported ? honestyBonus(task, config) : [],
+  };
 }
 
 /** Bonus on top of the last task's XP when a goal is completed. */

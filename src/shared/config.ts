@@ -13,6 +13,10 @@ export interface EngineConfig {
     lateMultiplier: number;
     /** Share of base XP deducted when a need is ignored. */
     ignoredNeedPenalty: number;
+    /** A task marked missed is penalised much harder than a clean completion is rewarded. */
+    missPenaltyMultiplier: number;
+    /** A self-reported miss earns a smaller honesty bonus than the penalty. */
+    honestyBonusMultiplier: number;
     /** Share of a promise's XP deducted when it's broken (not kept, released or renegotiated in time). */
     brokenPromisePenalty: number;
     goalCompletionMultiplier: number;
@@ -52,6 +56,8 @@ export const DEFAULT_CONFIG: EngineConfig = {
   xp: {
     lateMultiplier: 0.5,
     ignoredNeedPenalty: 0.5,
+    missPenaltyMultiplier: 2,
+    honestyBonusMultiplier: 0.5,
     brokenPromisePenalty: 1,
     goalCompletionMultiplier: 2,
     dreamMilestoneMultiplier: 3,

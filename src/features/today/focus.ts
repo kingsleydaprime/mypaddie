@@ -8,7 +8,7 @@ export interface TaskForFocus {
   tier: Tier | null;
   isNonNegotiable: boolean;
   dueAt: Date | null;
-  status: "pending" | "done" | "skipped" | "cancelled";
+  status: "pending" | "done" | "skipped" | "cancelled" | "missed";
   /** The habit this row is one day of, and that day ("YYYY-MM-DD"). */
   seriesId?: string | null;
   occursOn?: string | null;

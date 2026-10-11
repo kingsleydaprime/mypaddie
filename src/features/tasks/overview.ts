@@ -17,7 +17,7 @@ export interface SeriesRow {
   recurrence: string | null;
   occursOn: string;
   dueAt: Date | null;
-  status: "pending" | "done" | "skipped" | "cancelled";
+  status: "pending" | "done" | "skipped" | "cancelled" | "missed";
   routine: { id: string; step: number } | null;
   /** Uses the waking day, not work hours. */
   selfCare?: boolean;

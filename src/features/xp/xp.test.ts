@@ -5,10 +5,13 @@ import {
   completionXp,
   dreamMilestoneBonus,
   goalCompletionBonus,
+  honestyBonus,
   ignoredNeedDeduction,
   isIgnoredNeed,
   anyTimeEndsAt,
   lateAfter,
+  missedTaskPenalty,
+  missedTaskXp,
   transactionLoggedXp,
   wishFulfilledBonus,
   type TaskForXp,
@@ -211,6 +214,27 @@ describe("bonuses", () => {
 
   test("a dream milestone pays triple", () => {
     expect(total(dreamMilestoneBonus(40, goalWeights))).toBe(120);
+  });
+});
+
+describe("missed-task XP", () => {
+  test("a self-reported miss is harsher than a clean completion and the honesty bonus is smaller than the penalty", () => {
+    const task10 = task({ baseXp: 10 });
+    const reward = total(completionXp(task10, at("2026-10-05T06:00:00")));
+    const penalty = total(missedTaskPenalty(task10));
+    const bonus = total(honestyBonus(task10));
+
+    expect(penalty).toBeLessThan(0);
+    expect(bonus).toBeGreaterThan(0);
+    expect(bonus).toBeLessThan(Math.abs(penalty));
+    expect(Math.abs(penalty)).toBeGreaterThan(reward);
+    expect(Math.abs(penalty) - bonus).toBeGreaterThan(reward);
+  });
+
+  test("only a self-reported miss gets the honesty bonus", () => {
+    const xp = missedTaskXp(task({ baseXp: 10 }), false);
+    expect(total(xp.honesty)).toBe(0);
+    expect(total(xp.penalty)).toBeLessThan(0);
   });
 });
 

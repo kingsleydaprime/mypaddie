@@ -35,7 +35,7 @@ export interface DayTask {
   title: string;
   dueAt: Date | null;
   durationMinutes: number | null;
-  status: "pending" | "done" | "skipped" | "cancelled";
+  status: "pending" | "done" | "skipped" | "cancelled" | "missed";
   /** Routines, workouts, looking after yourself: takes time in the day, not from your work hours. */
   selfCare?: boolean;
 }

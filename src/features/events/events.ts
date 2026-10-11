@@ -26,7 +26,7 @@ export interface EventLike {
   allDay: boolean;
   important: boolean;
   yearly: boolean;
-  status: "upcoming" | "done" | "cancelled";
+  status: "upcoming" | "done" | "cancelled" | "missed";
 }
 
 function isLeap(y: number) {
