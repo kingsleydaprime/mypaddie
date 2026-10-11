@@ -176,7 +176,7 @@ describe("Preservation — Section A: saveItemAction passes correct non-unit fie
           await saveItemAction(null, fd);
 
           expect(adjustPantrySpy).toHaveBeenCalledTimes(1);
-          const [, changes] = adjustPantrySpy.mock.calls[0] as [unknown, Array<{ set?: number }>];
+          const [, changes] = adjustPantrySpy.mock.calls[0] as unknown as [unknown, Array<{ set?: number }>];
           // The quantity we passed must be forwarded as `set`
           const change = changes[0];
           expect(change.set).toBe(newQty);
@@ -217,7 +217,7 @@ describe("Preservation — Section A: saveItemAction passes correct non-unit fie
           await saveItemAction(null, fd);
 
           expect(adjustPantrySpy).toHaveBeenCalledTimes(1);
-          const [, changes] = adjustPantrySpy.mock.calls[0] as [unknown, Array<{ category?: string }>];
+          const [, changes] = adjustPantrySpy.mock.calls[0] as unknown as [unknown, Array<{ category?: string }>];
           expect(changes[0].category).toBe(newCategory);
         },
       ),
@@ -254,7 +254,7 @@ describe("Preservation — Section A: saveItemAction passes correct non-unit fie
         await saveItemAction(null, fd);
 
         expect(adjustPantrySpy).toHaveBeenCalledTimes(1);
-        const [, changes] = adjustPantrySpy.mock.calls[0] as [unknown, Array<Record<string, unknown>>];
+        const [, changes] = adjustPantrySpy.mock.calls[0] as unknown as [unknown, Array<Record<string, unknown>>];
         // unit should be absent from the change — preserving whatever is in the DB
         expect("unit" in changes[0]).toBe(false);
       }),
@@ -353,7 +353,7 @@ describe("Preservation — Section B: pure pantry logic (shoppingList, byCategor
           if (entry.reason === "low") seenLow = true;
           if (seenLow && entry.reason === "out") {
             // An "out" entry after a "low" entry — ordering violated
-            expect(entry.reason).toBe("low"); // will always fail here
+            throw new Error(`ordering violated: "out" entry after "low" — entry: ${JSON.stringify(entry)}`);
           }
         }
       }),
@@ -450,7 +450,7 @@ describe("Preservation — Section C: MCP tools remain registered and correct", 
         adjustPantrySpy.mockClear();
 
         // Re-register to capture the handler
-        let capturedHandler: ((args: unknown, ctx: unknown) => Promise<unknown>) | null = null;
+        const captured: { handler?: (args: unknown, ctx: unknown) => Promise<unknown> } = {};
         const server = new McpServer({ name: "test-delta", version: "1" });
         const original = server.registerTool.bind(server);
         (server as unknown as { registerTool: (...args: unknown[]) => unknown }).registerTool = (
@@ -458,20 +458,20 @@ describe("Preservation — Section C: MCP tools remain registered and correct", 
           meta: unknown,
           handler: unknown,
         ) => {
-          if (name === "update_pantry") capturedHandler = handler as typeof capturedHandler;
+          if (name === "update_pantry") captured.handler = handler as (args: unknown, ctx: unknown) => Promise<unknown>;
           return (original as (...a: unknown[]) => unknown)(name, meta, handler);
         };
         registerPantryTools(server);
 
-        if (!capturedHandler) throw new Error("update_pantry not registered");
+        if (!captured.handler) throw new Error("update_pantry not registered");
 
-        await capturedHandler(
+        await captured.handler(
           { changes: [{ name: itemName, delta }] },
           { extra: { userId: "u1" } },
         );
 
         expect(adjustPantrySpy).toHaveBeenCalledTimes(1);
-        const [, changes] = adjustPantrySpy.mock.calls[0] as [unknown, Array<{ name: string; delta?: number }>];
+        const [, changes] = adjustPantrySpy.mock.calls[0] as unknown as [unknown, Array<{ name: string; delta?: number }>];
         const change = changes.find((c) => c.name === itemName.trim());
         expect(change).toBeDefined();
         expect(change!.delta).toBe(delta);
@@ -500,7 +500,7 @@ describe("Preservation — Section C: MCP tools remain registered and correct", 
           recentMeals: async () => [],
         }));
 
-        let capturedHandler: ((args: unknown, ctx: unknown) => Promise<unknown>) | null = null;
+        const captured: { handler?: (args: unknown, ctx: unknown) => Promise<unknown> } = {};
         const server = new McpServer({ name: "test-get", version: "1" });
         const original = server.registerTool.bind(server);
         (server as unknown as { registerTool: (...args: unknown[]) => unknown }).registerTool = (
@@ -508,14 +508,14 @@ describe("Preservation — Section C: MCP tools remain registered and correct", 
           meta: unknown,
           handler: unknown,
         ) => {
-          if (name === "get_pantry") capturedHandler = handler as typeof capturedHandler;
+          if (name === "get_pantry") captured.handler = handler as (args: unknown, ctx: unknown) => Promise<unknown>;
           return (original as (...a: unknown[]) => unknown)(name, meta, handler);
         };
         registerPantryTools(server);
 
-        if (!capturedHandler) throw new Error("get_pantry not registered");
+        if (!captured.handler) throw new Error("get_pantry not registered");
 
-        const result = (await capturedHandler({ meal_days: 7 }, { extra: { userId: "u1" } })) as {
+        const result = (await captured.handler({ meal_days: 7 }, { extra: { userId: "u1" } })) as {
           content: Array<{ text: string }>;
         };
         const parsed = JSON.parse(result.content[0].text) as {
