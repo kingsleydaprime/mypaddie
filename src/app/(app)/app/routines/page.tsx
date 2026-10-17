@@ -25,7 +25,15 @@ export default async function RoutinesPage() {
     .eq("occurs_on", dayKey(new Date(), currentConfig().timeZone))
     .neq("status", "cancelled")
     .order("routine_step");
-  const todayOf = (id: string) => (todayRows ?? []).filter((t) => t.routine_id === id).map((t) => ({ id: t.id, title: t.title, done: t.status === "done" }));
+  const todayOf = (id: string) =>
+    (todayRows ?? [])
+      .filter((t) => t.routine_id === id)
+      .map((t) => ({
+        id: t.id,
+        title: t.title,
+        done: t.status === "done",
+        status: t.status as "pending" | "done" | "skipped" | "cancelled" | "missed",
+      }));
   return (
     <div className="flex flex-col gap-5">
       <header className="flex items-center gap-3">

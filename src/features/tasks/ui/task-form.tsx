@@ -35,7 +35,7 @@ export function TaskForm({ task, forOptions }: { task: TaskFormValues; forOption
   const [state, action, pending] = useActionState<TaskFormState, FormData>(saveTaskAction, null);
   const [busy, start] = useTransition();
   const [other, setOther] = useState<TaskFormState>(null);
-  const run = (a: "cancel" | "stop" | "delete") => start(async () => setOther(await taskAction(task.id, a)));
+  const run = (a: "cancel" | "stop" | "delete" | "miss") => start(async () => setOther(await taskAction(task.id, a)));
   const message = other ?? state;
 
   return (
@@ -110,6 +110,9 @@ export function TaskForm({ task, forOptions }: { task: TaskFormValues; forOption
       <div className="flex flex-col gap-2 border-t border-line pt-4">
         <button type="button" disabled={busy} onClick={() => run("cancel")} className="rounded-xl border border-line px-4 py-3 text-left">
           Skip this one <span className="block text-xs text-muted">Cancelled on purpose — no XP lost.</span>
+        </button>
+        <button type="button" disabled={busy} onClick={() => run("miss")} className="rounded-xl border border-red/40 px-4 py-3 text-left text-red">
+          Mark as missed <span className="block text-xs text-muted">Self-reported miss — honesty bonus applies.</span>
         </button>
         {task.habit && (
           <button type="button" disabled={busy} onClick={() => run("stop")} className="rounded-xl border border-line px-4 py-3 text-left">

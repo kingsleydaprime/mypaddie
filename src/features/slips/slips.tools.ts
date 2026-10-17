@@ -1,10 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
-import { honestyBonus, missedTaskPenalty } from "@/features/xp/xp";
-import type { PillarWeight } from "@/features/xp/split";
+import { markTaskMissed } from "@/features/tasks/tasks.repo";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
-import type { Json } from "@/shared/supabase/database.types";
 import { recordSlip } from "./slips.repo";
 
 export function registerSlipTools(server: McpServer) {
@@ -70,42 +68,21 @@ export function registerSlipTools(server: McpServer) {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const { data: task, error } = await db
-          .from("tasks")
-          .select("id, title, base_xp, task_pillars(pillar, weight)")
-          .eq("id", task_id)
-          .maybeSingle<{ id: string; title: string; base_xp: number; task_pillars: { pillar: string; weight: number }[] }>();
+        const outcome = await markTaskMissed(db, task_id, reason, self_reported, now);
 
-        if (error) return toolError(`mark_task_missed failed: ${error.message}`);
-        if (!task) return toolError("mark_task_missed failed: no such task");
-
-        const weights: PillarWeight[] = Array.isArray(task.task_pillars) && task.task_pillars.length > 0 ? (task.task_pillars as PillarWeight[]) : [{ pillar: "character", weight: 100 }];
-        const penalty = missedTaskPenalty({ baseXp: task.base_xp, weights });
-        const bonus = self_reported ? honestyBonus({ baseXp: task.base_xp, weights }) : [];
-
-        const { data: result, error: rpcError } = await db.rpc("record_miss", {
-          p_task_id: task_id,
-          p_event_id: null,
-          p_reason: reason,
-          p_penalty_entries: penalty as unknown as Json,
-          p_honesty_entries: bonus as unknown as Json,
-          p_self_reported: self_reported,
-        } as any);
-
-        if (rpcError) return toolError(`mark_task_missed failed: ${rpcError.message}`);
-        const rpcResult = result as { result?: string } | null;
-        if (rpcResult?.result === "already_missed") return toolError("mark_task_missed failed: already marked missed");
-        if (rpcResult?.result === "not_found") return toolError("mark_task_missed failed: no such task");
+        if (outcome.result !== "recorded") {
+          return toolError(`mark_task_missed failed: ${outcome.result.replace("_", " ")}`);
+        }
 
         return ok(
           await withMode(db, now, {
             task_id,
-            title: task.title,
+            title: outcome.title,
             reason,
             self_reported,
-            penalty,
-            honesty: bonus,
-            result: rpcResult?.result ?? "recorded",
+            penalty: outcome.penalty,
+            honesty: outcome.honesty,
+            result: outcome.result,
             next: "It is now marked missed and the penalty/honesty XP has been applied.",
           }),
         );

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { PRIORITIES } from "@/shared/domain";
 import { requireDb } from "@/shared/supabase/session";
-import { deleteTask, startTask, tickTaskStep, updateTask } from "./tasks.repo";
+import { deleteTask, markTaskMissed, startTask, tickTaskStep, updateTask } from "./tasks.repo";
 import { refusalMessage } from "./ui/refusal";
 
 export type TaskFormState = null | { error: string } | { ok: string };
@@ -66,11 +66,18 @@ function parseFor(v: string): { commitmentId: string | null; courseId: string | 
   return "invalid";
 }
 
-export async function taskAction(id: string, action: "cancel" | "stop" | "delete"): Promise<TaskFormState> {
+export async function taskAction(id: string, action: "cancel" | "stop" | "delete" | "miss"): Promise<TaskFormState> {
   const db = await requireDb(`/app/tasks/${id}`);
   if (action === "delete") {
     const r = await deleteTask(db, id);
     if (r.result === "has_history") return { error: "It has history (XP or slips), so it stays on the record. Cancel it instead." };
+    redirect("/app");
+  }
+  if (action === "miss") {
+    const r = await markTaskMissed(db, id, "Self-reported miss", true, new Date());
+    if (r.result === "already_done") return { error: "It's already done." };
+    if (r.result === "already_missed") return { error: "It's already marked missed." };
+    if (r.result === "not_found") return { error: "Task not found." };
     redirect("/app");
   }
   const r = await updateTask(db, id, {}, action);
