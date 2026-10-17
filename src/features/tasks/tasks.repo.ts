@@ -1,6 +1,6 @@
 import { validateWeights, type PillarWeight } from "@/features/xp/split";
 import { requireRoom } from "@/features/plans/guard";
-import { anyTimeEndsAt, completionXp, ignoredNeedDeduction, isLate, lateAfter, MUST_HABITS_DEDUCT_FROM, type SlipForXp, type TaskForXp } from "@/features/xp/xp";
+import { anyTimeEndsAt, completionXp, honestyBonus, ignoredNeedDeduction, isLate, lateAfter, missedTaskPenalty, MUST_HABITS_DEDUCT_FROM, type SlipForXp, type TaskForXp, type XpEntry } from "@/features/xp/xp";
 import { currentConfig, type EngineConfig } from "@/shared/config";
 import type { Priority, Tier } from "@/shared/domain";
 import type { Database, Json } from "@/shared/supabase/database.types";
@@ -330,6 +330,61 @@ export async function completeTask(db: Db, taskId: string, now: Date, config = c
     late: isLate(timed, now),
     title: task.title,
   };
+}
+
+export type MissTaskResult =
+  | {
+      result: "recorded";
+      title: string;
+      penalty: XpEntry[];
+      honesty: XpEntry[];
+    }
+  | { result: "already_missed" | "already_done" | "cancelled" | "not_found"; title: string | null };
+
+/**
+ * Marks a task missed, applying penalty XP and (if self-reported) honesty bonus XP.
+ */
+export async function markTaskMissed(
+  db: Db,
+  taskId: string,
+  reason = "Self-reported miss",
+  selfReported = true,
+  now = new Date(),
+): Promise<MissTaskResult> {
+  const { data: task, error } = await db
+    .from("tasks")
+    .select("id, title, status, base_xp, task_pillars(pillar, weight)")
+    .eq("id", taskId)
+    .maybeSingle<{ id: string; title: string; status: TaskForXp["status"]; base_xp: number; task_pillars: { pillar: string; weight: number }[] }>();
+
+  if (error) fail("loading task for miss", error);
+  if (!task) return { result: "not_found", title: null };
+  if (task.status === "done") return { result: "already_done", title: task.title };
+  if (task.status === "missed") return { result: "already_missed", title: task.title };
+  if (task.status === "cancelled") return { result: "cancelled", title: task.title };
+
+  const weights: PillarWeight[] =
+    Array.isArray(task.task_pillars) && task.task_pillars.length > 0
+      ? (task.task_pillars as PillarWeight[])
+      : [{ pillar: "character", weight: 100 }];
+  const penalty = missedTaskPenalty({ baseXp: task.base_xp, weights });
+  const bonus = selfReported ? honestyBonus({ baseXp: task.base_xp, weights }) : [];
+
+  const { data: result, error: rpcError } = await db.rpc("record_miss", {
+    p_task_id: taskId,
+    p_event_id: null,
+    p_reason: reason,
+    p_penalty_entries: penalty as unknown as Json,
+    p_honesty_entries: bonus as unknown as Json,
+    p_self_reported: selfReported,
+  } as any);
+
+  if (rpcError) fail("recording task miss", rpcError);
+  const rpcResult = result as { result?: string } | null;
+  if (rpcResult?.result === "already_missed") return { result: "already_missed", title: task.title };
+  if (rpcResult?.result === "not_found") return { result: "not_found", title: null };
+
+  return { result: "recorded", title: task.title, penalty, honesty: bonus };
 }
 
 // ─── Capacity and time blocks ───────────────────────────────────────────────
