@@ -9,6 +9,8 @@ describe("itemWith", () => {
       dueAt: null,
       overdue: false,
       nonNegotiable: true,
+      need: false,
+      habit: true,
       routine: {
         title: "Sunday routine",
         next: "Church",

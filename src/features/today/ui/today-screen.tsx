@@ -2,9 +2,10 @@ import { syncCalendar } from "@/features/calendar/calendar.repo";
 import { currentThemes, owedReviews } from "@/features/reviews/reviews.repo";
 import { checkAchievements } from "@/features/achievements/achievements.repo";
 import { applyBrokenPromises } from "@/features/promises/promises.repo";
-import { inProgress, upcoming } from "@/features/events/events";
-import { finishEventAction } from "@/features/events/events.actions";
-import { SubmitButton } from "@/shared/ui/submit-button";
+import { inProgress, startable, upcoming } from "@/features/events/events";
+import { EventButtons } from "@/features/events/ui/event-buttons";
+import { loadQuoteOfTheDay } from "@/features/quotes/quotes.repo";
+import { loadXpSummary, type XpSummary } from "@/features/stats/stats.repo";
 import Link from "next/link";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
 import { loadLearning } from "@/features/learning/learning.repo";
@@ -52,10 +53,10 @@ function due(item: FocusItem, now: Date, anyTime: string) {
 function Row({ item, now, big, details, checklist, anyTime }: { item: FocusItem; now: Date; big?: boolean; details?: string | null; checklist?: Step[]; anyTime: string }) {
   const hasChecklist = !item.routine && checklist !== undefined && checklist.length > 0;
   return (
-    <li className={`rounded-2xl border border-line bg-surface ${big ? "p-4" : "px-4 py-3"}`}>
+    <li className={`rounded-2xl border border-line bg-surface shadow-sm shadow-black/5 ${big ? "p-4" : "px-4 py-3"}`}>
       <div className="min-w-0">
         {/* A routine's title opens the routine; its steps are ticked right here. */}
-        <Link href={item.routine ? "/app/routines" : `/app/tasks/${item.id}`} className={`block truncate font-semibold ${big ? "text-lg" : "text-base"}`}>
+        <Link href={item.routine ? "/app/routines" : `/app/tasks/${item.id}`} className={`block truncate font-semibold ${big ? "text-[17px]" : "text-base"}`}>
           {item.title}
         </Link>
         {/* Steps open on the top three, folded in the list; tap the line to switch. */}
@@ -75,11 +76,37 @@ function Row({ item, now, big, details, checklist, anyTime }: { item: FocusItem;
         {details && <ExpandableText text={details} lines={big ? 2 : 1} />}
         <p className="mt-0.5 flex items-center gap-2 text-sm text-muted">
           <span className={item.overdue ? "font-medium text-red" : ""}>{item.overdue ? `overdue · ${due(item, now, anyTime)}` : due(item, now, anyTime)}</span>
-          {item.nonNegotiable && <span className="text-gold">· must</span>}
+          {item.nonNegotiable && <span className="rounded-full bg-gold/10 px-2 py-px text-xs font-medium text-gold">must</span>}
         </p>
       </div>
-      <TaskButtons taskId={item.id} title={item.routine ? item.routine.next : item.title} running={item.startedAt !== null} spentMinutes={item.spentMinutes} />
+      <TaskButtons taskId={item.id} title={item.routine ? item.routine.next : item.title} running={item.startedAt !== null} spentMinutes={item.spentMinutes} mustDo={item.nonNegotiable || item.need} habit={item.habit} routine={!!item.routine} />
     </li>
+  );
+}
+
+/** Level, the bar to the next one, and what today has earned so far. Taps through to Stats. */
+function XpStrip({ xp }: { xp: XpSummary }) {
+  const pct = Math.round(Math.min(1, Math.max(0, xp.progress)) * 100);
+  return (
+    <Link href="/app/stats" className="block rounded-2xl border border-line bg-surface p-4 shadow-sm shadow-black/5" aria-label={`Level ${xp.level}, ${xp.toNext} XP to the next level. Open stats`}>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="flex items-baseline gap-2">
+          <span className="text-xs font-medium uppercase tracking-wider text-muted">Level</span>
+          <span className="text-2xl font-bold tabular-nums text-gold">{xp.level}</span>
+        </p>
+        <p className="text-sm tabular-nums">
+          <span className={`font-semibold ${xp.today < 0 ? "text-red" : "text-gold"}`}>{xp.today > 0 ? "+" : ""}{xp.today} XP</span>
+          <span className="text-muted"> today</span>
+        </p>
+      </div>
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+        <div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="mt-1.5 flex justify-between text-xs tabular-nums text-muted">
+        <span>{xp.xp.toLocaleString()} XP</span>
+        <span>{xp.toNext.toLocaleString()} to level {xp.level + 1} · {xp.lastWeek >= 0 ? "+" : ""}{xp.lastWeek} this week</span>
+      </p>
+    </Link>
   );
 }
 
@@ -89,20 +116,24 @@ export async function TodayScreen({ db }: { db: Db }) {
   await applyBrokenPromises(db, now);
   // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
   await syncCalendar(db, now).catch(() => null);
-  const [tasks, mode, events, learning, schedule, themes, owed, earned, checkin] = await Promise.all([
+  const [tasks, mode, events, learning, schedule, themes, owed, earned, checkin, xp, quote] = await Promise.all([
     loadTasksAroundToday(db, now), loadMode(db, now), loadUpcomingEvents(db), loadLearning(db, now), loadSchedule(db),
     currentThemes(db, now), owedReviews(db, now), checkAchievements(db, now), loadCheckin(db, dayKey(now, tz())),
+    // After checkAchievements' write would be nicer, but a new badge's +25 shows on the next refresh anyway.
+    loadXpSummary(db, now, tz()), loadQuoteOfTheDay(db, dayKey(now, tz())),
   ]);
   const review = learning
     .filter((l) => l.skill.status === "active")
     .flatMap((l) => l.summary.reviewDue.map((t) => `${t.topic} (${l.skill.name})`));
   const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
   const todayEvents = soon.filter((e) => e.daysAway === 0);
-  // Happening right now (by its time, or started early).
-  const happening = events.flatMap((e) => {
+  // Today's events as cards: happening right now (by its time, or started early) first.
+  const todayAt = new Map(todayEvents.map((v) => [v.id, v.at]));
+  const todayCards = events.flatMap((e) => {
     const p = inProgress(e, now);
-    return p ? [{ id: e.id, title: e.title, until: p.until }] : [];
-  });
+    const at = todayAt.get(e.id) ?? (p ? e.startsAt : null);
+    return at ? [{ id: e.id, title: e.title, at, allDay: e.allDay, startable: startable(e), until: p?.until ?? null }] : [];
+  }).sort((a, b) => Number(b.until !== null) - Number(a.until !== null) || a.at.getTime() - b.at.getTime());
   const prepare = soon.filter((e) => e.daysAway > 0 && e.quadrant === "prepare_now");
   const focus = pickFocus(tasks, now, 3, undefined, schedule.showTimedWithin);
   const anyTime = anyTimeLabel(dayEndsAt(schedule));
@@ -121,10 +152,9 @@ export async function TodayScreen({ db }: { db: Db }) {
       <header>
         <p className="text-sm font-medium text-muted">{date}{themes.month ? <> · <span className="text-gold">{themes.month.title}</span></> : null}</p>
         <h1 className="mt-1 text-2xl font-bold leading-tight">{NARRATION[mode.mode]}</h1>
-        {(todayEvents.length > 0 || prepare.length > 0) && (
+        {prepare.length > 0 && (
           <Link href="/app/events" className="mt-2 block text-sm text-muted">
-            {todayEvents.map((e) => (e.allDay ? e.title : `${e.title} ${localTimeOf(e.at, tz())}`)).join(" · ")}
-            {todayEvents.length > 0 && prepare.length > 0 && " · "}
+            <span>Coming up: </span>
             {prepare.map((e) => (
               <span key={e.id} className="text-gold">
                 {e.title} in {e.daysAway}d{" "}
@@ -143,20 +173,37 @@ export async function TodayScreen({ db }: { db: Db }) {
         </div>
       )}
 
-      {happening.map((e) => (
-        <div key={e.id} className="rounded-2xl border border-gold bg-surface p-4" role="status">
-          <p className="truncate font-semibold">{e.title}</p>
-          <p className="text-sm"><span className="font-medium text-gold">Happening now</span> <span className="text-muted">· until {localTimeOf(e.until, tz())}</span></p>
-          <div className="mt-3 flex gap-2">
-            <form action={finishEventAction.bind(null, e.id, "not_at_it")} className="flex flex-1">
-              <SubmitButton className="flex-1 rounded-xl border border-line px-4 py-3 text-base font-semibold">Not at it</SubmitButton>
-            </form>
-            <form action={finishEventAction.bind(null, e.id, "done")} className="flex flex-1">
-              <SubmitButton className="flex-1 rounded-xl bg-gold px-4 py-3 text-base font-semibold text-on-gold">Done</SubmitButton>
-            </form>
-          </div>
-        </div>
-      ))}
+      <XpStrip xp={xp} />
+
+      {quote && (
+        <Link href="/app/me/quotes" className="block border-l-2 border-gold/60 py-0.5 pl-4" aria-label="Today's quote. Open your quotes">
+          <figure>
+            <blockquote className="text-pretty text-[15px] leading-relaxed italic">&ldquo;{quote.text}&rdquo;</blockquote>
+            {quote.author && <figcaption className="mt-1 text-xs text-muted">— {quote.author}</figcaption>}
+          </figure>
+        </Link>
+      )}
+
+      {todayCards.length > 0 && (
+        <section className="flex flex-col gap-2" aria-labelledby="today-events">
+          <h2 id="today-events" className="text-xs font-medium uppercase tracking-wider text-muted">Today&rsquo;s events</h2>
+          <ul className="flex flex-col gap-2">
+            {todayCards.map((e) => (
+              <li key={e.id} className={`rounded-2xl border bg-surface px-4 py-3 shadow-sm shadow-black/5 ${e.until ? "border-gold" : "border-line"}`}>
+                <p className="truncate font-semibold">{e.title}</p>
+                <p className="text-sm">
+                  {e.until ? (
+                    <><span className="font-medium text-gold">Happening now</span> <span className="text-muted">· until {localTimeOf(e.until, tz())}</span></>
+                  ) : (
+                    <span className="text-muted">{e.allDay ? "All day" : localTimeOf(e.at, tz())}</span>
+                  )}
+                </p>
+                <EventButtons eventId={e.id} title={e.title} startable={e.startable} happening={e.until !== null} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <StatusBar db={db} />
 
@@ -191,7 +238,7 @@ export async function TodayScreen({ db }: { db: Db }) {
 
       {focus.rest.length > 0 && (
         <details className="group">
-          <summary className="cursor-pointer list-none text-sm font-medium text-muted">
+          <summary className="cursor-pointer list-none text-xs font-medium uppercase tracking-wider text-muted">
             Everything else ({focus.rest.length}) <span className="group-open:hidden">›</span>
           </summary>
           <ul className="mt-3 flex flex-col gap-2">
@@ -220,10 +267,10 @@ export async function TodayScreen({ db }: { db: Db }) {
       {focus.doneToday > 0 && <Link href="/app/done" className="text-center text-sm text-muted underline-offset-4 hover:underline">{focus.doneToday} done today · undo a mistake</Link>}
 
       <nav className="grid grid-cols-3 gap-2">
-        <Link href="/app/plan" className="rounded-xl border border-line px-2 py-3 text-center text-sm font-medium">Plan my day</Link>
-        <Link href="/app/events" className="rounded-xl border border-line px-2 py-3 text-center text-sm font-medium">Events</Link>
-        <Link href="/app/workout" className="rounded-xl border border-line px-2 py-3 text-center text-sm font-medium">Workout</Link>
-        <Link href="/app/close" className="col-span-3 rounded-xl border border-line px-2 py-3 text-center text-sm font-medium">Close out the day</Link>
+        <Link href="/app/plan" className="rounded-xl border border-line bg-surface px-2 py-2.5 text-center text-sm font-medium">Plan my day</Link>
+        <Link href="/app/events" className="rounded-xl border border-line bg-surface px-2 py-2.5 text-center text-sm font-medium">Events</Link>
+        <Link href="/app/workout" className="rounded-xl border border-line bg-surface px-2 py-2.5 text-center text-sm font-medium">Workout</Link>
+        <Link href="/app/close" className="col-span-3 rounded-xl border border-line bg-surface px-2 py-2.5 text-center text-sm font-medium">Close out the day</Link>
       </nav>
     </div>
   );

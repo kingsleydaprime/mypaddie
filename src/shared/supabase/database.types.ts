@@ -711,6 +711,19 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"quotes": {
+                  Row: {
+                    "author": string | null,"created_at": string,"id": string,"text": string,"user_id": string
+                  }
+                  Insert: {
+                    "author"?: string | null,"created_at"?: string,"id"?: string,"text": string,"user_id"?: string
+                  }
+                  Update: {
+                    "author"?: string | null,"created_at"?: string,"id"?: string,"text"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+
+                  ]
                 },"recipes": {
                   Row: {
                     "created_at": string,"id": string,"ingredients": NonNullable<Json>,"minutes": number | null,"name": string,"notes": string | null,"slots": (string)[],"user_id": string

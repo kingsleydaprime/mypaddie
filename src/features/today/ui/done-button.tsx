@@ -24,7 +24,7 @@ export function DoneButton({ taskId, title, wide = false }: { taskId: string; ti
     });
 
   if (label) {
-    return <span className={`${wide ? "flex-1 text-center" : "shrink-0"} rounded-xl px-3 py-3 text-sm font-semibold text-gold`} role="status">{label}</span>;
+    return <span className={`${wide ? "flex-1 text-center" : "shrink-0"} rounded-lg px-3 py-2 text-sm font-semibold text-gold`} role="status">{label}</span>;
   }
   return (
     <button
@@ -32,7 +32,7 @@ export function DoneButton({ taskId, title, wide = false }: { taskId: string; ti
       onClick={done}
       disabled={pending}
       aria-label={`Mark "${title}" done`}
-      className={`${wide ? "flex-1" : "shrink-0"} rounded-xl bg-gold px-5 py-3 text-base font-semibold text-on-gold active:scale-95 disabled:opacity-60`}
+      className={`${wide ? "flex-1" : "shrink-0"} rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-on-gold shadow-sm disabled:opacity-60`}
     >
       {pending ? "…" : "Done"}
     </button>

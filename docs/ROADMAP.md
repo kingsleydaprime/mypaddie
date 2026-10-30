@@ -191,6 +191,13 @@ which gets a new entry when it changes.
   index what `collect_nudges` filters on.
 - [ ] Error monitoring and an uptime check on `/api/mcp` and `/api/push`.
 
+## Done: Home, more honest and more encouraging (2026-10-30)
+- [x] Level, progress bar and today's XP on Home (taps through to Stats).
+- [x] Quote of the day: built-in set plus their own (Me → Quotes, `save_quote` / `list_quotes` / `delete_quote`).
+- [x] Task cards: Start/Pause, Done, and ⋯ Skip (a reason for must-dos), Missed, Cancel / Stop habit.
+- [x] Today's events as cards: Start, Done, and ⋯ Missed, Cancel.
+- [x] Calmer look: compact buttons, softer cards.
+
 ## Ideas for later
 - Separate money accounts (OPay, bank, cash).
 - Two-way calendar sync (needs Google OAuth + verification).

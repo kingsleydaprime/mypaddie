@@ -1551,3 +1551,38 @@ each step you skip counts. Only days from 2026-10-09 deduct
 (`MUST_HABITS_DEDUCT_FROM`), so shipping it didn't backdate 14 days of
 penalties. For mode, a missed routine counts as one ignored need, not one per
 step, so one bad evening doesn't flip to strict on its own.
+
+### Home shows XP and a daily quote; every action on the card (2026-10-30)
+Asked for: "I should be tracking my xp so I'm conscious of it", quotes to
+stay encouraged, a prettier design with smaller buttons, and done / cancel /
+miss / skip / start / stop on tasks and events.
+
+- **XP on Home.** This reverses "the numbers live on Stats and are never
+  pushed at you on Home". A strip under the narration shows the overall level
+  (all pillars added up, on the same curve as one pillar, negatives floored at
+  0 as on Stats), the bar to the next level, today's XP (red if today is net
+  negative) and the last 7 days. It taps through to Stats.
+- **Quotes.** A built-in set (short; public domain or proverbs; only
+  attributions we're sure of) plus their own, in a new `quotes` table (owner
+  RLS, unique per user ignoring case). One a day, stable for the day: theirs
+  on two days in three when they have any, otherwise built-in. Added on Me →
+  Quotes or with `save_quote`. Considered: built-in only, or theirs only.
+  Chose both, so a new account isn't blank and their own lines win.
+- **Card actions.** Start/Pause and Done always show; Skip, Missed and Cancel
+  sit behind ⋯ so a card isn't six buttons. Skip on a **must-do** (a need or a
+  non-negotiable) asks for a one-line reason and records a slip through the
+  same `recordSlip` as `log_slip`, accepted unless it's the same reason a
+  third time in 7 days (the existing excuse backstop, which then lets the
+  ignored-need deduction apply). Considered: a free skip (it would let must-dos
+  dodge deductions) and counting a skip as a miss (too harsh for a real
+  reason). Non-must tasks skip as a plain cancel, as before. Cancel on a habit
+  is "Stop this habit" and needs a second tap. A routine's card has no
+  cancel; the routine is stopped from Routines.
+- **Events on Home** get cards with Start (when startable), Done, and ⋯
+  Missed (the `mark_event_missed` rule, now shared with the app through
+  `markEventMissed`) and Cancel. The old "Not at it" button was a cancel, so it
+  never cost XP and made "Missed" pointless next to it. It's replaced by
+  the two clearer choices. `complete_event`'s `not_at_it` still cancels.
+- **Look.** Calmer cards (soft shadow), compact buttons (`py-2 text-sm`,
+  `rounded-lg`), small uppercase section labels, "must" as a gold pill. Gold
+  stays the single accent.

@@ -10,6 +10,7 @@ import { registerListTools } from "@/features/lists/lists.tools";
 import { registerAchievementTools } from "@/features/achievements/achievements.tools";
 import { registerMetricsTools } from "@/features/metrics/metrics.tools";
 import { registerValuesTools } from "@/features/values/values.tools";
+import { registerQuoteTools } from "@/features/quotes/quotes.tools";
 import { registerDecisionTools } from "@/features/decisions/decisions.tools";
 import { registerReviewTools } from "@/features/reviews/reviews.tools";
 import { registerRoutineTools } from "@/features/routines/routines.tools";
@@ -88,6 +89,7 @@ const handler = createMcpHandler(
     tools.area("Routines", () => registerRoutineTools(server));
     tools.area("Decisions", () => registerDecisionTools(server));
     tools.area("Values", () => registerValuesTools(server));
+    tools.area("Quotes", () => registerQuoteTools(server));
     tools.area("Trends and experiments", () => registerMetricsTools(server));
     registerHelpTool(server, tools.entries);
   },
@@ -109,7 +111,7 @@ const handler = createMcpHandler(
       "lot more than tasks — courses, timetables and study plans, people and who to reach out to, notes about themselves " +
       "(patterns, triggers, habits, what they're healing from), their library and favourite things, their own lists " +
       "(bucket list, anything), weekly/monthly/quarterly/yearly reviews, year and month themes, achievements, " +
-      "routines, a decision log, their values, trends (sleep, mood, screen time, spending…) and personal experiments, " +
+      "routines, a decision log, their values, quotes that keep them going, trends (sleep, mood, screen time, spending…) and personal experiments, " +
       "check-ins with sleep, mood and screen time, promises, jobs and " +
       "roles (with history), fun, workouts, pantry, events, applications, updates owed, Google Calendar. Before telling them it can't do something, check your " +
       "tools or call what_can_paddie_do. If a tool says their plan doesn't include something, tell them exactly that.",

@@ -35,6 +35,10 @@ export interface FocusItem {
   dueAt: Date | null;
   overdue: boolean;
   nonNegotiable: boolean;
+  /** A need: skipping it is a slip, explained in a line. */
+  need: boolean;
+  /** One day of a repeating habit (so "cancel" means stop the habit). */
+  habit: boolean;
   /** `items`: today's steps in order, each tickable on its own. */
   routine?: {
     title: string;
@@ -145,6 +149,8 @@ export function pickFocus(
     dueAt: t.dueAt,
     overdue: isOverdue(t),
     nonNegotiable: t.isNonNegotiable,
+    need: t.tier === "need",
+    habit: !!t.seriesId,
     startedAt: t.startedAt ?? null,
     spentMinutes: t.spentMinutes ?? 0,
     steps: t.steps ?? null,

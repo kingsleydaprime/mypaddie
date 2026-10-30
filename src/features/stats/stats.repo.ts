@@ -1,5 +1,6 @@
 import { PILLARS } from "@/shared/domain";
 import type { Db } from "@/shared/supabase/token-client";
+import { dayKey, zonedInstant } from "@/shared/time";
 import { levelProgress } from "./levels";
 
 /** The 11 pillars with levels, last week's XP per pillar, and recent slip reasons. */
@@ -33,3 +34,28 @@ export async function loadStats(db: Db, now: Date) {
 }
 
 export type Stats = Awaited<ReturnType<typeof loadStats>>;
+
+/**
+ * The XP strip on Home: overall level (all pillars together, on the same curve
+ * as a pillar), what today has earned or cost so far, and the last 7 days.
+ * Negative pillars don't pull the total down, as on Stats.
+ */
+export async function loadXpSummary(db: Db, now: Date, timeZone: string) {
+  const dayStart = zonedInstant(dayKey(now, timeZone), "00:00", timeZone).getTime();
+  const week = new Date(now.getTime() - 7 * 86_400_000).toISOString();
+  const [pillars, recent] = await Promise.all([
+    db.from("pillars").select("xp"),
+    db.from("xp_log").select("amount, at").gte("at", week),
+  ]);
+  for (const res of [pillars, recent]) if (res.error) throw new Error(`loading XP: ${res.error.message}`);
+  const total = pillars.data!.reduce((s, p) => s + Math.max(0, p.xp), 0);
+  let today = 0;
+  let lastWeek = 0;
+  for (const r of recent.data!) {
+    lastWeek += r.amount;
+    if (new Date(r.at).getTime() >= dayStart) today += r.amount;
+  }
+  return { ...levelProgress(total), today, lastWeek };
+}
+
+export type XpSummary = Awaited<ReturnType<typeof loadXpSummary>>;

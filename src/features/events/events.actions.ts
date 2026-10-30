@@ -6,7 +6,7 @@ import { requireDb } from "@/shared/supabase/session";
 import { addEvent } from "./add-event";
 import { EVENT_KINDS } from "./events";
 import { changeEvent } from "./events.repo";
-import { finishEvent, startEvent } from "./event-progress";
+import { finishEvent, markEventMissed, startEvent } from "./event-progress";
 
 const optional = z.string().trim().transform((v) => v || undefined);
 const schema = z.object({
@@ -52,4 +52,30 @@ export async function finishEventAction(id: string, how: "done" | "not_at_it") {
   await finishEvent(db, id, how);
   revalidatePath("/app");
   revalidatePath("/app/events");
+}
+
+/** Weren't there when they were meant to be: the honest miss, with its penalty and honesty bonus. */
+export async function missEventAction(id: string) {
+  const db = await requireDb("/app");
+  const r = await markEventMissed(db, id, "Self-reported miss");
+  revalidatePath("/app");
+  revalidatePath("/app/events");
+  return { result: r.result };
+}
+
+/** Called off, or it isn't happening: no XP either way. */
+export async function cancelEventFromTodayAction(id: string) {
+  const db = await requireDb("/app");
+  await changeEvent(db, id, "cancel");
+  revalidatePath("/app");
+  revalidatePath("/app/events");
+}
+
+/** Start early, from Home; the reason it can't comes back instead of throwing. */
+export async function startEventFromTodayAction(id: string) {
+  const db = await requireDb("/app");
+  const r = await startEvent(db, id, new Date());
+  revalidatePath("/app");
+  revalidatePath("/app/events");
+  return r;
 }

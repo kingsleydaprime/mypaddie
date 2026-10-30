@@ -3,16 +3,13 @@ import { z } from "zod";
 import { findCommitment } from "@/features/commitments/commitments.repo";
 import { withMode } from "@/features/mode/mode.repo";
 import { loadSchedule } from "@/features/settings/settings.repo";
-import { honestyBonus, missedTaskPenalty } from "@/features/xp/xp";
-import type { PillarWeight } from "@/features/xp/split";
 import { currentConfig } from "@/shared/config";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
-import type { Json } from "@/shared/supabase/database.types";
 import { dayKey, formatLocal, zonedInstant } from "@/shared/time";
 import { EVENT_KINDS, upcoming, type EventKind } from "./events";
 import { addEvent } from "./add-event";
 import { changeEvent, loadUpcomingEvents } from "./events.repo";
-import { finishEvent, startEvent } from "./event-progress";
+import { finishEvent, markEventMissed, startEvent } from "./event-progress";
 
 /** The current user's time zone (read per call, never at import). */
 const tz = () => currentConfig().timeZone;
@@ -192,36 +189,17 @@ export function registerEventTools(server: McpServer) {
     async ({ event_id, reason, self_reported }: { event_id: string; reason: string; self_reported: boolean }, ctx: ToolContext) => {
       try {
         const db = dbFrom(ctx);
-        const { data: event, error } = await db.from("events").select("id, title").eq("id", event_id).maybeSingle();
-        if (error) return toolError(`mark_event_missed failed: ${error.message}`);
-        if (!event) return toolError("mark_event_missed failed: no such event");
-
-        const fallbackWeights: PillarWeight[] = [{ pillar: "character", weight: 100 }];
-        const penalty = missedTaskPenalty({ baseXp: 10, weights: fallbackWeights });
-        const bonus = self_reported ? honestyBonus({ baseXp: 10, weights: fallbackWeights }) : [];
-
-        const { data: result, error: rpcError } = await db.rpc("record_miss", {
-          p_task_id: null,
-          p_event_id: event_id,
-          p_reason: reason,
-          p_penalty_entries: penalty as unknown as Json,
-          p_honesty_entries: bonus as unknown as Json,
-          p_self_reported: self_reported,
-        } as any);
-
-        if (rpcError) return toolError(`mark_event_missed failed: ${rpcError.message}`);
-        const rpcResult = result as { result?: string } | null;
-        if (rpcResult?.result === "already_missed") return toolError("mark_event_missed failed: already marked missed");
-        if (rpcResult?.result === "not_found") return toolError("mark_event_missed failed: no such event");
-
+        const r = await markEventMissed(db, event_id, reason, self_reported);
+        if (r.result === "already_missed") return toolError("mark_event_missed failed: already marked missed");
+        if (r.result === "not_found") return toolError("mark_event_missed failed: no such event");
         return ok({
           event_id,
-          title: event.title,
+          title: r.title,
           reason,
           self_reported,
-          penalty,
-          honesty: bonus,
-          result: rpcResult?.result ?? "recorded",
+          penalty: r.penalty,
+          honesty: r.honesty,
+          result: r.result,
           next: "The event is marked missed and the honesty/penalty XP is recorded.",
         });
       } catch (error) {

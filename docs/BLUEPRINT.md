@@ -157,6 +157,8 @@ When you slip, paddie is firm first, curious second, then gets you moving again.
 
 Paddie judges whether a reason is accepted, with a backstop: the third time the same reason is given for the same habit within 7 days, it's an excuse regardless.
 
+Skipping from the app follows the same protocol. Skipping a must-do (a need, or anything non-negotiable) asks "why? one line" first and logs it as a slip, accepted unless the backstop catches it, so it costs no XP the first two times. Anything else skips with no questions and no XP lost: a decision, not ignoring it.
+
 ### How paddie picks a mode
 
 | Situation | Mode | What it does |
@@ -384,14 +386,14 @@ Authentication is OAuth 2.1 with PKCE. It never runs authless, because it return
 
 ## Mobile UI
 
-The app is designed phone-first as an installable web app (PWA) on Android, with a bottom tab bar, big thumb-friendly buttons and one-tap logging. Desktop simply centres the same layout. Gold is the single accent colour; green and red appear only where they mean something (money in / done, money out / overdue).
+The app is designed phone-first as an installable web app (PWA) on Android, with a bottom tab bar, compact buttons that are still easy to tap, and one-tap logging. Desktop simply centres the same layout. Gold is the single accent colour; green and red appear only where they mean something (money in / done, money out / overdue).
 
 | Tab | What's on it |
 | --- | --- |
 | Quests | Needs, wants, goals, wishes and dreams, with tier filters and an add button. Me & people (People, About me, Library, Lists), Commitments, Promises, Courses, Fun list, Applications and Updates live here |
 | Money | Balance card, current stage, buckets, the gap in deficit mode, quick log, history with void and edit, purchase checks. Pantry lives here |
-| Home (centre) | The 3 things that matter right now, with a button to do one. Everything else is one tap away, plus Plan my day, Events and today's workout |
-| Stats | The eleven pillars and levels, learning and training. The numbers live here, behind a tap, and are never pushed at you on Home |
+| Home (centre) | Your level, the bar to the next one and today's XP (so you stay aware of it), a quote for the day (yours most days, a built-in one otherwise), today's events, and the 3 things that matter right now. Each task has Start/Pause and Done, with Skip, Missed and Cancel (Stop, for a habit) behind ⋯; each event has Start and Done, with Missed and Cancel behind ⋯. Everything else is one tap away, plus Plan my day, Events and today's workout |
+| Stats | The eleven pillars and levels, learning and training. The detail lives here, behind a tap; Home shows only the overall level and today's XP |
 | Settings | "Who I'm becoming", nudges on/off, schedule, Google Calendar, links to open Claude or ChatGPT, sign out |
 
 Notifications are scheduled pushes decided by the database (non-negotiable nudges, check-ins, reminders, the morning brief), so they work even when no AI chat is open.
