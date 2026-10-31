@@ -1,4 +1,6 @@
+import { currentConfig } from "@/shared/config";
 import type { Db } from "@/shared/supabase/token-client";
+import { dayKey } from "@/shared/time";
 import { cancelOnUndo, kindOfTask, type UndoKind } from "./undo";
 
 /** How far back the "recent" list looks. Older mistakes are better fixed by hand. */
@@ -9,6 +11,8 @@ export interface Undoable {
   id: string;
   title: string;
   at: string;
+  /** A task's own day ("YYYY-MM-DD"), which can differ from the day it was ticked: an old day ticked late. */
+  forDay?: string | null;
 }
 
 /** Recently done tasks (fun and workouts included) and learning sessions, newest first. */
@@ -17,7 +21,7 @@ export async function recentUndoable(db: Db, now: Date, kind?: UndoKind, limit =
   const [tasks, sessions, slips] = await Promise.all([
     kind === "learning"
       ? Promise.resolve({ data: [], error: null })
-      : db.from("tasks").select("id, title, done_at, fun_activity_id, workout_logs(id)").eq("status", "done").gte("done_at", since).order("done_at", { ascending: false }).limit(30),
+      : db.from("tasks").select("id, title, done_at, occurs_on, due_at, fun_activity_id, workout_logs(id)").eq("status", "done").gte("done_at", since).order("done_at", { ascending: false }).limit(30),
     kind && kind !== "learning"
       ? Promise.resolve({ data: [], error: null })
       // Practice logged by completing a task goes with that task, not on its own.
@@ -35,6 +39,7 @@ export async function recentUndoable(db: Db, now: Date, kind?: UndoKind, limit =
     id: t.id,
     title: t.title,
     at: t.done_at!,
+    forDay: t.occurs_on ?? (t.due_at ? dayKey(new Date(t.due_at), currentConfig().timeZone) : null),
   }));
   const fromLearning: Undoable[] = (sessions.data ?? []).map((s) => ({
     kind: "learning",
