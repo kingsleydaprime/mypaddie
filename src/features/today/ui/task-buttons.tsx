@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { startTaskAction } from "@/features/tasks/tasks.actions";
 import { cancelTaskAction, missTaskAction, skipTaskAction } from "../today.actions";
+import type { StepStatus } from "@/features/routines/routines";
 import { DoneButton } from "./done-button";
+import { FinishRoutineButton } from "./finish-routine";
 
 const SECONDARY = "rounded-lg border border-line px-3 py-2 text-sm font-semibold disabled:opacity-60";
 const MENU_ITEM = "flex w-full flex-col items-start rounded-lg px-3 py-2 text-left text-sm hover:bg-surface-2 disabled:opacity-60";
@@ -15,7 +17,7 @@ const MENU_ITEM = "flex w-full flex-col items-start rounded-lg px-3 py-2 text-le
  * asks why in a line first. Starting while another task is running is refused;
  * the reason shows under the buttons.
  */
-export function TaskButtons({ taskId, title, running, spentMinutes, mustDo, habit, routine = false }: {
+export function TaskButtons({ taskId, title, running, spentMinutes, mustDo, habit, routine = false, routineTitle, routineSteps }: {
   taskId: string;
   title: string;
   running: boolean;
@@ -24,6 +26,9 @@ export function TaskButtons({ taskId, title, running, spentMinutes, mustDo, habi
   habit: boolean;
   /** A routine's step: skip or miss the step; the routine itself is stopped from Routines. */
   routine?: boolean;
+  /** A routine card's name and that day's steps: its Done finishes the routine (untouched steps are settled). */
+  routineTitle?: string;
+  routineSteps?: { id: string; title: string; status: StepStatus }[];
 }) {
   const router = useRouter();
   const [pending, run] = useTransition();
@@ -77,7 +82,11 @@ export function TaskButtons({ taskId, title, running, spentMinutes, mustDo, habi
         <button type="button" onClick={toggle} disabled={pending} aria-label={`${label} "${title}"`} className={`flex-1 ${SECONDARY}`}>
           {pending && panel === "closed" ? "…" : label}
         </button>
-        <DoneButton taskId={taskId} title={title} wide />
+        {routine && routineSteps ? (
+          <FinishRoutineButton routine={routineTitle ?? title} steps={routineSteps} />
+        ) : (
+          <DoneButton taskId={taskId} title={title} wide />
+        )}
         <button
           type="button"
           onClick={() => setPanel(panel === "closed" ? "menu" : "closed")}

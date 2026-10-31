@@ -62,7 +62,7 @@ function TodayRow({ item, now, anyTime, details, checklist }: { item: FocusItem;
           {item.nonNegotiable && <span className="text-gold"> · must</span>}
         </p>
       </div>
-      <TaskButtons taskId={item.id} title={item.routine ? item.routine.next : item.title} running={item.startedAt !== null} spentMinutes={item.spentMinutes} mustDo={item.nonNegotiable || item.need} habit={item.habit} routine={!!item.routine} />
+      <TaskButtons taskId={item.id} title={item.routine ? item.routine.next : item.title} running={item.startedAt !== null} spentMinutes={item.spentMinutes} mustDo={item.nonNegotiable || item.need} habit={item.habit} routine={!!item.routine} routineTitle={item.routine?.title} routineSteps={item.routine?.items.map((i) => ({ id: i.id, title: i.title, status: i.status }))} />
     </li>
   );
 }

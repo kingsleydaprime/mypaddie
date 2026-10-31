@@ -1656,3 +1656,24 @@ older open days through `dropSupersededDays`. That covers Home, Tasks and
 old days stay pending in the database; they're settled from History → Open
 (or by close-out), not hidden for good. Same fix: "done today" now counts an
 any-time habit done today (it was skipped for having no due time).
+
+### Done on a routine card finishes the routine (2026-10-31)
+Asked for: "I want done to mark the routine as done but everything in that
+routine that wasn't ticked will be marked as missed", with a popup first.
+Before, Done ticked only the next step, so a 9/11 routine stayed on Home and
+read as broken.
+
+- Done now opens a popup listing the steps not ticked. "Finish routine" marks
+  each open step missed (self-reported, so the honesty bonus applies) and the
+  card leaves Home. "Keep going" changes nothing. Individual steps are still
+  ticked from the card's list.
+- A step already **skipped** with a reason is closed (cancelled) instead of
+  missed, so an accepted excuse doesn't become a miss penalty. Not asked
+  about; chosen because the alternative punishes an explained step twice.
+- Cost, named once: a missed step is −2× base +0.5× honesty = −1.5× base,
+  while leaving a step to close-out costs −0.5× (ignored need). So finishing
+  with steps open costs more than walking away. Kept as asked: Done is an
+  honest "I'm finished, these didn't happen". Revisit if it pushes people to
+  ignore the card instead of finishing it.
+- The rule lives in `planRoutineFinish` (tested); the AI still settles steps
+  one by one with `mark_task_missed`.

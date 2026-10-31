@@ -67,3 +67,19 @@ export function stepTimes(start: string | null, minutes: readonly number[]): (st
     return at;
   });
 }
+
+export type StepStatus = "pending" | "done" | "skipped" | "cancelled" | "missed";
+
+/**
+ * "Done" on a routine card finishes the routine for that day: every step not
+ * ticked is settled. An open step is marked missed; a step already skipped
+ * with a reason (an accepted slip) is closed as cancelled instead, so the
+ * excuse isn't turned into a miss penalty. Done, missed and cancelled steps
+ * are already settled and left alone.
+ */
+export function planRoutineFinish(steps: readonly { id: string; status: StepStatus }[]): { miss: string[]; cancel: string[] } {
+  return {
+    miss: steps.filter((s) => s.status === "pending").map((s) => s.id),
+    cancel: steps.filter((s) => s.status === "skipped").map((s) => s.id),
+  };
+}

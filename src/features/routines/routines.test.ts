@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { routineStepReferences } from "./routines.repo";
-import { planRoutineEdit, stepTimes } from "./routines";
+import { planRoutineEdit, planRoutineFinish, stepTimes } from "./routines";
 
 const morning = [
   { title: "Pray", minutes: 15 },
@@ -79,5 +79,26 @@ describe("routineStepReferences", () => {
         next: { taskId: "brush-today", on: "2026-10-11" },
       },
     ]);
+  });
+});
+
+describe("Done on a routine finishes it: what isn't ticked is settled", () => {
+  // Kingsley, 2026-10-31: morning routine 9/11, Pray and Read Bible left. Done should end it, the two marked missed.
+  test("every open step is marked missed; ticked steps are left alone", () => {
+    const plan = planRoutineFinish([
+      { id: "wake", status: "done" },
+      { id: "pray", status: "pending" },
+      { id: "bible", status: "pending" },
+      { id: "brush", status: "done" },
+    ]);
+    expect(plan).toEqual({ miss: ["pray", "bible"], cancel: [] });
+  });
+
+  test("a step skipped with a reason is closed, not penalised as missed", () => {
+    expect(planRoutineFinish([{ id: "bath", status: "skipped" }, { id: "skin", status: "pending" }])).toEqual({ miss: ["skin"], cancel: ["bath"] });
+  });
+
+  test("steps already missed or cancelled aren't touched again", () => {
+    expect(planRoutineFinish([{ id: "a", status: "missed" }, { id: "b", status: "cancelled" }, { id: "c", status: "done" }])).toEqual({ miss: [], cancel: [] });
   });
 });

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { planRoutineFinish, type StepStatus } from "@/features/routines/routines";
 import { recordSlip } from "@/features/slips/slips.repo";
 import { skipNeedsReason } from "@/features/tasks/skip";
 import { completeTask, markTaskMissed, updateTask, type CompleteResult, type MissTaskResult } from "@/features/tasks/tasks.repo";
@@ -50,4 +51,35 @@ export async function cancelTaskAction(taskId: string, habit: boolean) {
   const r = await updateTask(db, taskId, {}, habit ? "stop" : "cancel");
   revalidatePath("/app");
   return r.result === "cancelled" || r.result === "stopped" ? { result: r.result } : { result: "failed" as const };
+}
+
+export type FinishRoutineResult = { result: "finished"; missed: number; closed: number } | { result: "not_found" };
+
+/**
+ * Done on a routine card: the routine is finished for that day. Each step not
+ * ticked is marked missed (self-reported: it costs XP, owning it earns some
+ * back); one already skipped with a reason is closed instead. `stepIds` are
+ * the card's steps; only steps of one routine are touched.
+ */
+export async function finishRoutineAction(stepIds: string[]): Promise<FinishRoutineResult> {
+  const db = await requireDb("/app");
+  const { data: steps, error } = await db.from("tasks").select("id, status, routine_id").in("id", stepIds);
+  if (error) throw new Error(`loading the routine's steps: ${error.message}`);
+  const routines = new Set(steps.map((s) => s.routine_id));
+  if (steps.length === 0 || routines.size !== 1 || routines.has(null)) return { result: "not_found" };
+
+  const plan = planRoutineFinish(steps.map((s) => ({ id: s.id, status: s.status as StepStatus })));
+  const now = new Date();
+  let missed = 0;
+  for (const id of plan.miss) {
+    const r = await markTaskMissed(db, id, "Not done when the routine was finished", true, now);
+    if (r.result === "recorded") missed += 1;
+  }
+  let closed = 0;
+  for (const id of plan.cancel) {
+    const r = await updateTask(db, id, {}, "cancel", now);
+    if (r.result === "cancelled") closed += 1;
+  }
+  revalidatePath("/app");
+  return { result: "finished", missed, closed };
 }
