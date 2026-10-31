@@ -24,6 +24,7 @@ const GROUPS: { title: string; entries: Entry[] }[] = [
     title: "Progress",
     entries: [
       { href: "/app/history", label: "History", hint: "Loose ends, and how past days went" },
+      { href: "/app/done", label: "Done recently", hint: "Ticked the wrong thing? Undo it (last 48 hours)" },
       { href: "/app/stats", label: "Stats", hint: "XP, streaks, pillars" },
       { href: "/app/stats/trends", label: "Trends", hint: "Sleep, mood, screen time, spending" },
       { href: "/app/life", label: "Your life", hint: "Every pillar at a glance" },

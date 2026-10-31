@@ -28,7 +28,7 @@ export default async function DonePage() {
   return (
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-1">
-        <Link href="/app" className="text-sm text-muted" aria-label="Back to today">‹ Today</Link>
+        <Link href="/app/more" className="text-sm text-muted">‹ Others</Link>
         <h1 className="text-2xl font-bold">Done recently</h1>
         <p className="text-sm text-muted">The last 48 hours, by the day you ticked it. Tapped the wrong one? Undo takes the XP back and puts it back on your list.</p>
       </header>
