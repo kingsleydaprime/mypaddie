@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { pickFocus, type TaskForFocus } from "./focus";
+import { dropSupersededDays, pickFocus, type TaskForFocus } from "./focus";
 
 const at = (local: string) => new Date(`${local}+01:00`);
 const now = at("2026-10-06T10:00:00");
@@ -304,5 +304,46 @@ describe("a habit's missed day ends when its next day comes", () => {
   test("one-off tasks are untouched: overdue stays overdue", () => {
     const f = pickFocus([task({ title: "Report", dueAt: at("2026-10-05T09:00:00") })], now);
     expect(f.top[0]).toMatchObject({ title: "Report", overdue: true });
+  });
+});
+
+describe("a habit's old open day stays gone once its newest day is ticked", () => {
+  // Kingsley, 2026-10-31: ticked today's Duolingo at 22:14 and an older, never-ticked Duolingo day took its place on Home.
+  // Today's done row isn't loaded (only open undated rows are), so the loader asks for each habit's newest day separately.
+  const sat = at("2026-10-31T22:17:00");
+  const duo = (day: string, status: TaskForFocus["status"] = "pending") =>
+    task({ id: `duo-${day}`, title: "Duolingo", dueAt: null, occursOn: day, seriesId: "duolingo", isNonNegotiable: true, status });
+
+  test("ticking today's Duolingo doesn't bring back an older open day", () => {
+    const loaded = [duo("2026-10-26"), duo("2026-10-30")]; // open days; today's done row isn't among them
+    const f = pickFocus(dropSupersededDays(loaded, [{ seriesId: "duolingo", occursOn: "2026-10-31" }], sat), sat);
+    expect(f.top).toEqual([]);
+  });
+
+  test("a weekly habit: last week's ticked day still ends the week before's", () => {
+    const run = (day: string) => task({ id: `run-${day}`, title: "Long run", dueAt: at(`${day}T07:00:00`), occursOn: day, seriesId: "run" });
+    const kept = dropSupersededDays([run("2026-10-17")], [{ seriesId: "run", occursOn: "2026-10-24" }], sat);
+    expect(kept).toEqual([]);
+  });
+
+  test("the newest day itself stays, and so does a day with nothing newer", () => {
+    const kept = dropSupersededDays([duo("2026-10-31")], [{ seriesId: "duolingo", occursOn: "2026-10-31" }], sat);
+    expect(kept.map((t) => t.id)).toEqual(["duo-2026-10-31"]);
+    expect(dropSupersededDays([duo("2026-10-26")], [], sat).map((t) => t.id)).toEqual(["duo-2026-10-26"]);
+  });
+
+  test("a day not yet come (tomorrow's, booked ahead) doesn't end today's", () => {
+    const kept = dropSupersededDays([duo("2026-10-31")], [{ seriesId: "duolingo", occursOn: "2026-11-01" }], sat);
+    expect(kept.map((t) => t.id)).toEqual(["duo-2026-10-31"]);
+  });
+
+  test("one-offs and done rows pass through untouched", () => {
+    const report = task({ id: "report", title: "Report", dueAt: at("2026-10-20T09:00:00") });
+    expect(dropSupersededDays([report, duo("2026-10-26", "done")], [{ seriesId: "duolingo", occursOn: "2026-10-31" }], sat).map((t) => t.id))
+      .toEqual(["report", "duo-2026-10-26"]);
+  });
+
+  test("an any-time habit done today counts in 'done today'", () => {
+    expect(pickFocus([duo("2026-10-31", "done")], sat).doneToday).toBe(1);
   });
 });

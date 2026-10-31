@@ -1,3 +1,4 @@
+import { dropSupersededDays } from "@/features/today/focus";
 import { validateWeights, type PillarWeight } from "@/features/xp/split";
 import { requireRoom } from "@/features/plans/guard";
 import { anyTimeEndsAt, completionXp, honestyBonus, ignoredNeedDeduction, isLate, lateAfter, missedTaskPenalty, MUST_HABITS_DEDUCT_FROM, type SlipForXp, type TaskForXp, type XpEntry } from "@/features/xp/xp";
@@ -129,8 +130,20 @@ export async function loadTasksAroundToday(db: Db, now: Date, config = currentCo
     .or(`and(due_at.gte.${from},due_at.lt.${to}),and(due_at.is.null,status.in.(pending,skipped))`)
     .returns<TaskRow[]>();
   if (error) fail("loading today's tasks", error);
+
+  // Each habit's newest day so far, in any status: a done day isn't loaded
+  // above when it has no time, but it still ends older open days.
+  const openDays = data.filter((r) => r.series_id && r.occurs_on && r.status !== "done");
+  const series = [...new Set(openDays.map((r) => r.series_id!))];
+  const oldest = openDays.reduce((min, r) => (r.occurs_on! < min ? r.occurs_on! : min), today);
+  const { data: days, error: daysError } = series.length
+    ? await db.from("tasks").select("series_id, occurs_on").in("series_id", series).gt("occurs_on", oldest).lte("occurs_on", today)
+    : { data: [], error: null };
+  if (daysError) fail("loading habit days", daysError);
+  const newest = (days ?? []).flatMap((d) => (d.series_id && d.occurs_on ? [{ seriesId: d.series_id, occursOn: d.occurs_on }] : []));
+
   const dayEnds = dayEndsAt(await loadSchedule(db));
-  return data.map((r) => toTask(r, now, dayEnds, config));
+  return dropSupersededDays(data.map((r) => toTask(r, now, dayEnds, config)), newest, now, config);
 }
 
 /**

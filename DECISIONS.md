@@ -1642,3 +1642,17 @@ open on past days, and a way to attach lecturers to courses.
   any one-off that was paid in the gap (`last_paid_at` is only ever set by
   `pay_bill`, so that's exactly the stuck ones). Lesson: when a migration
   recreates a function, copy it from the *latest* migration that defines it.
+
+### Ticking today's any-time habit no longer brings back an old day (2026-10-31)
+Reported: "I've ticked my Duolingo task as done but it still keeps showing
+up." No rule changed: "a habit's missed day ends when its next day comes"
+already held. The loader only loads *open* rows of undated tasks, so once
+today's any-time Duolingo was done, nothing in the loaded rows said an older,
+never-ticked Duolingo day was over, and it took today's place. Lateness was a
+coincidence (it's ticked at night). The loader now also fetches each habit's
+newest day in any status (bounded to days after the oldest open one) and drops
+older open days through `dropSupersededDays`. That covers Home, Tasks and
+`get_today`, plus weekly habits whose newest day is older than yesterday. The
+old days stay pending in the database; they're settled from History → Open
+(or by close-out), not hidden for good. Same fix: "done today" now counts an
+any-time habit done today (it was skipped for having no due time).

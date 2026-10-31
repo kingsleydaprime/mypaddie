@@ -68,6 +68,29 @@ export interface Focus {
 }
 
 /**
+ * Drops open habit days that a newer day of the same habit has replaced, by
+ * `newest`: each habit's latest day so far, in any status. Needed because
+ * only open rows of undated tasks are loaded, so once today's any-time habit
+ * is done, the loaded rows alone can't tell an older open day is over.
+ * Days still to come don't count, and one-offs pass through.
+ */
+export function dropSupersededDays<T extends TaskForFocus>(
+  tasks: readonly T[],
+  newest: readonly { seriesId: string; occursOn: string }[],
+  now: Date,
+  config: EngineConfig = currentConfig(),
+): T[] {
+  const today = dayKey(now, config.timeZone);
+  const latest = new Map<string, string>();
+  for (const n of newest) {
+    if (n.occursOn <= today && (latest.get(n.seriesId) ?? "") < n.occursOn) latest.set(n.seriesId, n.occursOn);
+  }
+  return tasks.filter(
+    (t) => t.status === "done" || !t.seriesId || !t.occursOn || (latest.get(t.seriesId) ?? "") <= t.occursOn,
+  );
+}
+
+/**
  * "Here are the 3 things that matter right now." Ranking, highest first:
  *   0. whatever they've started (in progress)
  *   1. non-negotiables that are overdue      (pray, brush, food…)
@@ -202,7 +225,7 @@ export function pickFocus(
   return {
     top: items.slice(0, limit),
     rest: items.slice(limit),
-    doneToday: tasks.filter((t) => t.status === "done" && t.dueAt !== null && dayKey(t.dueAt, config.timeZone) === today)
-      .length,
+    // By the day it was for: an any-time habit has no due time, only its day.
+    doneToday: tasks.filter((t) => t.status === "done" && dayOf(t) === today).length,
   };
 }
