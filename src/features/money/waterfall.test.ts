@@ -75,10 +75,31 @@ describe("proposeWaterfall", () => {
     expect(sum(proposeWaterfall({ income: 0, needsOutstanding: 5_000, bufferBalance: 0, bufferTarget: 1 }))).toBe(0);
   });
 
-  test("rejects fractional income", () => {
-    expect(() =>
-      proposeWaterfall({ income: 100.5, needsOutstanding: 0, bufferBalance: 0, bufferTarget: 0 }),
-    ).toThrow(RangeError);
+  test("a decimal income splits exactly: every kobo accounted for", () => {
+    const p = proposeWaterfall({ income: 100.5, needsOutstanding: 0, bufferBalance: 0, bufferTarget: 0 });
+    expect(p).toEqual({ needs: 0, buffer: 0, savings: 50.25, wants: 30.15, flexible: 20.1, needsShort: false });
+    expect(sum(p)).toBeCloseTo(100.5, 10);
+  });
+
+  test("leftover kobo go to savings first, like leftover naira", () => {
+    const p = proposeWaterfall({ income: 0.07, needsOutstanding: 0, bufferBalance: 0, bufferTarget: 0 });
+    expect([p.savings, p.wants, p.flexible]).toEqual([0.04, 0.02, 0.01]);
+  });
+
+  test("decimal needs and buffer come off first, to the kobo", () => {
+    const p = proposeWaterfall({ income: 1_000.75, needsOutstanding: 200.25, bufferBalance: 99.5, bufferTarget: 100 });
+    expect([p.needs, p.buffer]).toEqual([200.25, 0.5]);
+    expect(p.savings + p.wants + p.flexible).toBeCloseTo(800, 10);
+  });
+
+  test("a whole-naira income is never split into kobo", () => {
+    const p = proposeWaterfall({ income: 100_001, needsOutstanding: 0, bufferBalance: 0, bufferTarget: 0 });
+    expect([p.savings, p.wants, p.flexible].every(Number.isInteger)).toBe(true);
+    expect(sum(p)).toBe(100_001);
+  });
+
+  test("rejects negative income", () => {
+    expect(() => proposeWaterfall({ income: -1, needsOutstanding: 0, bufferBalance: 0, bufferTarget: 0 })).toThrow(RangeError);
   });
 });
 

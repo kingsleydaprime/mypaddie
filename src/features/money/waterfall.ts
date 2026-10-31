@@ -1,4 +1,4 @@
-import { assertNaira, type Naira } from "@/shared/domain";
+import { assertNaira, fromMinor, toMinor, type Naira } from "@/shared/domain";
 
 export interface SplitPercentages {
   savings: number;
@@ -54,36 +54,42 @@ export function proposeWaterfall(input: WaterfallInput): WaterfallProposal {
   assertNaira(input.bufferTarget, "bufferTarget");
   validateSplit(split);
 
-  let remaining = input.income;
+  // Worked in minor units (kobo / cents), so a decimal income splits exactly too.
+  let remaining = toMinor(input.income);
 
-  const needs = Math.min(remaining, input.needsOutstanding);
+  const needs = Math.min(remaining, toMinor(input.needsOutstanding));
   remaining -= needs;
 
-  const bufferRoom = Math.max(0, input.bufferTarget - input.bufferBalance);
+  const bufferRoom = Math.max(0, toMinor(input.bufferTarget) - toMinor(input.bufferBalance));
   const buffer = Math.min(remaining, bufferRoom);
   remaining -= buffer;
+
+  // Split to the precision they gave: whole units when every amount is whole
+  // (₦100,001 never becomes ₦50,000.50), kobo when any amount has kobo.
+  const amounts = [input.income, input.needsOutstanding, input.bufferBalance, input.bufferTarget];
+  const step = amounts.every(Number.isInteger) ? 100 : 1;
 
   // Largest remainder again, so rounding never loses or invents a unit.
   // Leftover units go to savings first, then flexible, then wants.
   const keys = ["savings", "flexible", "wants"] as const;
   const shares = keys.map((k) => {
-    const exact = (remaining * split[k]) / 100;
-    return { k, value: Math.floor(exact), remainder: exact - Math.floor(exact) };
+    const exact = (remaining / step) * split[k] / 100;
+    return { k, value: Math.floor(exact) * step, remainder: exact - Math.floor(exact) };
   });
   let leftover = remaining - shares.reduce((s, x) => s + x.value, 0);
   for (const s of [...shares].sort((a, b) => b.remainder - a.remainder)) {
     if (leftover === 0) break;
-    s.value += 1;
-    leftover -= 1;
+    s.value += step;
+    leftover -= step;
   }
-  const part = (k: (typeof keys)[number]) => shares.find((s) => s.k === k)!.value;
+  const part = (k: (typeof keys)[number]) => fromMinor(shares.find((s) => s.k === k)!.value);
 
   return {
-    needs,
-    buffer,
+    needs: fromMinor(needs),
+    buffer: fromMinor(buffer),
     savings: part("savings"),
     wants: part("wants"),
     flexible: part("flexible"),
-    needsShort: needs < input.needsOutstanding,
+    needsShort: needs < toMinor(input.needsOutstanding),
   };
 }

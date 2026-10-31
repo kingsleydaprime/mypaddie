@@ -34,9 +34,9 @@ select lives_ok($$select public.adjust_pantry('[{"name":"Rice","set":5,"unit":"b
 select is((select unit from public.pantry_items where name = 'Rice'), 'bags', 'unit is updated to bags');
 
 create temp table cooked as select public.cook_meal('Jollof', '[
-  {"name":"Rice","quantity":0.5,"unit":"kg"},{"name":"tomato paste","quantity":1,"unit":"tins"},{"name":"Pepper","quantity":3,"unit":"pieces"}]',
+  {"name":"Rice","quantity":0.5,"unit":"bags"},{"name":"tomato paste","quantity":1,"unit":"tins"},{"name":"Pepper","quantity":3,"unit":"pieces"}]',
   null, null) as r;
-select is((select quantity from public.pantry_items where name = 'Rice'), 1.00, 'cooking uses up ingredients');
+select is((select quantity from public.pantry_items where name = 'Rice'), 4.50, 'cooking uses up ingredients, in the unit it''s stored in');
 select is((select r->'missing' from cooked), '["Pepper"]'::jsonb, 'ingredients not in the pantry are reported, not fatal');
 select is((select count(*)::int from public.meals where name = 'Jollof'), 1, 'the meal is recorded');
 

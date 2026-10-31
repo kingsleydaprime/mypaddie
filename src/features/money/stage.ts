@@ -1,5 +1,5 @@
 import { currentConfig, type EngineConfig } from "@/shared/config";
-import { assertNaira, type Naira } from "@/shared/domain";
+import { assertNaira, fromMinor, toMinor, type Naira } from "@/shared/domain";
 import { daysBetween } from "@/shared/time";
 
 export type MoneyTag = "need" | "want" | "unsure";
@@ -44,11 +44,13 @@ export function totalsOf(transactions: readonly TransactionForMoney[]): MoneyTot
   let wants = 0;
   for (const t of transactions) {
     assertNaira(t.amount, "transaction amount");
-    if (t.direction === "in") income += t.amount;
-    else if (t.tag === "want") wants += t.amount;
-    else needs += t.amount; // "need", "unsure", and an untagged outflow all count as needs
+    // Summed in minor units: 0.1 + 0.2 must be 0.3, not 0.30000000000000004.
+    const minor = toMinor(t.amount);
+    if (t.direction === "in") income += minor;
+    else if (t.tag === "want") wants += minor;
+    else needs += minor; // "need", "unsure", and an untagged outflow all count as needs
   }
-  return { income, needs, wants, gap: needs - income };
+  return { income: fromMinor(income), needs: fromMinor(needs), wants: fromMinor(wants), gap: fromMinor(needs - income) };
 }
 
 /** The three want categories that took the most money — "where it leaked". */

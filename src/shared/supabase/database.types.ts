@@ -534,13 +534,13 @@ isOneToOne: false
                   ]
                 },"media": {
                   Row: {
-                    "created_at": string,"creator": string | null,"finished_on": string | null,"id": string,"kind": string,"notes": string | null,"rating": number | null,"started_on": string | null,"status": string,"title": string,"user_id": string
+                    "created_at": string,"creator": string | null,"finished_on": string | null,"format": string | null,"id": string,"kind": string,"notes": string | null,"rating": number | null,"started_on": string | null,"status": string,"title": string,"user_id": string
                   }
                   Insert: {
-                    "created_at"?: string,"creator"?: string | null,"finished_on"?: string | null,"id"?: string,"kind": string,"notes"?: string | null,"rating"?: number | null,"started_on"?: string | null,"status"?: string,"title": string,"user_id"?: string
+                    "created_at"?: string,"creator"?: string | null,"finished_on"?: string | null,"format"?: string | null,"id"?: string,"kind": string,"notes"?: string | null,"rating"?: number | null,"started_on"?: string | null,"status"?: string,"title": string,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"creator"?: string | null,"finished_on"?: string | null,"id"?: string,"kind"?: string,"notes"?: string | null,"rating"?: number | null,"started_on"?: string | null,"status"?: string,"title"?: string,"user_id"?: string
+                    "created_at"?: string,"creator"?: string | null,"finished_on"?: string | null,"format"?: string | null,"id"?: string,"kind"?: string,"notes"?: string | null,"rating"?: number | null,"started_on"?: string | null,"status"?: string,"title"?: string,"user_id"?: string
                   }
                   Relationships: [
 

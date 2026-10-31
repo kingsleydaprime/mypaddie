@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { MEDIA_LABEL, type MediaKind, type MediaStatus } from "@/features/library/library";
+import { type MediaFormat, type MediaKind, type MediaStatus } from "@/features/library/library";
 import { removeFavoriteAction, removeMediaAction, setMediaStatusAction } from "@/features/library/library.actions";
 import { loadFavorites, loadMedia } from "@/features/library/library.repo";
-import { AddFavoriteForm, AddMediaForm } from "@/features/library/ui/library-forms";
+import { AddFavoriteForm, AddMediaForm, MediaItem } from "@/features/library/ui/library-forms";
 import { requireDb } from "@/shared/supabase/session";
 import { SubmitButton } from "@/shared/ui/submit-button";
 
@@ -10,6 +10,7 @@ const GROUPS: { status: MediaStatus; title: string }[] = [
   { status: "in_progress", title: "On it" },
   { status: "want", title: "Want to get to" },
   { status: "done", title: "Done" },
+  { status: "dropped", title: "Dropped" },
 ];
 
 export default async function LibraryPage() {
@@ -32,17 +33,17 @@ export default async function LibraryPage() {
             <h2 className="font-bold">{title}</h2>
             <ul className="flex flex-col divide-y divide-line rounded-2xl border border-line bg-surface">
               {list.map((m) => (
-                <li key={m.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium">{m.title}{m.rating ? ` · ${"★".repeat(m.rating)}` : ""}</span>
-                    <span className="text-xs text-muted">{MEDIA_LABEL[m.kind as MediaKind].replace(/s$/, "")}{m.creator ? ` · ${m.creator}` : ""}</span>
-                  </span>
-                  <span className="flex shrink-0 gap-2 text-xs">
-                    {status === "want" && <form action={setMediaStatusAction.bind(null, m.kind as MediaKind, m.title, "in_progress", undefined)}><SubmitButton className="font-semibold text-gold">Start</SubmitButton></form>}
-                    {status === "in_progress" && <form action={setMediaStatusAction.bind(null, m.kind as MediaKind, m.title, "done", undefined)}><SubmitButton className="font-semibold text-gold">Finished</SubmitButton></form>}
-                    <form action={removeMediaAction.bind(null, m.id)}><SubmitButton className="text-muted">✕</SubmitButton></form>
-                  </span>
-                </li>
+                <MediaItem
+                  key={m.id}
+                  item={{ ...m, kind: m.kind as MediaKind, format: m.format as MediaFormat | null, status: m.status as MediaStatus }}
+                  actions={
+                    <>
+                      {status === "want" && <form action={setMediaStatusAction.bind(null, m.kind as MediaKind, m.title, "in_progress", undefined)}><SubmitButton className="font-semibold text-gold">Start</SubmitButton></form>}
+                      {status === "in_progress" && <form action={setMediaStatusAction.bind(null, m.kind as MediaKind, m.title, "done", undefined)}><SubmitButton className="font-semibold text-gold">Finished</SubmitButton></form>}
+                      <form action={removeMediaAction.bind(null, m.id)}><SubmitButton className="text-muted" aria-label={`Remove ${m.title}`}>✕</SubmitButton></form>
+                    </>
+                  }
+                />
               ))}
             </ul>
           </section>

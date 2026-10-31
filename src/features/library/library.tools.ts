@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { withMode } from "@/features/mode/mode.repo";
 import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
-import { MEDIA_KINDS, MEDIA_STATUS, type MediaKind, type MediaStatus } from "./library";
+import { MEDIA_FORMATS, MEDIA_KINDS, MEDIA_STATUS, type MediaFormat, type MediaKind, type MediaStatus } from "./library";
 import { loadFavorites, loadMedia, removeFavorite, saveFavorite, saveMedia } from "./library.repo";
 
 export function registerLibraryTools(server: McpServer) {
@@ -34,17 +34,20 @@ export function registerLibraryTools(server: McpServer) {
       title: "Save to library",
       description:
         "Add or update a book, film, series, album, podcast or game (matched by kind + title): want to, in progress, " +
-        "done or dropped, with a 1–5 rating and notes. For a book's reading sessions use log_learning as well.",
+        "done or dropped, with a 1–5 rating and notes. A book can have a format: 'print' (hard copy), 'ebook' (PDF or " +
+        "e-book) or 'audio' (audiobook) — set it when they say how they have it, never guess. For a book's reading " +
+        "sessions use log_learning as well.",
       inputSchema: z.object({
         kind: z.enum(MEDIA_KINDS),
         title: z.string().trim().min(1).max(200),
         creator: z.string().trim().max(200).optional().describe("Author, director, artist…"),
+        format: z.enum(MEDIA_FORMATS).nullable().optional().describe("Books only. null clears it"),
         status: z.enum(MEDIA_STATUS).optional(),
         rating: z.number().int().min(1).max(5).optional(),
         notes: z.string().trim().max(2000).optional(),
       }),
     },
-    async (args: { kind: MediaKind; title: string; creator?: string; status?: MediaStatus; rating?: number; notes?: string }, ctx: ToolContext) => {
+    async (args: { kind: MediaKind; title: string; creator?: string; format?: MediaFormat | null; status?: MediaStatus; rating?: number; notes?: string }, ctx: ToolContext) => {
       try {
         const db = dbFrom(ctx);
         const now = new Date();

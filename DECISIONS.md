@@ -1613,3 +1613,32 @@ open on past days, and a way to attach lecturers to courses.
   a link to People. Considered: a `course_lecturers` table linked to People
   (contact details, reach-out nudges). It's deferred until there's a need for
   more than a name.
+
+### Decimal money is split exactly; books have a format (2026-10-31)
+- **Money tests caught up with decimals.** The 2026-10-11 change to
+  `numeric(15,2)` loosened `assertNaira` to allow kobo but left two tests
+  expecting fractions to be refused. It also left a real bug: the waterfall's
+  largest-remainder loop stepped in whole units, so ₦100.50 was proposed as
+  51 + 31 + 21 = ₦103. Totals and the waterfall now work in minor units
+  (`toMinor` / `fromMinor`), so 0.1 + 0.2 is 0.3 and every kobo is accounted
+  for. The waterfall splits to the precision given: whole-naira inputs give
+  whole-naira parts (₦100,001 never becomes ₦50,000.50), and any kobo in the
+  inputs means a kobo-level split. Considered: always splitting to the kobo
+  (odd-looking proposals for whole amounts). The "Money is whole units" entry
+  above is superseded on storage; display is unchanged.
+- **Book format.** `media.format`: `print` (hard copy), `ebook` (PDF or
+  e-book) or `audio` (audiobook). It's optional and allowed on books only
+  (a check constraint, and `formatFor` in code), so existing rows read as
+  "not set" and need no backfill. Audiobook was added alongside the asked-for
+  hard copy / PDF because it's the other common way people have a book.
+  `save_media` takes it, but only when they say; the AI never guesses.
+- **Library items are editable** from their row: kind, title, author, format,
+  status (dropped included), rating and notes, by id, so a title can be
+  fixed (`save_media` matches by title and can't rename).
+- **`pay_bill` regression fixed.** The decimal migration recreated
+  `pay_bill` from its 2026-10-20 copy and silently dropped 2026-11-03's rule
+  that a one-off payment ends once paid. The guardrails DB test caught it, but
+  the DB suite wasn't being run. `20261117100000` restores the rule and ends
+  any one-off that was paid in the gap (`last_paid_at` is only ever set by
+  `pay_bill`, so that's exactly the stuck ones). Lesson: when a migration
+  recreates a function, copy it from the *latest* migration that defines it.

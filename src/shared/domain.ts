@@ -37,3 +37,7 @@ export function assertNaira(value: number, label: string): void {
     throw new RangeError(`${label} must be a non-negative amount, got ${value}`);
   }
 }
+
+/** Money in minor units (kobo / cents), so sums and splits stay exact. Amounts are stored to 2 places. */
+export const toMinor = (amount: Naira): number => Math.round(amount * 100);
+export const fromMinor = (minor: number): Naira => minor / 100;

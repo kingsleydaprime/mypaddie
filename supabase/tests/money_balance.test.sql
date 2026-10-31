@@ -21,11 +21,11 @@ select throws_ok($$insert into public.transactions (amount, direction, category)
 insert into public.buckets (name, balance) values ('wants', 10000), ('needs', 5000);
 create temp table tx as select public.record_transaction(3000, 'out', 'snacks', 'want', null, null, null, null,
   '[{"pillar":"financial","amount":2,"reason":"transaction_logged"}]') as id;
-select is((select balance from public.buckets where name = 'wants'), 7000::bigint, 'logging drew down the wants bucket');
+select is((select balance from public.buckets where name = 'wants'), 7000::numeric, 'logging drew down the wants bucket');
 
 select is(public.void_transaction((select id from tx), 'logged twice by mistake', '[{"pillar":"financial","amount":-2,"reason":"transaction_logged","note":"voided"}]'),
   'voided', 'voids a mistake');
-select is((select balance from public.buckets where name = 'wants'), 10000::bigint, 'the money goes back in its bucket');
+select is((select balance from public.buckets where name = 'wants'), 10000::numeric, 'the money goes back in its bucket');
 select is((select xp from public.pillars where name = 'financial'), 0::bigint, 'the logging XP is taken back');
 select is((select void_reason from public.transactions where id = (select id from tx)), 'logged twice by mistake', 'it stays on the record, with the reason');
 select is(public.void_transaction((select id from tx), null, '[]'), 'already_voided', 'voiding twice changes nothing');

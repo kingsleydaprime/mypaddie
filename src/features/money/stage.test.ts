@@ -28,9 +28,18 @@ describe("totalsOf", () => {
     expect(totals).toEqual({ income: 100_000, needs: 50_000, wants: 5_000, gap: -50_000 });
   });
 
-  test("rejects kobo, negatives and floats", () => {
+  test("rejects negatives and non-numbers", () => {
     expect(() => totalsOf([spend(-1, "need", "food", "2026-10-02T09:00:00")])).toThrow(RangeError);
-    expect(() => totalsOf([spend(10.5, "need", "food", "2026-10-02T09:00:00")])).toThrow(RangeError);
+    expect(() => totalsOf([spend(Number.NaN, "need", "food", "2026-10-02T09:00:00")])).toThrow(RangeError);
+  });
+
+  test("kobo and cents add up exactly — no floating-point drift", () => {
+    const totals = totalsOf([
+      spend(0.1, "need", "food", "2026-10-02T09:00:00"),
+      spend(0.2, "need", "food", "2026-10-02T10:00:00"),
+      spend(10.55, "want", "snacks", "2026-10-02T11:00:00"),
+    ]);
+    expect(totals).toEqual({ income: 0, needs: 0.3, wants: 10.55, gap: 0.3 });
   });
 });
 

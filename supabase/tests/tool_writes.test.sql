@@ -25,14 +25,14 @@ select throws_ok($$select public.record_slip('99999999-0000-0000-0000-0000000000
 insert into public.buckets (name, balance) values ('wants', 30000), ('needs', 50000);
 select isnt(public.record_transaction(12000, 'out', 'snacks', 'want', null, null, null, null,
   '[{"pillar":"financial","amount":2,"reason":"transaction_logged"}]'), null, 'logs a spend');
-select is((select balance from public.buckets where name = 'wants'), 18000::bigint, 'a want draws down the wants bucket');
+select is((select balance from public.buckets where name = 'wants'), 18000::numeric, 'a want draws down the wants bucket');
 select is((select xp from public.pillars where name = 'financial'), 2::bigint, 'and pays the logging XP');
 select lives_ok($$select public.record_transaction(40000, 'out', 'shoes', 'want', null, null, null, null, '[]')$$,
   'overspending the bucket still logs (honest logging always works)');
-select is((select balance from public.buckets where name = 'wants'), 0::bigint, 'the bucket floors at zero');
+select is((select balance from public.buckets where name = 'wants'), 0::numeric, 'the bucket floors at zero');
 select lives_ok($$select public.record_transaction(5000, 'out', 'data', 'unsure', null, null, null, null, '[]')$$,
   'unsure counts as a need');
-select is((select balance from public.buckets where name = 'needs'), 45000::bigint, '…and comes out of the needs bucket');
+select is((select balance from public.buckets where name = 'needs'), 45000::numeric, '…and comes out of the needs bucket');
 
 -- ── apply_split ────────────────────────────────────────────────────────────
 insert into public.transactions (id, amount, direction, category)
@@ -43,7 +43,7 @@ select throws_ok(
 select is(
   public.apply_split('cccccccc-0000-0000-0000-000000000001', '{"needs":50000,"buffer":20000,"savings":15000,"wants":9000,"flexible":6000}'),
   'applied', 'an exact split is applied');
-select is((select balance from public.buckets where name = 'needs'), 95000::bigint, 'buckets are topped up, not replaced');
+select is((select balance from public.buckets where name = 'needs'), 95000::numeric, 'buckets are topped up, not replaced');
 select is(
   public.apply_split('cccccccc-0000-0000-0000-000000000001', '{"needs":100000}'),
   'already_applied', 'the same income can''t be split twice');

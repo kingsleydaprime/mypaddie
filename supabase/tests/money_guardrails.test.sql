@@ -56,11 +56,11 @@ select is(
 
 -- ── debts ───────────────────────────────────────────────────────────────────
 select public.add_debt('Tobi', null, 'i_owe', 10000, 'Rent top-up', '2026-10-20', true, now()) as tobi \gset
-select is((select direction || '|' || kind || '|' || amount from public.transactions where category = 'Loan: Tobi'), 'in|loan|10000',
+select is((select direction || '|' || kind || '|' || amount from public.transactions where category = 'Loan: Tobi'), 'in|loan|10000.00',
   'borrowing brings money in, as a loan');
 select is((select tag from public.transactions where category = 'Loan: Tobi'), null, 'a loan is never tagged');
 
-select is(public.record_debt_payment(:'tobi', 4000, true, now())->>'left', '6000', 'a partial payment');
+select is(public.record_debt_payment(:'tobi', 4000, true, now())->>'left', '6000.00', 'a partial payment');
 select is(public.record_debt_payment(:'tobi', 6001, true, now())->>'result', 'more_than_owed', 'can''t pay back more than is left');
 select is(public.record_debt_payment(:'tobi', 6000, true, now())->>'result', 'settled', 'the rest settles it');
 select is((select status from public.debts where id = :'tobi'), 'settled', 'the debt is settled');

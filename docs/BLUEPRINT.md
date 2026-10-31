@@ -124,6 +124,8 @@ When income covers needs, every new income entry proposes this waterfall, and yo
 2. An emergency buffer is filled before any investing.
 3. The remainder is split by default into 50% savings and investments, 30% wants, 20% flexible (needs that come up unexpectedly, and family support).
 
+The split never loses or invents money: the parts always add up to the income. It works to the precision you logged: a whole-naira income gives whole-naira parts (leftover naira go to savings first), and an income with kobo is split to the kobo.
+
 The percentages are editable settings, not rules. Open question: is the 20% bucket for family support, for surprise needs, or both?
 
 The emergency buffer target defaults to one month of needs. Buckets are envelopes (budget labels): income reaches them only when you accept a split, and spending draws down its envelope.
@@ -258,7 +260,7 @@ These were added after the four-day plan, each because a real day needed it.
 - **Role history.** A commitment keeps every role you've held there, with dates: Member (Sep 2025 – Mar 2026) → Secretary (since Mar 2026).
 - **People.** Who each person is to you, notes, birthdays (on the calendar), a reach-out rhythm, things to talk about. "Talked today" earns Relationships XP; Paddie names who's due a check-in.
 - **About me.** Strengths, weak spots, what you're healing from (and how), patterns, triggers, good habits and habits to break, history. The AI keeps the advice-relevant ones in mind every chat — kindly, never to shame.
-- **Library, favourites and lists.** Books, films, series, music, podcasts and games; your favourite things; and any list you like, ticked off with a percentage. A bucket-list tick pays +50, like a wish coming true.
+- **Library, favourites and lists.** Books, films, series, music, podcasts and games (a book can be a hard copy, a PDF / e-book or an audiobook; every item can be edited from its row); your favourite things; and any list you like, ticked off with a percentage. A bucket-list tick pays +50, like a wish coming true.
 - **Reviews and themes.** Weekly, monthly, quarterly and yearly reviews written from what actually happened, with the questions that matter (what did I avoid? what drained me? what changes next?). Year and month themes — "Month of Mercies" — with what to focus on and what this season says no to.
 - **Achievements, routines, decisions.** Achievements earned from what you've done (a 30-day streak, first savings, 100 workouts), recorded once with the date. Routines show on Today as one item with the next step. A habit's missed day stays overdue until its next day starts; then the new day takes its place on Today and the old one is settled at close-out (a slip, or the deduction). Decisions come back for review: did it work?
 - **Values.** What you stand on, in order, in your own words. The AI weighs big choices (a job, a purchase, a new commitment) against them and names a clash once — it never moralises. Monthly and longer reviews ask: did I live my values?
