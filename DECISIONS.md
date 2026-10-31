@@ -1586,3 +1586,30 @@ miss / skip / start / stop on tasks and events.
 - **Look.** Calmer cards (soft shadow), compact buttons (`py-2 text-sm`,
   `rounded-lg`), small uppercase section labels, "must" as a gold pill. Gold
   stays the single accent.
+
+### History page, a stale-completion cap, and editable course details (2026-10-31)
+Asked for: a place to see history and tick, cancel or mark missed tasks left
+open on past days, and a way to attach lecturers to courses.
+
+- **History** lives under Others (`/app/history`), not as a tab. It's a
+  timeline grouped by day over the last 4 weeks (up to 52 on "Look further
+  back"), filtered Open / Done / Missed / All, Open by default. Open means
+  pending on a day that's already over. Today's tasks stay on Today. Each open
+  row gets Done, Missed and Cancel inline (no ⋯ menu, since settling is the
+  page's whole job). Cancel there always cancels that one occurrence, never
+  stops the habit. The page and `get_task_history` share one loader
+  (`loadTaskHistory`), which now filters a stored status in the query, so a
+  filtered page is no longer cut short by pagination.
+- **Stale completions are capped.** Before this, a task done weeks late paid
+  the same 50% as one done an hour late, and History makes ticking old tasks
+  one tap. Now: up to 2 days after it turned late → 50% (unchanged); later →
+  20%, never below 1 XP (`staleAfterDays`, `staleMultiplier`). Considered: no
+  cap (farmable), and paying nothing (makes honest catch-up pointless). The
+  reason stays `late_completion`, so no enum migration. It's judged at
+  completion time, so XP already paid is untouched and no cutover is needed.
+- **Course details** (code, title, lecturer, semester, units, target,
+  description) are editable from the course page behind "Edit details". The
+  lecturer stays one free-text line (several fit, comma-separated) rather than
+  a link to People. Considered: a `course_lecturers` table linked to People
+  (contact details, reach-out nudges). It's deferred until there's a need for
+  more than a name.

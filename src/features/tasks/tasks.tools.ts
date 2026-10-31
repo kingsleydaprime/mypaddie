@@ -8,11 +8,10 @@ import { findCourseRef } from "@/features/courses/courses.repo";
 import { findFun } from "@/features/fun/fun.repo";
 import { findOrCreateSkill } from "@/features/learning/learning.repo";
 import { currentConfig } from "@/shared/config";
-import { dayEndsAt } from "@/features/settings/schedule";
-import { loadSchedule } from "@/features/settings/settings.repo";
-import { addDays, dayKey, daysBetween, zonedInstant } from "@/shared/time";
+import { dayKey, daysBetween } from "@/shared/time";
 import { loadTaskOverview } from "./overview.repo";
-import { matchesTaskHistoryStatus, taskHistoryRecord, type TaskHistoryFilter, type TaskHistoryRow } from "./history";
+import type { TaskHistoryFilter } from "./history";
+import { loadTaskHistory } from "./history.repo";
 import { completeTask, createTask, deleteTask, habitRow, startTask, tickTaskStep, updateTask } from "./tasks.repo";
 
 const weightsSchema = z
@@ -327,50 +326,10 @@ export function registerTaskTools(server: McpServer) {
         const db = dbFrom(ctx);
         const now = new Date();
         const config = currentConfig();
-        const schedule = await loadSchedule(db);
-        const start = zonedInstant(args.from, "00:00", config.timeZone).toISOString();
-        const end = zonedInstant(addDays(args.to, 1), "00:00", config.timeZone).toISOString();
         const rangeDays = daysBetween(new Date(`${args.from}T00:00:00Z`), new Date(`${args.to}T00:00:00Z`), "UTC");
         if (rangeDays < 0) return toolError("get_task_history failed: from must be on or before to");
         if (rangeDays > 365) return toolError("get_task_history failed: date range cannot exceed 366 days");
-
-        const dateFilter = [
-          `and(occurs_on.gte.${args.from},occurs_on.lte.${args.to})`,
-          `and(occurs_on.is.null,due_at.gte.${start},due_at.lt.${end})`,
-          `and(occurs_on.is.null,due_at.is.null,done_at.gte.${start},done_at.lt.${end})`,
-          `and(occurs_on.is.null,due_at.is.null,done_at.is.null,created_at.gte.${start},created_at.lt.${end})`,
-        ].join(",");
-        const { data: tasks, error } = await db
-          .from("tasks")
-          .select("id, title, status, due_at, done_at, created_at, occurs_on, duration_minutes, routine_step, routines(title)")
-          .or(dateFilter)
-          .order("occurs_on", { ascending: true, nullsFirst: true })
-          .order("due_at", { ascending: true, nullsFirst: true })
-          .order("created_at", { ascending: true })
-          .order("id", { ascending: true })
-          .range(args.offset, args.offset + args.limit - 1);
-
-        if (error) return toolError(`get_task_history failed: ${error.message}`);
-        const rows = (tasks ?? []) as unknown as TaskHistoryRow[];
-        const ids = rows.map((task) => task.id);
-        const [slipResult, missResult] = ids.length
-          ? await Promise.all([
-              db.from("slips").select("task_id, why, why_category, accepted, at").in("task_id", ids).order("at", { ascending: true }),
-              db.from("missed_tasks").select("task_id, reason, at, self_reported").in("task_id", ids),
-            ])
-          : [{ data: [], error: null }, { data: [], error: null }];
-        if (slipResult.error) return toolError(`get_task_history failed loading slips: ${slipResult.error.message}`);
-        if (missResult.error) return toolError(`get_task_history failed loading miss reasons: ${missResult.error.message}`);
-
-        const slipsByTask = new Map<string, NonNullable<typeof slipResult.data>>();
-        for (const slip of slipResult.data ?? []) {
-          slipsByTask.set(slip.task_id, [...(slipsByTask.get(slip.task_id) ?? []), slip]);
-        }
-        const missesByTask = new Map((missResult.data ?? []).filter((miss) => miss.task_id).map((miss) => [miss.task_id!, miss]));
-        const records = rows
-          .map((task) => taskHistoryRecord(task, slipsByTask.get(task.id) ?? [], missesByTask.get(task.id) ?? null, config.timeZone, dayEndsAt(schedule), config))
-          .filter((record) => matchesTaskHistoryStatus(record, args.status));
-        const nextOffset = rows.length === args.limit ? args.offset + rows.length : null;
+        const { tasks: records, nextOffset } = await loadTaskHistory(db, args, config);
 
         return ok(await withMode(db, now, {
           from: args.from,

@@ -118,10 +118,17 @@ export function lateAfter(
   return end > dueAt ? end : endOfActiveDay(dayKey(dueAt, config.timeZone), ANY_TIME, config);
 }
 
+/** Done this long after it turned late, a task is stale: ticked off from History, not recovered. */
+export function isStale(task: Pick<TaskForXp, "dueAt">, doneAt: Date, config: EngineConfig = currentConfig()): boolean {
+  return task.dueAt !== null && doneAt.getTime() - task.dueAt.getTime() > config.xp.staleAfterDays * 86_400_000;
+}
+
 /**
  * XP for finishing a task. Done on time pays full base XP; done after
- * `dueAt` pays the late share, because recovering fast beats dwelling.
- * Applies to every tier — trying always scores.
+ * `dueAt` pays the late share, because recovering fast beats dwelling. Done
+ * more than `staleAfterDays` after that, the share is capped lower still, so
+ * clearing old tasks weeks on can't be farmed for XP. Applies to every tier —
+ * trying always scores.
  */
 export function completionXp(
   task: TaskForXp,
@@ -129,7 +136,8 @@ export function completionXp(
   config: EngineConfig = currentConfig(),
 ): XpEntry[] {
   if (isLate(task, doneAt)) {
-    return entries(scale(task.baseXp, config.xp.lateMultiplier), task.weights, "late_completion");
+    const share = isStale(task, doneAt, config) ? config.xp.staleMultiplier : config.xp.lateMultiplier;
+    return entries(scale(task.baseXp, share), task.weights, "late_completion");
   }
   return entries(scale(task.baseXp, 1), task.weights, "completion");
 }

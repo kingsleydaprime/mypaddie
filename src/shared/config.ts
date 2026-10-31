@@ -11,6 +11,10 @@ export interface EngineConfig {
   xp: {
     /** Share of base XP paid when a task is done after its due time. */
     lateMultiplier: number;
+    /** Days after a task turned late from which it counts as stale (cleared from History, weeks on). */
+    staleAfterDays: number;
+    /** Share of base XP paid for a stale completion: a cap below the late share. */
+    staleMultiplier: number;
     /** Share of base XP deducted when a need is ignored. */
     ignoredNeedPenalty: number;
     /** A task marked missed is penalised much harder than a clean completion is rewarded. */
@@ -55,6 +59,8 @@ export const DEFAULT_CONFIG: EngineConfig = {
   currency: "NGN",
   xp: {
     lateMultiplier: 0.5,
+    staleAfterDays: 2,
+    staleMultiplier: 0.2,
     ignoredNeedPenalty: 0.5,
     missPenaltyMultiplier: 2,
     honestyBonusMultiplier: 0.5,

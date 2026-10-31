@@ -57,8 +57,25 @@ describe("completionXp", () => {
     expect(xp.every((e) => e.reason === "late_completion")).toBe(true);
   });
 
-  test("days late still earns the same reduced XP — recovering is never worthless", () => {
-    expect(total(completionXp(task(), at("2026-10-09T22:00:00")))).toBe(5);
+  test("up to two days late still earns the late share", () => {
+    expect(total(completionXp(task(), at("2026-10-07T07:00:00")))).toBe(5);
+  });
+
+  test("more than two days late is stale: capped at a fifth — never worthless, never farmable", () => {
+    const xp = completionXp(task(), at("2026-10-07T07:00:01"));
+    expect(total(xp)).toBe(2);
+    expect(xp.every((e) => e.reason === "late_completion")).toBe(true);
+    expect(total(completionXp(task(), at("2026-11-20T09:00:00")))).toBe(2);
+  });
+
+  test("a stale completion never rounds down to zero", () => {
+    expect(total(completionXp(task({ baseXp: 1 }), at("2026-10-20T09:00:00")))).toBe(1);
+  });
+
+  test("stale counts from when it turned late, not the due time — an any-time task gets its whole day first", () => {
+    // lateAfter for any-time: end of the active day, so 2 days after 22:00 on the 5th is still late, not stale.
+    const turnedLate = at("2026-10-05T22:00:00");
+    expect(total(completionXp(task({ dueAt: turnedLate }), at("2026-10-07T21:00:00")))).toBe(5);
   });
 
   test("a task with no due time can never be late", () => {

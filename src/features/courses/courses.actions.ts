@@ -40,6 +40,33 @@ export async function addCourseAction(_prev: CourseFormState, form: FormData): P
   redirect(`/app/courses/${result.id}`);
 }
 
+/** Edit a course's details from its page: code, title, lecturer, semester, units, target, description. */
+export async function updateCourseAction(courseId: string, _prev: CourseFormState, form: FormData): Promise<CourseFormState> {
+  const title = text(form, "title");
+  if (!title) return { error: "A course needs a title" };
+  const units = text(form, "units") ? Number(text(form, "units")) : null;
+  if (units !== null && (!Number.isInteger(units) || units < 0 || units > 30)) return { error: "Units is a whole number up to 30" };
+  const db = await requireDb(`/app/courses/${courseId}`);
+  const r = await updateCourse(
+    db,
+    courseId,
+    {
+      code: text(form, "code") || null,
+      title,
+      lecturer: text(form, "lecturer") || null,
+      semester: text(form, "semester") || null,
+      units,
+      targetGrade: text(form, "targetGrade") || null,
+      description: text(form, "description") || null,
+    },
+    new Date(),
+  );
+  if (r.result === "not_found") return { error: "Course not found" };
+  revalidatePath(`/app/courses/${courseId}`);
+  revalidatePath("/app/courses");
+  return { ok: true, message: "Saved" };
+}
+
 export async function addTopicsAction(courseId: string, _prev: CourseFormState, form: FormData): Promise<CourseFormState> {
   const topics = parseTopics(text(form, "topics"));
   if (topics.length === 0) return { error: "Paste or type at least one topic" };

@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { ASSESSMENT_KINDS } from "../courses";
-import { acceptStudyAction, addAssessmentAction, addCourseAction, addTopicsAction, type CourseFormState } from "../courses.actions";
+import { acceptStudyAction, addAssessmentAction, addCourseAction, addTopicsAction, updateCourseAction, type CourseFormState } from "../courses.actions";
 import type { StudyBooking } from "../courses.repo";
 
 const field = "rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-base";
@@ -38,6 +38,45 @@ export function AddCourseForm() {
         <p className="text-xs text-muted">Have the outline as a PDF? Share it with Paddie in chat and it&apos;ll fill in the topics, tests and exams for you.</p>
         <Status state={state} />
         <button disabled={pending} className={button}>{pending ? "Adding…" : "Add course"}</button>
+      </form>
+    </details>
+  );
+}
+
+export interface CourseDetails {
+  id: string;
+  code: string | null;
+  title: string;
+  lecturer: string | null;
+  semester: string | null;
+  units: number | null;
+  targetGrade: string | null;
+  description: string | null;
+}
+
+/** The course's details, tucked behind "Edit details" so the page stays about the work. */
+export function EditCourseForm({ course }: { course: CourseDetails }) {
+  const [state, action, pending] = useActionState<CourseFormState, FormData>(updateCourseAction.bind(null, course.id), null);
+  return (
+    <details className="group">
+      <summary className="cursor-pointer list-none text-sm font-semibold text-gold [&::-webkit-details-marker]:hidden">
+        <span className="group-open:hidden">{course.lecturer ? "Edit details" : "+ Add lecturer & details"}</span>
+        <span className="hidden group-open:inline">Close</span>
+      </summary>
+      <form action={action} className="mt-3 flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
+        <div className="grid grid-cols-3 gap-2">
+          <input name="code" defaultValue={course.code ?? ""} maxLength={20} placeholder="Code" className={field} aria-label="Course code" />
+          <input name="title" defaultValue={course.title} required maxLength={200} placeholder="Title" className={`${field} col-span-2`} aria-label="Course title" />
+        </div>
+        <input name="lecturer" defaultValue={course.lecturer ?? ""} maxLength={200} placeholder="Lecturer(s), e.g. Dr. Okafor, Prof. Bello" className={field} aria-label="Lecturer or lecturers" />
+        <div className="grid grid-cols-3 gap-2">
+          <input name="semester" defaultValue={course.semester ?? ""} placeholder="Semester" className={field} aria-label="Semester" />
+          <input name="units" type="number" min={0} max={30} defaultValue={course.units ?? ""} placeholder="Units" className={field} aria-label="Units" />
+          <input name="targetGrade" defaultValue={course.targetGrade ?? ""} placeholder="Target" className={field} aria-label="Target grade" />
+        </div>
+        <textarea name="description" defaultValue={course.description ?? ""} rows={2} maxLength={2000} placeholder="What it's about (optional)" className={field} aria-label="Description" />
+        <Status state={state} />
+        <button disabled={pending} className={button}>{pending ? "Saving…" : "Save"}</button>
       </form>
     </details>
   );

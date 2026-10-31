@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import type { TopicStatus } from "@/features/courses/courses";
 import { assessmentDoneAction, courseStatusAction, removeTopicAction, scoreAction } from "@/features/courses/courses.actions";
 import { loadClasses, loadCourses, proposeStudy } from "@/features/courses/courses.repo";
-import { AcceptStudy, AddAssessmentForm, AddTopicsForm } from "@/features/courses/ui/course-forms";
+import { AcceptStudy, AddAssessmentForm, AddTopicsForm, EditCourseForm } from "@/features/courses/ui/course-forms";
 import { requireDb } from "@/shared/supabase/session";
 import { SubmitButton } from "@/shared/ui/submit-button";
 
@@ -35,10 +35,14 @@ export default async function CoursePage({ params }: PageProps<"/app/courses/[id
       </header>
       <section>
         <h1 className="text-2xl font-bold">{course.code ? `${course.code} · ${course.title}` : course.title}</h1>
+        {course.lecturer && <p className="mt-1 text-sm">with <span className="font-semibold">{course.lecturer}</span></p>}
         <p className="text-sm text-muted">
-          {[course.lecturer, course.semester, course.units !== null ? `${course.units} units` : null, course.targetGrade ? `aiming for ${course.targetGrade}` : null].filter(Boolean).join(" · ")}
+          {[course.semester, course.units !== null ? `${course.units} units` : null, course.targetGrade ? `aiming for ${course.targetGrade}` : null].filter(Boolean).join(" · ")}
         </p>
         {course.description && <p className="mt-2 text-sm">{course.description}</p>}
+        <div className="mt-3">
+          <EditCourseForm course={course} />
+        </div>
       </section>
 
       {plan && (
