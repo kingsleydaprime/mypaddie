@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { KIND_LABEL, type EntryKind } from "../kinds";
 import { currentConfig } from "@/shared/config";
 import { formatMoney } from "@/shared/format";
 import type { Db } from "@/shared/supabase/token-client";
@@ -24,7 +25,7 @@ export async function MoneyScreen({ db, addMoney = false }: { db: Db; addMoney?:
   const now = new Date();
   const [budget, recent, checks, { balance }, bills] = await Promise.all([
     loadBudget(db, now),
-    db.from("transactions").select("id, amount, direction, category, tag, note, at").is("voided_at", null).order("at", { ascending: false }).limit(6),
+    db.from("transactions").select("id, amount, direction, category, tag, note, kind, at").is("voided_at", null).order("at", { ascending: false }).limit(6),
     db.from("purchase_checks").select("id, item, price, verdict, decided_at, interest").order("decided_at", { ascending: false }).limit(8),
     loadBalance(db),
     loadBills(db, now),
@@ -136,7 +137,8 @@ export async function MoneyScreen({ db, addMoney = false }: { db: Db; addMoney?:
                 <Link href={`/app/money/tx/${t.id}`} className="flex items-center justify-between px-4 py-3">
                   <span className="min-w-0 truncate">
                     {t.note || t.category}
-                    {t.tag && <span className="ml-2 text-xs text-muted">{t.tag}</span>}
+                    {t.tag && <span className="ml-2 text-xs text-muted">{t.tag === "unsure" ? "not sure" : t.tag}</span>}
+                    {t.kind !== "normal" && <span className="ml-2 text-xs text-muted">{KIND_LABEL[t.kind as EntryKind].toLowerCase()}</span>}
                   </span>
                   <span className={`shrink-0 font-semibold ${t.direction === "in" ? "text-green" : ""}`}>
                     {t.direction === "in" ? "+" : "−"}

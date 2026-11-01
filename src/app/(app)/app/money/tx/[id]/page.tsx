@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { KIND_LABEL, type EntryKind } from "@/features/money/kinds";
 import { EditTransactionForm, VoidTransactionForm } from "@/features/money/ui/history-forms";
 import { currentConfig } from "@/shared/config";
 import { formatMoney } from "@/shared/format";
@@ -27,13 +28,13 @@ export default async function TransactionPage({ params }: PageProps<"/app/money/
           {t.direction === "in" ? "+" : "−"}{formatMoney(t.amount)}
         </p>
         <p className="mt-1 text-sm text-muted">
-          {formatLocal(new Date(t.at), currentConfig().timeZone)} · {t.kind === "normal" ? t.tag ?? "income" : t.kind === "opening" ? "opening balance" : "correction"}
+          {formatLocal(new Date(t.at), currentConfig().timeZone)} · {t.kind === "normal" ? (t.tag === "unsure" ? "not sure" : t.tag ?? "income") : KIND_LABEL[t.kind as EntryKind].toLowerCase()}
         </p>
         {t.voided_at && <p className="mt-2 text-sm text-red">Voided{t.void_reason ? `: ${t.void_reason}` : ""}. It stays on the record but doesn&apos;t count.</p>}
       </section>
       {!t.voided_at && (
         <>
-          <EditTransactionForm id={t.id} note={t.note ?? ""} category={t.category} />
+          <EditTransactionForm id={t.id} note={t.note ?? ""} category={t.category} tag={t.kind === "normal" && t.direction === "out" ? t.tag : null} />
           {t.split_applied_at ? (
             <p className="text-sm text-muted">This income was already split into your buckets, so it can&apos;t be voided here.</p>
           ) : (

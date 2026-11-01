@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { formatMoney, parseAmount } from "@/shared/format";
 import { redirect } from "next/navigation";
 import { requireDb } from "@/shared/supabase/session";
-import { editTransaction, setBalance, setPurchaseInterest, voidTransaction } from "./money.repo";
+import { editTransaction, retagTransaction, setBalance, setPurchaseInterest, voidTransaction } from "./money.repo";
 
 export type FormState = null | { error: string } | { ok: string };
 
@@ -34,6 +34,12 @@ export async function editTransactionAction(_prev: FormState, form: FormData): P
   const db = await requireDb(`/app/money/tx/${id}`);
   const r = await editTransaction(db, id, { note: String(form.get("note") ?? ""), category });
   if (r === "not_found") return { error: "Can't edit a voided entry." };
+  // A spend's tag: its money moves to the right bucket with it.
+  const tag = String(form.get("tag") ?? "");
+  if (tag === "need" || tag === "want" || tag === "unsure") {
+    const t = await retagTransaction(db, id, tag);
+    if (t === "voided" || t === "not_found") return { error: "Can't edit a voided entry." };
+  }
   revalidatePath("/app/money");
   revalidatePath("/app/money/history");
   return { ok: "Saved." };

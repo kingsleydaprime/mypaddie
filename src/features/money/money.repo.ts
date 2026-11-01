@@ -132,6 +132,8 @@ export interface NewTransaction {
   note?: string | null;
   /** ISO time it happened, for backfilling; default now. */
   at?: string | null;
+  /** Not income or spending (see kinds.ts): only changes the balance. Default "normal". */
+  kind?: "normal" | "moved" | "repaid" | "refund";
 }
 
 /**
@@ -140,6 +142,16 @@ export interface NewTransaction {
  * logging XP paid atomically, and income comes back with a proposed split.
  */
 export async function logTransaction(db: Db, tx: NewTransaction, now: Date) {
+  // Money moved, a repaid debt or a refund: on the record and in the balance, nothing else.
+  if (tx.kind && tx.kind !== "normal") {
+    const { data, error } = await db
+      .from("transactions")
+      .insert({ amount: tx.amount, direction: tx.direction, category: tx.category, kind: tx.kind, note: tx.note ?? null, at: tx.at ?? now.toISOString() })
+      .select("id")
+      .single();
+    if (error) throw new Error(`logging the entry: ${error.message}`);
+    return { transactionId: data.id, xpEarned: 0, flags: [] as SpendFlag[], proposedSplit: null };
+  }
   if (tx.direction === "out" && !tx.tag) throw new Error("outflows need a tag (need, want or unsure)");
   const before = await loadBudget(db, now);
   const tag = tx.direction === "out" ? tx.tag : null;
@@ -173,6 +185,16 @@ export async function logTransaction(db: Db, tx: NewTransaction, now: Date) {
     flags,
     proposedSplit: tx.direction === "in" ? proposalFor(tx.amount, before) : null,
   };
+}
+
+/**
+ * Change a spend's need/want tag; its money moves between buckets with it
+ * (see retagMove in kinds.ts). Only live spending can be retagged.
+ */
+export async function retagTransaction(db: Db, id: string, tag: "need" | "want" | "unsure") {
+  const { data, error } = await db.rpc("retag_transaction", { p_id: id, p_tag: tag });
+  if (error) throw new Error(`changing the tag: ${error.message}`);
+  return data as "retagged" | "unchanged" | "not_spending" | "voided" | "not_found";
 }
 
 export type SplitAmounts = Record<BucketName, number>;

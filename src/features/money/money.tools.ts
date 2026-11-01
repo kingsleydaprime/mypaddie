@@ -5,6 +5,7 @@ import { dbFrom, ok, toolError, type ToolContext } from "@/shared/mcp/kit";
 import type { Json } from "@/shared/supabase/database.types";
 import { escapeLike } from "@/shared/supabase/like";
 import { planDeficit } from "./deficit";
+import { entryOf, isIncome } from "./kinds";
 import { capForCategory, loadBills, loadCaps, loadDebts } from "./guardrails.repo";
 import {
   acceptSplit,
@@ -14,6 +15,7 @@ import {
   loadBudget,
   logTransaction,
   proposalFor,
+  retagTransaction,
   setBalance,
   setPurchaseInterest,
   voidTransaction,
@@ -45,12 +47,18 @@ export function registerMoneyTools(server: McpServer) {
         "Outflows need a tag: need, want, or unsure; for food and similar, ask 'basic version or the extra?' and " +
         "log two entries (need + want) if it's both. If `flags` comes back non-empty, point out the bad call " +
         "plainly and briefly (firm about the action, funny about the situation), then move on. For income, the " +
-        "reply includes a proposed split — present it and ask them to accept, tweak, or reject (accept_split).",
+        "reply includes a proposed split — present it and ask them to accept, tweak, or reject (accept_split). " +
+        "Not all money in is income: `kind` 'moved' (from their own other account), 'repaid' (someone paid back " +
+        "money they owed; prefer pay_debt when the debt is recorded) or 'refund' only change the balance — no split, " +
+        "no XP, not counted in the audit. Money out can be `kind` 'moved' (to their own other account): no tag needed. " +
+        "An ATM or POS withdrawal to cash isn't logged at all (the cash is still theirs, and they log what they spend " +
+        "it on); only its fee is a spend. Ask when it's unclear whether money in is income.",
       inputSchema: z.object({
         amount,
         direction: z.enum(["in", "out"]),
         category: z.string().trim().min(1),
-        tag: z.enum(["need", "want", "unsure"]).optional().describe("Required for out, ignored for in"),
+        tag: z.enum(["need", "want", "unsure"]).optional().describe("Required for spending; ignored for in and for kind 'moved'"),
+        kind: z.enum(["income", "moved", "repaid", "refund"]).optional().describe("Default income (in) / spending (out). Out allows only 'moved'"),
         spend_level: z.enum(["floor", "comfortable"]).optional().describe("Needs only: cheapest honest version or current comfort"),
         item_id: z.uuid().optional(),
         note: z.string().optional(),
@@ -63,6 +71,7 @@ export function registerMoneyTools(server: McpServer) {
         direction: "in" | "out";
         category: string;
         tag?: "need" | "want" | "unsure";
+        kind?: "income" | "moved" | "repaid" | "refund";
         spend_level?: "floor" | "comfortable";
         item_id?: string;
         note?: string;
@@ -71,7 +80,9 @@ export function registerMoneyTools(server: McpServer) {
       ctx: ToolContext,
     ) => {
       try {
-        if (args.direction === "out" && !args.tag) return toolError("log_transaction: outflows need a tag (need, want or unsure)");
+        if (args.direction === "out" && args.kind && args.kind !== "moved") return toolError("log_transaction: money out can only be kind 'moved' (or spending with a tag)");
+        if (args.direction === "out" && args.kind !== "moved" && !args.tag) return toolError("log_transaction: outflows need a tag (need, want or unsure)");
+        const entry = entryOf(args.direction, args.direction === "in" ? args.kind ?? "income" : args.kind === "moved" ? "moved" : args.tag!);
         const db = dbFrom(ctx);
         const now = new Date();
         const logged = await logTransaction(
@@ -80,7 +91,8 @@ export function registerMoneyTools(server: McpServer) {
             amount: args.amount,
             direction: args.direction,
             category: args.category,
-            tag: args.tag ?? null,
+            tag: entry.tag,
+            kind: entry.kind as "normal" | "moved" | "repaid" | "refund",
             spendLevel: args.spend_level,
             itemId: args.item_id,
             note: args.note,
@@ -152,9 +164,9 @@ export function registerMoneyTools(server: McpServer) {
       try {
         const db = dbFrom(ctx);
         const now = new Date();
-        const { data: tx, error } = await db.from("transactions").select("amount, direction, split_applied_at").eq("id", transaction_id).maybeSingle();
+        const { data: tx, error } = await db.from("transactions").select("amount, direction, kind, split_applied_at").eq("id", transaction_id).maybeSingle();
         if (error) return toolError(`propose_split failed: ${error.message}`);
-        if (!tx || tx.direction !== "in") return toolError("propose_split: that isn't an income entry");
+        if (!tx || !isIncome(tx)) return toolError("propose_split: that isn't an income entry (money moved, refunds and repaid debts aren't split)");
         if (tx.split_applied_at) return toolError("propose_split: this income has already been split");
         return ok(await withMode(db, now, { income: tx.amount, proposedSplit: proposalFor(tx.amount, await loadBudget(db, now)) }));
       } catch (error) {
@@ -319,13 +331,22 @@ export function registerMoneyTools(server: McpServer) {
     "edit_transaction",
     {
       title: "Edit transaction",
-      description: "Change a transaction's narration (note) or category. Amounts and need/want tags can't change — void and re-log instead.",
-      inputSchema: z.object({ id: z.uuid(), note: z.string().trim().max(500).nullable().optional(), category: z.string().trim().min(1).optional() }),
+      description:
+        "Change a transaction's narration (note), category, or a spend's need/want tag (its money moves to the right " +
+        "bucket with it). Amounts can't change — void and re-log instead.",
+      inputSchema: z.object({
+        id: z.uuid(),
+        note: z.string().trim().max(500).nullable().optional(),
+        category: z.string().trim().min(1).optional(),
+        tag: z.enum(["need", "want", "unsure"]).optional().describe("Spending only"),
+      }),
     },
-    async ({ id, note, category }: { id: string; note?: string | null; category?: string }, ctx: ToolContext) => {
+    async ({ id, note, category, tag }: { id: string; note?: string | null; category?: string; tag?: "need" | "want" | "unsure" }, ctx: ToolContext) => {
       try {
         const db = dbFrom(ctx);
-        return ok(await withMode(db, new Date(), { result: await editTransaction(db, id, { note, category }) }));
+        const result = note !== undefined || category !== undefined ? await editTransaction(db, id, { note, category }) : null;
+        const retag = tag ? await retagTransaction(db, id, tag) : undefined;
+        return ok(await withMode(db, new Date(), { result: result ?? retag, ...(retag ? { tag: retag } : {}) }));
       } catch (error) {
         return toolError(`edit_transaction failed: ${(error as Error).message}`);
       }

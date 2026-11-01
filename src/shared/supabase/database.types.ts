@@ -1219,6 +1219,9 @@ isOneToOne: false
 "record_transaction":
 { Args: { "p_amount": number,"p_at": string,"p_category": string,"p_direction": Database["public"]['Enums']["money_direction"],"p_item_id": string,"p_note": string,"p_spend_level": Database["public"]['Enums']["spend_level"],"p_tag": Database["public"]['Enums']["money_tag"],"p_xp": Json }; Returns: string
                            },
+"retag_transaction":
+{ Args: { "p_id": string,"p_tag": Database["public"]['Enums']["money_tag"] }; Returns: string
+                           },
 "record_update_sent":
 { Args: { "p_at": string,"p_content": string,"p_update_id": string }; Returns: string
                            },

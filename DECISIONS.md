@@ -1677,3 +1677,30 @@ read as broken.
   ignore the card instead of finishing it.
 - The rule lives in `planRoutineFinish` (tested); the AI still settles steps
   one by one with `mark_task_missed`.
+
+### Money in isn't always income; spend tags are editable (2026-11-01)
+Asked: "You can't change tags on transactions, was that a conscious
+decision?" and "not all income is like a salary… if someone paid me a debt
+or if I moved money from another account… that isn't really income."
+
+- **Tags are editable** (supersedes "amount and need/want tag aren't" from
+  2026-10-05). `retag_transaction` moves the amount back to the old bucket and
+  out of the new one, as logging it right would have; need ↔ not sure share
+  the needs bucket, so nothing moves. Flags from logging time aren't
+  re-judged. Chosen over "label only" so buckets can't drift.
+  Amounts still can't change (void and re-log).
+- **Money-in types**: income (default), money moved in, debt repaid, refund.
+  **Money-out types**: need / want / not sure, or money moved out. New kinds
+  `moved`, `repaid`, `refund`, like `loan`, change the balance only: no audit,
+  buckets, split or logging XP (XP for moving money would be farmable). Refund
+  counts as balance only (chosen over reducing spending in its category).
+- **"Money moved", not "transfer"**, at the user's request: plainer. An
+  ATM/POS withdrawal is *not* money moved while there's one balance: cash is
+  still tracked, and its spending is logged, so recording the withdrawal would
+  count it twice. The fee is a spend. Separate accounts (next) will make
+  withdrawals a move from Bank to Cash.
+- **`apply_split` only splits real income** (`kind = 'normal'`). Before, an
+  opening balance or a loan could be split into buckets. Copied from the
+  latest definition (20261114) this time.
+- Quick log and the entry page show the type ("money moved", "loan", "debt
+  repaid"…). Loans were mislabelled "correction" there before.

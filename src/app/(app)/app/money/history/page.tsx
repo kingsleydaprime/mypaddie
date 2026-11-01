@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { KIND_LABEL, type EntryKind } from "@/features/money/kinds";
 import { listTransactions, loadBalance } from "@/features/money/money.repo";
 import { SetBalanceForm } from "@/features/money/ui/history-forms";
 import { currentConfig } from "@/shared/config";
@@ -36,7 +37,7 @@ export default async function HistoryPage() {
                     <p className={`truncate ${r.voided_at ? "line-through" : ""}`}>{r.note || r.category}</p>
                     <p className="text-xs text-muted">
                       {localTimeOf(new Date(r.at), tz())} · {r.note ? `${r.category} · ` : ""}
-                      {r.kind !== "normal" ? (r.kind === "opening" ? "opening balance" : "correction") : r.tag ?? "income"}
+                      {r.kind !== "normal" ? KIND_LABEL[r.kind as EntryKind].toLowerCase() : r.tag === "unsure" ? "not sure" : r.tag ?? "income"}
                       {r.voided_at && " · voided"}
                     </p>
                   </div>

@@ -132,7 +132,9 @@ The emergency buffer target defaults to one month of needs. Buckets are envelope
 
 ### Balance
 
-Separate from the buckets, the balance is real money: an opening balance plus everything in minus everything out. "Set balance" records an adjustment so it can always be matched to your real account. Mistakes are voided, not deleted: a voided entry stays on the record, stops counting everywhere, and its XP is reversed. Amounts are whole naira.
+Separate from the buckets, the balance is real money: an opening balance plus everything in minus everything out. "Set balance" records an adjustment so it can always be matched to your real account. Mistakes are voided, not deleted: a voided entry stays on the record, stops counting everywhere, and its XP is reversed. A spend's need/want tag can be changed afterwards, and its money moves to the right bucket with it; the amount can't (void and re-log). Amounts are in the user's currency, to two decimal places.
+
+Not all money in is income. Money in is **income** (counts in the audit, gets a split proposal, earns the logging XP), **money moved in** (from another account of yours), **debt repaid** (someone paid you back) or a **refund**. Money out is spending (need, want, not sure) or **money moved out** (to another account of yours). Money moved, repaid debts, refunds and loans change the balance and nothing else: no audit, buckets, split or XP. Cash from an ATM or POS isn't logged as money moved: it's still yours, and what you spend it on is logged (the withdrawal fee is a spend). Separate accounts, each with its own balance, are planned next.
 
 ### The don't-buy-this check
 

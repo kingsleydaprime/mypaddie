@@ -23,11 +23,32 @@ export function SetBalanceForm({ currency }: { currency: string }) {
   );
 }
 
-export function EditTransactionForm({ id, note, category }: { id: string; note: string; category: string }) {
+const TAGS = [
+  { v: "need", label: "Need" },
+  { v: "want", label: "Want" },
+  { v: "unsure", label: "Not sure" },
+] as const;
+
+/** `tag`: a spend's need/want, editable (its money moves bucket with it); absent for anything that isn't spending. */
+export function EditTransactionForm({ id, note, category, tag }: { id: string; note: string; category: string; tag?: "need" | "want" | "unsure" | null }) {
   const [state, action, pending] = useActionState<FormState, FormData>(editTransactionAction, null);
   return (
     <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="id" value={id} />
+      {tag && (
+        <fieldset className="flex flex-col gap-1 text-sm text-muted">
+          <legend className="mb-1">Need or want?</legend>
+          <div className="flex gap-2">
+            {TAGS.map((t) => (
+              <label key={t.v} className="flex-1 cursor-pointer rounded-xl border border-line px-3 py-2.5 text-center font-semibold text-muted has-[:checked]:border-gold has-[:checked]:bg-gold has-[:checked]:text-on-gold">
+                <input type="radio" name="tag" value={t.v} defaultChecked={tag === t.v} className="sr-only" />
+                {t.label}
+              </label>
+            ))}
+          </div>
+          <span className="text-xs">Changing it moves the money to the right bucket.</span>
+        </fieldset>
+      )}
       <label className="flex flex-col gap-1 text-sm text-muted">Narration<input name="note" defaultValue={note} maxLength={500} placeholder="e.g. Lunch with Tolu at Mama Put" className={field} /></label>
       <label className="flex flex-col gap-1 text-sm text-muted">Category<input name="category" defaultValue={category} required className={field} /></label>
       <Msg s={state} />
@@ -41,7 +62,7 @@ export function VoidTransactionForm({ id }: { id: string }) {
   return (
     <form action={action} className="flex flex-col gap-2 border-t border-line pt-4">
       <input type="hidden" name="id" value={id} />
-      <p className="text-sm text-muted">Logged by mistake? Voiding keeps it on the record but stops it counting. Its bucket money goes back and the logging XP is taken back. To fix the amount or need/want, void it and log it again.</p>
+      <p className="text-sm text-muted">Logged by mistake? Voiding keeps it on the record but stops it counting. Its bucket money goes back and the logging XP is taken back. To fix the amount, void it and log it again.</p>
       <input name="reason" maxLength={200} placeholder="Why? (optional)" className={field} />
       <Msg s={state} />
       <button disabled={pending} className="rounded-xl border border-red/40 px-4 py-3 text-red disabled:opacity-60">Void this entry</button>
