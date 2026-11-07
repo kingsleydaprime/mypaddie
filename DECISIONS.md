@@ -1704,3 +1704,26 @@ or if I moved money from another account… that isn't really income."
   latest definition (20261114) this time.
 - Quick log and the entry page show the type ("money moved", "loan", "debt
   repaid"…). Loans were mislabelled "correction" there before.
+
+### Quit tracker rules (2026-11-07, decided before building)
+Plan: `docs/QUIT-TRACKER-PLAN.md`. Asked of the relapse rule: "Shouldn't a
+relapse change like back to zero" and, of milestones, "Every attempt but I
+think a relapse should drop 0".
+
+- **A relapse sends the counter back to day 0 and costs 0 XP.** XP already
+  earned stays; logging a slip earns +2 honesty XP (once a day per quit).
+  Rejected: a −5 penalty and clawing back the attempt's milestone XP, both
+  of which give a reason to hide slips.
+- **Milestones pay again on every attempt.** The plan recommended "only
+  beyond the previous best", but that pays out exactly like "once ever", so
+  the real choice was once-ever vs every attempt. Every attempt rewards the
+  restart; the cost (re-earning the 1d/3d bonuses, +15 a cycle) was accepted
+  because it's a private coach with nothing to win by gaming it.
+- **Quit and cut down both ship first.** A cut-down day is over only when
+  usage is *more than* the cap; an over day counts as a relapse. Raising a
+  cap starts a new attempt.
+- **Relapses can only move the mode towards soft** (2+ in 3 days), never
+  strict: shame spirals make relapses likelier.
+- **Paddie sees the alias only**, unless the real name is turned on per quit.
+- **Free gets 1 active quit**, Plus/Pro unlimited. Quitting something harmful
+  shouldn't be fully behind a paywall.

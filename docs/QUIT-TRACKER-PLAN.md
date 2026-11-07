@@ -1,7 +1,7 @@
 # Plan: Quit tracker (bad habits)
 
-Status: **proposed, not built** (2026-11-01). Decisions marked **D1…D6** need
-the product owner's call before code. Recommendations are given for each.
+Status: **decided, not built** (decisions made 2026-11-07; see the table at
+the end and DECISIONS.md).
 
 ## Why
 
@@ -37,26 +37,42 @@ New table `quits` (one per habit being quit):
 | `id`, `user_id` | owner RLS, the same four policies as every table |
 | `title` | the real name, e.g. "Porn". Only shown on its own page |
 | `alias` | optional display name, e.g. "Project P", used everywhere else |
-| `kind` | `quit` (zero is the goal) or `limit` (under a daily cap) — **D2** |
-| `limit_per_day` | for `limit`: e.g. 60 (minutes) or 1 (times); null for `quit` |
+| `kind` | `quit` (zero is the goal) or `limit` (stay under a daily cap) |
+| `limit_per_day` | for `limit`: e.g. 60 or 2; null for `quit` |
+| `unit` | for `limit`: `minutes` or `times`; null for `quit` |
 | `started_at` | when the current attempt began; counting starts here |
 | `on_home` | default **false** |
 | `status` | `active` / `paused` / `ended` |
 | `why` | optional: "for my marriage", "to get my mornings back". Shown on a slip |
+| `show_name_to_ai` | default **false**: Paddie sees only the alias (D5) |
 
-New table `quit_relapses`: `id`, `user_id`, `quit_id`, `at`, `note`
-(≤ 500 chars), `trigger` (optional short label, reusing slip categories).
+New table `quit_logs`: `id`, `user_id`, `quit_id`, `at`, `amount` (null
+for `quit`; minutes or times for `limit`), `note` (≤ 500 chars), `trigger`
+(optional short label, reusing slip categories). For a `quit`, every log is a
+relapse. For a `limit`, a log is usage.
 
-**Derived, never stored:** the current streak (now − max(started_at, last
-relapse)), the longest streak, the total clean days, and the milestones
-crossed. These are pure functions in `features/quits/quits.ts`, the same
+**Cut down (`limit`) rules:**
+
+- Days are the user's local days (profile time zone).
+- A day is **over** when that day's logged amount is **more than** the cap.
+  Hitting the cap exactly is still a clean day.
+- An over day counts as a relapse: the streak goes back to 0 from that day.
+  Today counts as clean until it goes over.
+- The streak is counted in whole clean days. A `quit` counts from the moment
+  of the last relapse (shown as days, with hours on day 0).
+- Raising the cap starts a new attempt (otherwise a raise would wipe past
+  over days). Lowering it doesn't.
+
+**Derived, never stored:** the current streak (from max(started_at, last
+relapse or over day)), the longest streak, the total clean days, and the
+milestones crossed. These are pure functions in `features/quits/quits.ts`, the same
 pattern as `xp.ts` and `stage.ts`, so they're unit-tested without a database.
 
 **Link to About me:** a `bad_habit` self-note can be turned into a quit
 ("Start tracking this"), but the tables stay separate. A note is reflection;
 a quit is a counter.
 
-## XP — D1
+## XP
 
 Rule of thumb: **reward honesty and progress; don't punish the slip
 itself.** A tracker people stop logging to is worse than none.
@@ -64,20 +80,22 @@ itself.** A tracker people stop logging to is worse than none.
 - Milestones: 1d +5, 3d +10, 7d +20, 14d +30, 30d +50, 60d +60, 90d +80,
   180d +100, 365d +150. Pillar: Character 60 / Mental 40 (editable weights,
   like tasks).
-- Logging a relapse: **+2 honesty XP**, at most once a day per quit.
-- A relapse costs **0 XP** (recommended). Alternatives: a small −5, or a
-  penalty only when it's hidden (impossible to detect, so no).
-- Milestones are paid once per attempt. After a relapse, reaching 7 days
-  again pays again, but only up to the previous longest streak plus new
-  ground. Otherwise reset-and-repeat would farm XP. **D3**: simpler
-  alternative is "each milestone pays once ever".
+- A relapse sends the counter back to day 0 and costs **0 XP**. XP already
+  earned is never taken back (D1).
+- Logging a relapse (or, for `limit`, logging usage): **+2 honesty XP**, at
+  most once a local day per quit.
+- **Milestones pay again on every attempt** (D3). After a relapse, reaching 7
+  days again pays +20 again. Accepted cost: someone who slips every few days
+  re-earns the 1d and 3d bonuses (+15 a cycle). It's a private coach with no
+  leaderboard, so it can only be gamed against yourself.
 
 ## Coaching mode
 
 Relapses are not ignored needs. Recommended: **don't** let relapses move the
 mode to strict. Shame spirals make relapses more likely. Instead, 2+ relapses
 in 3 days gives `soft` with a reason ("rough patch on Project P"), unless the
-user has set "no mercy". **D4.**
+user has set "no mercy". An over day on a `limit` counts as a relapse here
+(D4).
 
 ## Screens
 
@@ -97,10 +115,12 @@ user has set "no mercy". **D4.**
 ## AI tools (MCP)
 
 - `get_quits`: list with alias, streaks, next milestone. **The real `title` is
-  returned only when the user names it in chat first** (or always?) — **D5**.
+  returned only when `show_name_to_ai` is on** for that quit (D5); otherwise
+  the alias, or "a habit you're quitting" when there's no alias.
 - `start_quit`, `update_quit` (alias, why, on_home, pause, end, restart).
-- `log_relapse`: one quit, a time and an optional note. It returns the reset
-  streak, what was kept (longest, total), and a pattern hint when there is one.
+- `log_relapse`: one quit, a time, an optional note, and an amount for
+  `limit`. It returns the streak (reset, or still going if under the cap),
+  what was kept (longest, total), and a pattern hint when there is one.
 - Server instructions: Paddie never brings up a quit unprompted except on a
   milestone day, and then by its alias only.
 
@@ -118,17 +138,17 @@ user has set "no mercy". **D4.**
   drops the coaching tone (the existing server instruction already covers
   distress). The app itself doesn't try to detect it.
 
-## Plans (pricing) — D6
+## Plans (pricing)
 
-Recommended: Free includes **1 active quit**, Plus and Pro unlimited. It's a
+Free includes **1 active quit** (D6), Plus and Pro unlimited. It's a
 `limits.quits` entry next to `habits` in `plans.ts`, enforced by
 `requireRoom`. Quitting something harmful shouldn't sit behind a paywall,
 hence at least one is free.
 
 ## Build order (each a commit)
 
-1. `quits.ts` pure functions + tests: streaks, totals, milestones, the
-   repeat-milestone rule.
+1. `quits.ts` pure functions + tests: streaks for both kinds, over days,
+   totals, milestones per attempt, the honesty cap, the cap-raise rule.
 2. Migration: both tables, RLS, constraints + pgTAP tests. Update
    `database.types.ts`.
 3. Repo + server actions; XP through the existing ledger (new `xp_reason`
@@ -141,15 +161,15 @@ hence at least one is free.
 Rough size: 1–2 days. Steps 1–4 make it usable on its own; step 5 is what
 makes Paddie part of it.
 
-## Decisions needed
+## Decisions (2026-11-07)
 
-| # | Question | Recommended |
+| # | Question | Chosen |
 |---|---|---|
-| D1 | Does a relapse cost XP? | No. +2 for logging it honestly |
-| D2 | Support "cut down" (under a daily cap) as well as "quit completely"? | Yes, but ship `quit` first and add `limit` as step 8 |
-| D3 | Milestones after a relapse: pay again, or once ever? | Again, but only beyond the previous best |
+| D1 | Does a relapse cost XP? | No. Counter back to 0, earned XP kept, +2 for logging honestly |
+| D2 | Support "cut down" as well as "quit completely"? | Yes, both from the start |
+| D3 | Milestones after a relapse: pay again, or once ever? | Again, on every attempt |
 | D4 | Can relapses move the mode? | Only towards `soft`, never `strict` |
-| D5 | Does Paddie see the real name or only the alias? | Alias by default; the real name only if the user turns it on |
+| D5 | Does Paddie see the real name or only the alias? | Alias by default; the real name only if turned on per quit |
 | D6 | How many on Free? | 1 active, Plus/Pro unlimited |
 
 ## Not in scope
