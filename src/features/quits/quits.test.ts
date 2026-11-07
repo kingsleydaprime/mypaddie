@@ -11,6 +11,7 @@ import {
   milestonesToPay,
   nextMilestone,
   quitProgress,
+  quitTimeline,
   QuitRuleError,
   validateLog,
   validateSetup,
@@ -461,5 +462,43 @@ describe("validation", () => {
     expect(capChangeStartsNewAttempt(30, 60)).toBe(true);
     expect(capChangeStartsNewAttempt(60, 30)).toBe(false);
     expect(capChangeStartsNewAttempt(60, 60)).toBe(false);
+  });
+});
+
+describe("history", () => {
+  test("shows starts, stops, restarts and slips, newest first", () => {
+    const periods = [closed("2026-11-01T08:00:00", "2026-11-03T08:00:00"), open("2026-11-05T08:00:00")];
+    const t = quitTimeline("quit", periods, [relapse("2026-11-02T23:00:00"), relapse("2026-11-06T01:00:00")], TZ);
+    expect(t.map((e) => e.type)).toEqual(["slip", "started", "stopped", "slip", "started"]);
+    expect(t[1]).toMatchObject({ type: "started", again: true });
+    expect(t[4]).toMatchObject({ type: "started", again: false });
+  });
+
+  test("a cap change reads as a cap change, not a stop and restart", () => {
+    const lowered: QuitPeriod = { startedAt: at("2026-11-03T12:00:00"), endedAt: at("2026-11-04T12:00:00"), limitPerDay: 30, continuesRun: true };
+    const raised: QuitPeriod = { startedAt: at("2026-11-04T12:00:00"), endedAt: null, limitPerDay: 45 };
+    const t = quitTimeline("limit", [closed("2026-11-01T08:00:00", "2026-11-03T12:00:00", 60), lowered, raised], [], TZ);
+    expect(t).toEqual([
+      { type: "cap", at: at("2026-11-04T12:00:00"), cap: 45, change: "raised" },
+      { type: "cap", at: at("2026-11-03T12:00:00"), cap: 30, change: "lowered" },
+      { type: "started", at: at("2026-11-01T08:00:00"), again: false, cap: 60 },
+    ]);
+  });
+
+  test("marks the log that takes a cut-down day over its cap, and only that one", () => {
+    const logs = [use("2026-11-02T09:00:00", 40), use("2026-11-02T13:00:00", 30), use("2026-11-02T20:00:00", 10), use("2026-11-03T09:00:00", 60)];
+    const t = quitTimeline("limit", [open("2026-11-01T08:00:00", 60)], logs, TZ).filter((e) => e.type === "used");
+    expect(t.map((e) => [e.dayTotal, e.tippedOver])).toEqual([[60, false], [80, false], [70, true], [40, false]]);
+  });
+
+  test("a paused quit ends on its stop", () => {
+    const t = quitTimeline("quit", [closed("2026-11-01T08:00:00", "2026-11-03T08:00:00")], [], TZ);
+    expect(t.map((e) => e.type)).toEqual(["stopped", "started"]);
+  });
+
+  test("passes the caller's log rows through", () => {
+    const log = { at: at("2026-11-02T23:00:00"), amount: null, note: "bored" };
+    const [e] = quitTimeline("quit", [open("2026-11-01T08:00:00")], [log], TZ);
+    expect(e).toMatchObject({ type: "slip", log: { note: "bored" } });
   });
 });

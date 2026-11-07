@@ -1744,3 +1744,15 @@ think a relapse should drop 0".
   `quit_milestones` is unique per run, so two loads at once can't pay twice.
 - **The mode's rough-patch reason uses the alias only**, never the real name,
   even with "Paddie can see the real name" on: the mode is in every reply.
+
+## Quit tracker screens (2026-11-07)
+
+- **Others → Quitting is always listed**, not only once a quit exists as the
+  plan first said: the list page is also where one is started, and Paddie
+  can't start one until the MCP tools land. The label is generic enough to
+  sit in the menu.
+- **The alias is the name on screen** (list, quit page, Home line); the real
+  name shows only in the quit's settings. Same reason as D5, but for someone
+  looking over a shoulder rather than for Paddie.
+- **A start date of today means from now**, not from the midnight before; an
+  earlier date means from that day's local midnight.

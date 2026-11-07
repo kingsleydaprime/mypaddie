@@ -360,3 +360,65 @@ export function inRoughPatch(
   }
   return overDays >= ROUGH_PATCH.relapses;
 }
+
+// ── History ──────────────────────────────────────────────────────────
+
+/** One line in a quit's history. `log` carries the caller's row (note, cause) through untouched. */
+export type QuitTimelineEntry<L extends QuitLog = QuitLog> =
+  | { type: "started"; at: Date; again: boolean; cap: number | null }
+  | { type: "stopped"; at: Date }
+  | { type: "cap"; at: Date; cap: number; change: "raised" | "lowered" }
+  | { type: "slip"; at: Date; log: L }
+  | { type: "used"; at: Date; log: L; dayTotal: number; cap: number | null; tippedOver: boolean };
+
+/**
+ * A quit's history, newest first: when tracking started, stopped and started
+ * again, cap changes, and each log. For cutting down, the log that takes a day
+ * over its cap is marked, judged against the cap the day started under (the
+ * same rule as the rough patch).
+ */
+export function quitTimeline<L extends QuitLog>(
+  kind: QuitKind,
+  periods: readonly QuitPeriod[],
+  logs: readonly L[],
+  timeZone: string,
+): QuitTimelineEntry<L>[] {
+  const sorted = sortedPeriods(periods);
+  const out: QuitTimelineEntry<L>[] = [];
+
+  sorted.forEach((p, i) => {
+    const prev = sorted[i - 1];
+    // A cap change closes one period and opens the next at the same instant.
+    const seamless = prev?.endedAt?.getTime() === p.startedAt.getTime();
+    if (prev && seamless && p.limitPerDay !== null) {
+      out.push({ type: "cap", at: p.startedAt, cap: p.limitPerDay, change: p.continuesRun ? "lowered" : "raised" });
+    } else {
+      if (prev?.endedAt) out.push({ type: "stopped", at: prev.endedAt });
+      out.push({ type: "started", at: p.startedAt, again: i > 0, cap: p.limitPerDay });
+    }
+  });
+  const last = sorted[sorted.length - 1];
+  if (last?.endedAt) out.push({ type: "stopped", at: last.endedAt });
+
+  const capOn = (day: string): number | null =>
+    sorted.find((p) => dayKey(p.startedAt, timeZone) <= day && (!p.endedAt || day <= dayKey(p.endedAt, timeZone)))?.limitPerDay ?? null;
+  const totals = new Map<string, number>();
+  for (const log of [...logs].sort((a, b) => a.at.getTime() - b.at.getTime())) {
+    if (kind === "quit") {
+      out.push({ type: "slip", at: log.at, log });
+      continue;
+    }
+    const day = dayKey(log.at, timeZone);
+    const before = totals.get(day) ?? 0;
+    const dayTotal = before + (log.amount ?? 0);
+    totals.set(day, dayTotal);
+    const cap = capOn(day);
+    out.push({ type: "used", at: log.at, log, dayTotal, cap, tippedOver: cap !== null && before <= cap && dayTotal > cap });
+  }
+
+  // Newest first; at the same instant, the later event (a log after its start) comes first.
+  return out
+    .map((e, i) => ({ e, i }))
+    .sort((a, b) => b.e.at.getTime() - a.e.at.getTime() || b.i - a.i)
+    .map(({ e }) => e);
+}

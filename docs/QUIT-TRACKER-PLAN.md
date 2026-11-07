@@ -117,9 +117,12 @@ user has set "no mercy". An over day on a `limit` counts as a relapse here
 
 ## Screens
 
-- **Others → Quitting** (only appears once there's one): a list of counters.
-  Each shows a big day number, the longest streak, and a thin bar towards the
-  next milestone. One tap opens the quit's page.
+- **Others → Quitting** (always listed, under "You", since it's also where a
+  quit is started): a list of counters. Each shows a big day number, the
+  longest streak, and a thin bar towards the next milestone. One tap opens the
+  quit's page. Paused and ended quits sit below, muted.
+- **Names on screen:** the list, the quit page and the Home line show the
+  alias when there is one; the real name appears only in the quit's settings.
 - **Quit page:** the counter, an "I slipped" button (it asks once to confirm,
   then shows a short, firm-kind line, not a lecture), the `why`, a relapse
   history as a timeline (the History style), and the patterns once there are
@@ -175,7 +178,9 @@ hence at least one is free.
    are Postgres functions so each happens in one transaction. Milestones are
    paid when the quit is next loaded, since they're crossed by time passing.
    The rough patch feeds the mode by alias only.
-4. Screens: Others entry, list, quit page, Home line.
+4. Screens: Others entry, list, quit page, Home line. **Built 2026-11-07**
+   (`/app/quits`, `/app/quits/[id]`). The history is a pure `quitTimeline`;
+   form dates and times are read in the profile's time zone.
 5. MCP tools + server-instruction wording; `what_can_paddie_do` entry.
 6. Patterns ("most were after midnight") once 1–5 are in.
 7. BLUEPRINT (Features, Data model, MCP tools, the XP rules) and DECISIONS.

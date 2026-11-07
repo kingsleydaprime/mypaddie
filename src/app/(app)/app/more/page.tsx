@@ -18,6 +18,7 @@ const GROUPS: { title: string; entries: Entry[] }[] = [
     entries: [
       { href: "/app/me", label: "Me & people", hint: "About me, values, library, lists, people" },
       { href: "/app/growth", label: "Growth", hint: "Reviews, themes, achievements" },
+      { href: "/app/quits", label: "Quitting", hint: "Day counters for what you're stopping or cutting down" },
     ],
   },
   {

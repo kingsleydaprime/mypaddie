@@ -11,6 +11,7 @@ import {
   nextMilestone,
   privateLabel,
   quitProgress,
+  quitTimeline,
   QuitRuleError,
   validateLog,
   validateSetup,
@@ -74,11 +75,18 @@ function group<T>(rows: readonly { quit_id: string }[], map: (r: never) => T): M
   return out;
 }
 
-/** Quits with their periods and logs. `since` limits logs (and periods) to recent ones, for the mode. */
-async function loadQuitData(db: Db, opts: { id?: string; since?: Date; activeOnly?: boolean } = {}): Promise<QuitData> {
+/**
+ * Quits with their periods and logs. `since` limits logs (and periods) to
+ * recent ones, for the mode; `onHome` reads only active quits shown on Home.
+ */
+async function loadQuitData(
+  db: Db,
+  opts: { id?: string; since?: Date; activeOnly?: boolean; onHome?: boolean } = {},
+): Promise<QuitData> {
   let quits = db.from("quits").select(QUIT_COLUMNS).order("created_at");
   if (opts.id) quits = quits.eq("id", opts.id);
-  if (opts.activeOnly) quits = quits.eq("status", "active");
+  if (opts.activeOnly || opts.onHome) quits = quits.eq("status", "active");
+  if (opts.onHome) quits = quits.eq("on_home", true);
   let periods = db.from("quit_periods").select("quit_id, started_at, ended_at, limit_per_day, continues_run").order("started_at");
   let logs = db.from("quit_logs").select("quit_id, at, amount").order("at");
   if (opts.id) {
@@ -89,7 +97,18 @@ async function loadQuitData(db: Db, opts: { id?: string; since?: Date; activeOnl
     periods = periods.or(`ended_at.is.null,ended_at.gte.${opts.since.toISOString()}`);
     logs = logs.gte("at", opts.since.toISOString());
   }
-  const [q, p, l] = await Promise.all([quits, periods, logs]);
+
+  let q, p, l;
+  if (opts.onHome) {
+    // Home asks on every load and most people have none on it: read the quits first, the rest only if needed.
+    q = await quits;
+    if (q.error) throw new Error(`loading quits: ${q.error.message}`);
+    const ids = q.data.map((r) => r.id);
+    if (!ids.length) return { rows: [], periods: new Map(), logs: new Map() };
+    [p, l] = await Promise.all([periods.in("quit_id", ids), logs.in("quit_id", ids)]);
+  } else {
+    [q, p, l] = await Promise.all([quits, periods, logs]);
+  }
   for (const res of [q, p, l]) if (res.error) throw new Error(`loading quits: ${res.error.message}`);
   return {
     rows: (q.data ?? []) as QuitData["rows"],
@@ -151,7 +170,7 @@ async function settleMilestones(db: Db, quit: Quit): Promise<number[]> {
  * Every quit (or one) with its progress. Pays milestones crossed since last
  * looked; `milestonesPaid` lists them so the app or Paddie can celebrate.
  */
-export async function loadQuits(db: Db, now: Date, opts: { id?: string } = {}) {
+export async function loadQuits(db: Db, now: Date, opts: { id?: string; onHome?: boolean } = {}) {
   const tz = currentConfig().timeZone;
   const data = await loadQuitData(db, opts);
   const quits = data.rows.map((r) => toQuit(r, data, now, tz));
@@ -163,6 +182,26 @@ export async function loadQuit(db: Db, id: string, now: Date) {
   return (await loadQuits(db, now, { id }))[0] ?? null;
 }
 
+/** One quit's history for its page, newest first, with notes. Only the owner ever sees this. */
+export async function loadQuitHistory(db: Db, id: string, kind: QuitKind) {
+  const tz = currentConfig().timeZone;
+  const [p, l] = await Promise.all([
+    db.from("quit_periods").select("started_at, ended_at, limit_per_day, continues_run").eq("quit_id", id).order("started_at"),
+    db.from("quit_logs").select("id, at, amount, note, cause").eq("quit_id", id).order("at", { ascending: false }).limit(HISTORY_LIMIT),
+  ]);
+  for (const res of [p, l]) if (res.error) throw new Error(`loading the quit's history: ${res.error.message}`);
+  const periods: QuitPeriod[] = (p.data ?? []).map((r) => ({
+    startedAt: new Date(r.started_at),
+    endedAt: r.ended_at ? new Date(r.ended_at) : null,
+    limitPerDay: r.limit_per_day,
+    continuesRun: r.continues_run,
+  }));
+  const logs = (l.data ?? []).map((r) => ({ id: r.id, at: new Date(r.at), amount: r.amount, note: r.note, cause: r.cause }));
+  return { entries: quitTimeline(kind, periods, logs, tz), capped: logs.length === HISTORY_LIMIT };
+}
+
+const HISTORY_LIMIT = 200;
+
 /** Private labels of active quits in a rough patch, for the mode. Reads only the last few days. */
 export async function loadRoughPatches(db: Db, now: Date, tz = currentConfig().timeZone): Promise<string[]> {
   const since = zonedInstant(dayKey(new Date(now.getTime() - 3 * 86_400_000), tz), "00:00", tz);
@@ -170,6 +209,13 @@ export async function loadRoughPatches(db: Db, now: Date, tz = currentConfig().t
   return data.rows
     .filter((r) => inRoughPatch(r.kind, data.periods.get(r.id) ?? [], data.logs.get(r.id) ?? [], now, tz))
     .map((r) => privateLabel(r));
+}
+
+/** The table's length checks, as messages instead of a failed insert. */
+function checkLengths(q: { title?: string; alias?: string | null; why?: string | null }) {
+  if (q.title !== undefined && q.title.trim().length > 80) throw new QuitRuleError("Keep the name to 80 characters.");
+  if (q.alias && q.alias.trim().length > 40) throw new QuitRuleError("Keep the private name to 40 characters.");
+  if (q.why && q.why.trim().length > 300) throw new QuitRuleError("Keep the why to 300 characters.");
 }
 
 export interface NewQuit {
@@ -187,6 +233,7 @@ export interface NewQuit {
 export async function startQuit(db: Db, quit: NewQuit, now: Date) {
   const title = quit.title.trim();
   if (!title) throw new QuitRuleError("Name the habit.");
+  checkLengths(quit);
   const limit = quit.kind === "limit" ? (quit.limitPerDay ?? null) : null;
   const unit = quit.kind === "limit" ? (quit.unit ?? null) : null;
   validateSetup(quit.kind, limit, unit);
@@ -242,6 +289,7 @@ export interface QuitDetails {
 }
 
 export async function updateQuitDetails(db: Db, id: string, details: QuitDetails) {
+  checkLengths(details);
   const patch: TablesUpdate<"quits"> = {};
   if (details.title !== undefined) {
     const title = details.title.trim();

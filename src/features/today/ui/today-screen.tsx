@@ -5,6 +5,8 @@ import { applyBrokenPromises } from "@/features/promises/promises.repo";
 import { inProgress, startable, upcoming } from "@/features/events/events";
 import { EventButtons } from "@/features/events/ui/event-buttons";
 import { loadQuoteOfTheDay } from "@/features/quotes/quotes.repo";
+import { loadQuits } from "@/features/quits/quits.repo";
+import { shownName } from "@/features/quits/ui/labels";
 import { loadXpSummary, type XpSummary } from "@/features/stats/stats.repo";
 import Link from "next/link";
 import { loadUpcomingEvents } from "@/features/events/events.repo";
@@ -116,11 +118,13 @@ export async function TodayScreen({ db }: { db: Db }) {
   await applyBrokenPromises(db, now);
   // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
   await syncCalendar(db, now).catch(() => null);
-  const [tasks, mode, events, learning, schedule, themes, owed, earned, checkin, xp, quote] = await Promise.all([
+  const [tasks, mode, events, learning, schedule, themes, owed, earned, checkin, xp, quote, homeQuits] = await Promise.all([
     loadTasksAroundToday(db, now), loadMode(db, now), loadUpcomingEvents(db), loadLearning(db, now), loadSchedule(db),
     currentThemes(db, now), owedReviews(db, now), checkAchievements(db, now), loadCheckin(db, dayKey(now, tz())),
     // After checkAchievements' write would be nicer, but a new badge's +25 shows on the next refresh anyway.
     loadXpSummary(db, now, tz()), loadQuoteOfTheDay(db, dayKey(now, tz())),
+    // Only quits the user put on Home; one cheap read when there are none.
+    loadQuits(db, now, { onHome: true }),
   ]);
   const review = learning
     .filter((l) => l.skill.status === "active")
@@ -174,6 +178,16 @@ export async function TodayScreen({ db }: { db: Db }) {
       )}
 
       <XpStrip xp={xp} />
+      {homeQuits.length > 0 && (
+        // A count only: no slip button on Home, so it can't be tapped by accident or seen over a shoulder.
+        <p className="-mt-4 flex flex-wrap gap-x-4 px-1 text-sm text-muted">
+          {homeQuits.map(({ quit: q }) => (
+            <Link key={q.id} href={`/app/quits/${q.id}`}>
+              {shownName(q)} · <span className="font-semibold tabular-nums text-gold">day {q.progress.currentDays}</span>
+            </Link>
+          ))}
+        </p>
+      )}
 
       {quote && (
         <Link href="/app/me/quotes" className="block border-l-2 border-gold/60 py-0.5 pl-4" aria-label="Today's quote. Open your quotes">
