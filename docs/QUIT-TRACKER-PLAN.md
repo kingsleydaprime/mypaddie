@@ -190,7 +190,10 @@ hence at least one is free.
    `log_relapse` (area "Quitting and cutting down", listed by
    `what_can_paddie_do` automatically), `quitMilestones` in `get_today`, and a
    line in the server instructions. Deleting stays in the app.
-6. Patterns ("most were after midnight") once 1–5 are in.
+6. Patterns ("most were after midnight") once 1–5 are in. **Built
+   2026-11-07**: `quitPatterns` reads the last 10 slips (for cutting down,
+   the log that took a day over) and needs 3. Shown on the quit page, in
+   `get_quits`, and as `patternHint` from `log_relapse`.
 7. BLUEPRINT (Features, Data model, MCP tools, the XP rules) and DECISIONS.
 
 Rough size: 1–2 days. Steps 1–4 make it usable on its own; step 5 is what

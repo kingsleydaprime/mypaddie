@@ -1769,3 +1769,17 @@ think a relapse should drop 0".
   `quits` part would have shown every real name.
 - **No delete through Paddie.** Deleting wipes the history for good, so it's
   only in the app, behind a confirm.
+
+## Quit tracker patterns (2026-11-07)
+
+- **Three kinds:** time of day (after midnight, morning, afternoon, evening,
+  late at night), day of the week (one weekday, or the weekend), and the cause
+  they named.
+- **When one counts:** at least 3 of the last 10 slips, and more than chance
+  would give: half for a time of day or a cause, 40% for one weekday (chance
+  is 14%), 60% for the weekend (chance is 29%). Under 3 slips, nothing.
+- **For cutting down**, the slip is the log that took a day over its cap,
+  since that's the moment worth planning around.
+- **Causes reach Paddie** inside the pattern line (`came after "bored"`),
+  even with the real name hidden: triggers are the point of a pattern, and
+  causes are short labels like "bored", not notes.

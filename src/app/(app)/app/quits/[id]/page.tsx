@@ -94,6 +94,16 @@ export default async function QuitPage({ params }: PageProps<"/app/quits/[id]">)
         {quit.status === "active" && <SlipButton id={quit.id} kind={quit.kind} unit={quit.unit} longest={quit.progress.longestDays} />}
       </section>
 
+      {quit.patterns.length > 0 && (
+        <section className="rounded-2xl border border-line bg-surface p-4">
+          <h2 className="font-bold">What your {quit.kind === "quit" ? "slips" : "over days"} have in common</h2>
+          <ul className="mt-2 flex flex-col gap-1 text-sm">
+            {quit.patterns.map((p) => <li key={p.kind}>{p.text}.</li>)}
+          </ul>
+          <p className="mt-2 text-xs text-muted">Worth a plan for that time, not a verdict on you.</p>
+        </section>
+      )}
+
       <QuitSettings quit={quit} />
 
       <section className="flex flex-col gap-3">

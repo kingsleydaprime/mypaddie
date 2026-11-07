@@ -12,6 +12,7 @@ import {
   nextMilestone,
   quitProgress,
   quitTimeline,
+  quitPatterns,
   QuitRuleError,
   validateLog,
   validateSetup,
@@ -500,5 +501,58 @@ describe("history", () => {
     const log = { at: at("2026-11-02T23:00:00"), amount: null, note: "bored" };
     const [e] = quitTimeline("quit", [open("2026-11-01T08:00:00")], [log], TZ);
     expect(e).toMatchObject({ type: "slip", log: { note: "bored" } });
+  });
+});
+
+describe("patterns", () => {
+  const since = [open("2026-10-01T08:00:00")];
+  const slip = (local: string, cause: string | null = null) => ({ at: at(local), amount: null, cause });
+
+  test("says nothing under 3 slips", () => {
+    expect(quitPatterns("quit", since, [slip("2026-11-02T01:00:00"), slip("2026-11-03T01:00:00")], TZ)).toEqual([]);
+  });
+
+  test("4 of the last 5 after midnight", () => {
+    const logs = [slip("2026-11-01T01:00:00"), slip("2026-11-03T02:30:00"), slip("2026-11-04T15:00:00"), slip("2026-11-05T00:10:00"), slip("2026-11-06T04:59:00")];
+    const [p] = quitPatterns("quit", since, logs, TZ);
+    expect(p).toEqual({ kind: "time", text: "4 of your last 5 slips were after midnight", count: 4, of: 5 });
+  });
+
+  test("times are read in the user's zone", () => {
+    // 23:30 UTC is 00:30 in Lagos.
+    const logs = ["2026-11-01", "2026-11-02", "2026-11-03"].map((d) => ({ at: new Date(`${d}T23:30:00Z`), amount: null }));
+    expect(quitPatterns("quit", since, logs, TZ)[0]?.text).toBe("3 of your last 3 slips were after midnight");
+  });
+
+  test("no pattern when they're spread out", () => {
+    const logs = [slip("2026-11-01T01:00:00", "bored"), slip("2026-11-03T09:00:00", "tired"), slip("2026-11-04T15:00:00"), slip("2026-11-06T19:00:00"), slip("2026-11-07T22:00:00")];
+    expect(quitPatterns("quit", since, logs, TZ)).toEqual([]);
+  });
+
+  test("a weekday stands out at 40%, the weekend at 60%", () => {
+    // Fridays: 30 Oct, 6 Nov; 23 Oct; plus a Monday and a Tuesday, at varied times.
+    const fridays = [slip("2026-10-23T09:00:00"), slip("2026-10-30T15:00:00"), slip("2026-11-06T19:00:00"), slip("2026-11-02T22:00:00"), slip("2026-11-03T01:00:00")];
+    expect(quitPatterns("quit", since, fridays, TZ).find((p) => p.kind === "day")?.text).toBe("3 of your last 5 slips were on a Friday");
+    // Sat, Sun, Sat, Wed: weekend 3 of 4, but no single day with 3.
+    const weekend = [slip("2026-10-24T09:00:00"), slip("2026-10-25T15:00:00"), slip("2026-10-31T19:00:00"), slip("2026-11-04T22:00:00")];
+    expect(quitPatterns("quit", since, weekend, TZ).find((p) => p.kind === "day")?.text).toBe("3 of your last 4 slips were at the weekend");
+  });
+
+  test("a cause they keep naming, in any case", () => {
+    const logs = [slip("2026-11-01T09:00:00", "Bored"), slip("2026-11-03T15:00:00", "bored "), slip("2026-11-05T19:00:00", "bored"), slip("2026-11-06T22:00:00", "tired")];
+    expect(quitPatterns("quit", since, logs, TZ).find((p) => p.kind === "cause")?.text).toBe('3 of your last 4 slips came after "bored"');
+  });
+
+  test("only the last 10 count", () => {
+    const old = Array.from({ length: 6 }, (_, i) => slip(`2026-10-0${i + 2}T01:00:00`));
+    const recent = Array.from({ length: 10 }, (_, i) => slip(`2026-10-${11 + i}T${String(5 + i).padStart(2, "0")}:00:00`));
+    const time = quitPatterns("quit", since, [...old, ...recent], TZ).find((p) => p.kind === "time");
+    expect(time).toEqual({ kind: "time", text: "7 of your last 10 slips were in the morning", count: 7, of: 10 });
+  });
+
+  test("cutting down: only the log that took a day over counts", () => {
+    const logs = ["2026-11-01", "2026-11-02", "2026-11-03"].flatMap((d) => [use(`${d}T09:00:00`, 50), use(`${d}T23:00:00`, 20)]);
+    const p = quitPatterns("limit", [open("2026-10-01T08:00:00", 60)], logs, TZ);
+    expect(p[0]?.text).toBe("3 of your last 3 over days were late at night");
   });
 });

@@ -12,6 +12,8 @@ import {
   privateLabel,
   quitProgress,
   quitTimeline,
+  quitPatterns,
+  type QuitPattern,
   QuitRuleError,
   validateLog,
   validateSetup,
@@ -42,6 +44,8 @@ export interface Quit {
   showNameToAi: boolean;
   createdAt: Date;
   progress: QuitProgress;
+  /** What recent slips have in common, once there are 3+. */
+  patterns: QuitPattern[];
   nextMilestone: { days: number; daysLeft: number } | null;
 }
 
@@ -62,7 +66,7 @@ interface QuitData {
     created_at: string;
   }[];
   periods: Map<string, QuitPeriod[]>;
-  logs: Map<string, QuitLog[]>;
+  logs: Map<string, (QuitLog & { cause: string | null })[]>;
 }
 
 function group<T>(rows: readonly { quit_id: string }[], map: (r: never) => T): Map<string, T[]> {
@@ -88,7 +92,7 @@ async function loadQuitData(
   if (opts.activeOnly || opts.onHome) quits = quits.eq("status", "active");
   if (opts.onHome) quits = quits.eq("on_home", true);
   let periods = db.from("quit_periods").select("quit_id, started_at, ended_at, limit_per_day, continues_run").order("started_at");
-  let logs = db.from("quit_logs").select("quit_id, at, amount").order("at");
+  let logs = db.from("quit_logs").select("quit_id, at, amount, cause").order("at");
   if (opts.id) {
     periods = periods.eq("quit_id", opts.id);
     logs = logs.eq("quit_id", opts.id);
@@ -118,12 +122,14 @@ async function loadQuitData(
       limitPerDay: r.limit_per_day,
       continuesRun: r.continues_run,
     })),
-    logs: group(l.data ?? [], (r: { at: string; amount: number | null }) => ({ at: new Date(r.at), amount: r.amount })),
+    logs: group(l.data ?? [], (r: { at: string; amount: number | null; cause: string | null }) => ({ at: new Date(r.at), amount: r.amount, cause: r.cause })),
   };
 }
 
 function toQuit(row: QuitData["rows"][number], data: QuitData, now: Date, timeZone: string): Quit {
-  const progress = quitProgress(row.kind, data.periods.get(row.id) ?? [], data.logs.get(row.id) ?? [], now, timeZone);
+  const periods = data.periods.get(row.id) ?? [];
+  const logs = (data.logs.get(row.id) ?? []).filter((l) => l.at.getTime() <= now.getTime());
+  const progress = quitProgress(row.kind, periods, logs, now, timeZone);
   return {
     id: row.id,
     title: row.title,
@@ -137,6 +143,7 @@ function toQuit(row: QuitData["rows"][number], data: QuitData, now: Date, timeZo
     showNameToAi: row.show_name_to_ai,
     createdAt: new Date(row.created_at),
     progress,
+    patterns: quitPatterns(row.kind, periods, logs, timeZone),
     nextMilestone: row.status === "active" ? nextMilestone(progress.currentDays) : null,
   };
 }

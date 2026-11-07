@@ -1,5 +1,5 @@
 import { splitXp, type PillarAmount, type PillarWeight } from "@/features/xp/split";
-import { addDays, dayKey, withinLastDays } from "@/shared/time";
+import { addDays, dayKey, localTimeOf, weekdayOf, withinLastDays } from "@/shared/time";
 
 /**
  * Quit tracker rules (docs/QUIT-TRACKER-PLAN.md, decided 2026-11-07).
@@ -421,4 +421,75 @@ export function quitTimeline<L extends QuitLog>(
     .map((e, i) => ({ e, i }))
     .sort((a, b) => b.e.at.getTime() - a.e.at.getTime() || b.i - a.i)
     .map(({ e }) => e);
+}
+
+// ── Patterns ─────────────────────────────────────────────────────────
+
+/** How many slips to read, and how many before saying anything. */
+export const PATTERNS = { lookBack: 10, minSlips: 3 } as const;
+
+export interface QuitPattern {
+  kind: "time" | "day" | "cause";
+  /** Ready to say: "4 of your last 5 were after midnight". */
+  text: string;
+  count: number;
+  of: number;
+}
+
+const TIMES: { label: string; from: number; to: number }[] = [
+  { label: "after midnight", from: 0, to: 5 },
+  { label: "in the morning", from: 5, to: 12 },
+  { label: "in the afternoon", from: 12, to: 17 },
+  { label: "in the evening", from: 17, to: 21 },
+  { label: "late at night", from: 21, to: 24 },
+];
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function top<K>(items: readonly K[]): { key: K; count: number } | null {
+  const counts = new Map<K, number>();
+  for (const k of items) counts.set(k, (counts.get(k) ?? 0) + 1);
+  let best: { key: K; count: number } | null = null;
+  for (const [key, count] of counts) if (!best || count > best.count) best = { key, count };
+  return best;
+}
+
+/**
+ * What the recent slips have in common: the time of day, the day of the week
+ * and what set them off. Reads the last 10 slips (for cutting down: the log
+ * that took a day over its cap) and says nothing until there are 3. A pattern
+ * needs 3+ slips and to stand out from chance: half of them for a time of day
+ * or a cause, 40% for one weekday, 60% for the weekend.
+ */
+export function quitPatterns<L extends QuitLog & { cause?: string | null }>(
+  kind: QuitKind,
+  periods: readonly QuitPeriod[],
+  logs: readonly L[],
+  timeZone: string,
+): QuitPattern[] {
+  const slips = quitTimeline(kind, periods, logs, timeZone)
+    .flatMap((e) => (e.type === "slip" || (e.type === "used" && e.tippedOver) ? [e.log] : []))
+    .slice(0, PATTERNS.lookBack); // the timeline is newest first
+  const n = slips.length;
+  if (n < PATTERNS.minSlips) return [];
+  const say = (count: number, what: string) => `${count} of your last ${n} ${kind === "quit" ? "slips" : "over days"} ${what}`;
+  const out: QuitPattern[] = [];
+
+  const hours = slips.map((l) => Number(localTimeOf(l.at, timeZone).slice(0, 2)));
+  const time = top(hours.map((h) => TIMES.find((t) => h >= t.from && h < t.to)!.label));
+  if (time && time.count >= 3 && time.count / n >= 0.5) out.push({ kind: "time", text: say(time.count, `were ${time.key}`), count: time.count, of: n });
+
+  const weekdays = slips.map((l) => weekdayOf(dayKey(l.at, timeZone)));
+  const day = top(weekdays);
+  const weekend = weekdays.filter((d) => d === 0 || d === 6).length;
+  if (day && day.count >= 3 && day.count / n >= 0.4) {
+    out.push({ kind: "day", text: say(day.count, `were on a ${DAYS[day.key]}`), count: day.count, of: n });
+  } else if (weekend >= 3 && weekend / n >= 0.6) {
+    out.push({ kind: "day", text: say(weekend, "were at the weekend"), count: weekend, of: n });
+  }
+
+  const causes = slips.map((l) => l.cause?.trim().toLowerCase()).filter((c): c is string => !!c);
+  const cause = top(causes);
+  if (cause && cause.count >= 3 && cause.count / n >= 0.5) out.push({ kind: "cause", text: say(cause.count, `came after "${cause.key}"`), count: cause.count, of: n });
+
+  return out.sort((a, b) => b.count / b.of - a.count / a.of);
 }

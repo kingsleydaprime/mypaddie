@@ -44,6 +44,8 @@ export function quitView(q: Quit, paid: readonly number[] = []) {
     totalCleanDays: p.totalCleanDays,
     ...(p.today && q.status === "active" ? { today: p.today } : {}),
     ...(q.nextMilestone ? { nextMilestone: q.nextMilestone } : {}),
+    // What recent slips share. Say one plainly, once, as something to plan around, not a verdict.
+    ...(q.patterns.length ? { patterns: q.patterns.map((p) => p.text) } : {}),
     ...(q.showNameToAi && q.why ? { why: q.why } : {}),
     onHome: q.onHome,
     ...(paid.length ? { milestonesJustPaid: paid.map((d) => ({ day: d, xp: milestoneXp(d) })) } : {}),
@@ -197,7 +199,9 @@ export function registerQuitTools(server: McpServer) {
         "earns +2 for honesty. For 'quit' the count goes back to day 0; for 'cut_down' only going over the day's cap " +
         "resets it. Respond firm and kind, in a line or two: no lecture, no shame. Name what was kept (their best, " +
         "their total), and ask for the next clean hour, not a vow. If they sound in real distress, drop the coaching " +
-        "and be there for them first. Pass `cause` (e.g. 'bored', 'late night') when they say what set it off.",
+        "and be there for them first. Pass `cause` (e.g. 'bored', 'late night') when they say what set it off. If " +
+          "`patternHint` comes back ('4 of your last 5 slips were after midnight'), name it once and ask what would " +
+          "help at that time.",
       inputSchema: z.object({
         id: z.uuid(),
         at: when.optional().describe("When it happened, if not just now"),
@@ -222,6 +226,8 @@ export function registerQuitTools(server: McpServer) {
             streak: reset ? "reset" : "still going",
             kept: { longestDays: q.progress.longestDays, totalCleanDays: q.progress.totalCleanDays, xp: "all of it" },
             honestyXp: res.honestyXp,
+            // The strongest pattern, if there is one: name it and ask what would help at that time.
+            ...(q.patterns[0] ? { patternHint: q.patterns[0].text } : {}),
           }),
         );
       } catch (error) {

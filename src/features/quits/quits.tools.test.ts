@@ -17,6 +17,7 @@ const quit = (over: Partial<Quit> = {}): Quit => ({
   createdAt: new Date("2026-11-01T00:00:00Z"),
   progress: { currentDays: 7, runStartedAt: new Date("2026-10-31T00:00:00Z"), longestDays: 9, totalCleanDays: 20, today: null },
   nextMilestone: { days: 14, daysLeft: 7 },
+  patterns: [],
   ...over,
 });
 
@@ -49,6 +50,12 @@ describe("what Paddie sees of a quit (D5)", () => {
     expect(v.cap).toEqual({ perDay: 60, unit: "minutes" });
     expect(v.today).toEqual({ used: 20, cap: 60, over: false });
     expect(quitView(quit({ status: "paused" })).daysClean).toBeNull();
+  });
+
+  test("patterns are passed as ready-to-say lines", () => {
+    expect(quitView(quit()).patterns).toBeUndefined();
+    const v = quitView(quit({ patterns: [{ kind: "time", text: "4 of your last 5 slips were after midnight", count: 4, of: 5 }] }));
+    expect(v.patterns).toEqual(["4 of your last 5 slips were after midnight"]);
   });
 
   test("milestones just paid come with their XP", () => {
