@@ -42,7 +42,7 @@ New table `quits` (one per habit being quit):
 | `unit` | for `limit`: `minutes` or `times`; null for `quit` |
 | `started_at` | when the current attempt began; counting starts here |
 | `on_home` | default **false** |
-| `status` | `active` / `paused` / `ended` |
+| `status` | `active` / `paused` / `ended`. Pausing stops the streak: resuming starts a new attempt from day 0, with longest and total kept |
 | `why` | optional: "for my marriage", "to get my mornings back". Shown on a slip |
 | `show_name_to_ai` | default **false**: Paddie sees only the alias (D5) |
 
@@ -60,6 +60,8 @@ relapse. For a `limit`, a log is usage.
   Today counts as clean until it goes over.
 - The streak is counted in whole clean days. A `quit` counts from the moment
   of the last relapse (shown as days, with hours on day 0).
+- **A streak can't be paused.** Pausing stops it, like a relapse: resuming
+  starts a new attempt from day 0. Longest and total clean days are kept.
 - Raising the cap starts a new attempt (otherwise a raise would wipe past
   over days). Lowering it doesn't.
 
@@ -171,6 +173,7 @@ makes Paddie part of it.
 | D4 | Can relapses move the mode? | Only towards `soft`, never `strict` |
 | D5 | Does Paddie see the real name or only the alias? | Alias by default; the real name only if turned on per quit |
 | D6 | How many on Free? | 1 active, Plus/Pro unlimited |
+| D7 | Does pausing freeze the streak? | No. A paused streak is a stopped streak; resuming starts from day 0 |
 
 ## Not in scope
 

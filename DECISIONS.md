@@ -1727,3 +1727,7 @@ think a relapse should drop 0".
 - **Paddie sees the alias only**, unless the real name is turned on per quit.
 - **Free gets 1 active quit**, Plus/Pro unlimited. Quitting something harmful
   shouldn't be fully behind a paywall.
+- **Pausing doesn't freeze a streak.** "A streak is spoilt if it is paused
+  (stopped)": pausing ends the attempt, and resuming starts a new one from
+  day 0, keeping longest and total. Rejected: freezing the count, which would
+  let someone pause just before a relapse to protect it.

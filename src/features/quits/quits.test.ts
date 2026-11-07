@@ -138,6 +138,21 @@ describe("quit completely: streaks", () => {
     expect(p.currentDays).toBe(3);
   });
 
+  test("a streak can't be paused: resuming starts again from day 0, keeping longest and total", () => {
+    // 10 clean days, paused for 5, resumed 2 days ago.
+    const p = quitProgress(
+      "quit",
+      [closed("2026-10-01T00:00:00", "2026-10-11T00:00:00"), open("2026-10-16T00:00:00")],
+      [],
+      at("2026-10-18T00:00:00"),
+      TZ,
+    );
+    expect(p.currentDays).toBe(2);
+    expect(p.runStartedAt).toEqual(at("2026-10-16T00:00:00"));
+    expect(p.longestDays).toBe(10);
+    expect(p.totalCleanDays).toBe(10 + 2);
+  });
+
   test("periods given out of order are handled", () => {
     const periods = [open("2026-10-10T00:00:00"), closed("2026-10-01T00:00:00", "2026-10-04T12:00:00")];
     expect(quitProgress("quit", periods, [], at("2026-10-13T12:00:00"), TZ).currentDays).toBe(3);
