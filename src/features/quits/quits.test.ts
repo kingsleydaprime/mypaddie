@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
+  aiLabel,
+  capChange,
   capChangeStartsNewAttempt,
+  privateLabel,
   honestyDue,
+  honestyXp,
+  milestonePayouts,
   inRoughPatch,
   milestonesToPay,
   nextMilestone,
@@ -254,6 +259,60 @@ describe("cut down: streaks", () => {
   });
 });
 
+describe("cut down: lowering the cap", () => {
+  const lowered = (continuesRun = true): QuitPeriod[] => [
+    closed("2026-11-01T00:00:00", "2026-11-05T12:00:00", 60),
+    { ...open("2026-11-05T12:00:00", 30), continuesRun },
+  ];
+
+  test("lowering the cap keeps the streak going", () => {
+    const logs = [use("2026-11-02T20:00:00", 50), use("2026-11-04T20:00:00", 50)];
+    const p = quitProgress("limit", lowered(), logs, at("2026-11-08T12:00:00"), TZ);
+    expect(p.currentDays).toBe(7); // Nov 1–7, one run across both caps
+    expect(p.runStartedAt).toEqual(at("2026-11-01T00:00:00"));
+    expect(p.totalCleanDays).toBe(7);
+  });
+
+  test("past days keep the cap they ran under: 50 of 60 isn't re-judged against 30", () => {
+    const p = quitProgress("limit", lowered(), [use("2026-11-02T20:00:00", 50)], at("2026-11-08T12:00:00"), TZ);
+    expect(p.longestDays).toBe(7);
+  });
+
+  test("the lower cap applies from the day it's set", () => {
+    // Lowered at noon on Nov 5 with 40 already used: over the new 30.
+    const p = quitProgress("limit", lowered(), [use("2026-11-05T09:00:00", 40)], at("2026-11-08T12:00:00"), TZ);
+    expect(p.currentDays).toBe(2); // Nov 6, 7
+    expect(p.longestDays).toBe(4); // Nov 1–4
+  });
+
+  test("the day the cap changed is counted once", () => {
+    const p = quitProgress("limit", lowered(), [], at("2026-11-06T12:00:00"), TZ);
+    expect(p.totalCleanDays).toBe(5); // Nov 1–5
+  });
+
+  test("capChange: raised starts a new attempt, lowered carries on, same is nothing", () => {
+    expect(capChange(30, 60)).toBe("raised");
+    expect(capChange(60, 30)).toBe("lowered");
+    expect(capChange(60, 60)).toBe("unchanged");
+  });
+});
+
+describe("labels (privacy)", () => {
+  test("Paddie sees the alias by default", () => {
+    expect(aiLabel({ title: "Porn", alias: "Project P", showNameToAi: false })).toBe("Project P");
+  });
+  test("with no alias, a neutral phrase, never the name", () => {
+    expect(aiLabel({ title: "Porn", alias: null, showNameToAi: false })).toBe("a habit you're quitting");
+  });
+  test("the real name only when it's been turned on", () => {
+    expect(aiLabel({ title: "Porn", alias: "Project P", showNameToAi: true })).toBe("Porn");
+  });
+  test("the private label never uses the name, whatever the setting", () => {
+    expect(privateLabel({ alias: "Project P" })).toBe("Project P");
+    expect(privateLabel({ alias: null })).toBe("a habit you're quitting");
+  });
+});
+
 describe("milestones", () => {
   test("pays every milestone crossed that this run hasn't been paid for", () => {
     expect(milestonesToPay(7, [])).toEqual([
@@ -285,6 +344,24 @@ describe("milestones", () => {
   test("there's no next milestone after a year", () => {
     expect(nextMilestone(365)).toBeNull();
     expect(milestonesToPay(400, []).at(-1)).toEqual({ days: 365, xp: 150 });
+  });
+});
+
+describe("XP split (Character 60 / Mental 40)", () => {
+  test("the honesty bonus splits 1 and 1", () => {
+    const xp = honestyXp();
+    expect(xp).toHaveLength(2);
+    expect(xp).toContainEqual({ pillar: "character", amount: 1 });
+    expect(xp).toContainEqual({ pillar: "mental", amount: 1 });
+  });
+  test("each milestone's XP adds back up to its amount", () => {
+    for (const m of milestonePayouts(365, [])) {
+      const total = m.xp.reduce((s, e) => s + e.amount, 0);
+      expect(total).toBe([5, 10, 20, 30, 50, 60, 80, 100, 150][[1, 3, 7, 14, 30, 60, 90, 180, 365].indexOf(m.days)]);
+    }
+  });
+  test("a 7-day milestone pays 12 Character and 8 Mental", () => {
+    expect(milestonePayouts(7, [1, 3])).toEqual([{ days: 7, xp: [{ pillar: "character", amount: 12 }, { pillar: "mental", amount: 8 }] }]);
   });
 });
 

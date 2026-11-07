@@ -1731,3 +1731,16 @@ think a relapse should drop 0".
   (stopped)": pausing ends the attempt, and resuming starts a new one from
   day 0, keeping longest and total. Rejected: freezing the count, which would
   let someone pause just before a relapse to protect it.
+
+### Quit tracker: a lowered cap keeps its history; milestones are paid on read (2026-11-07)
+- **Lowering a cap opens a new period that carries the streak on.** Found while
+  building: with one cap per period, lowering it would re-judge every past
+  day against the new cap, so 50 minutes on a 60 cap became an over day and
+  the streak the rules said lowering keeps was lost. Each change now opens a
+  new period, and a lowered one is marked `continues_run`. The new cap applies
+  from the day it's set, including usage already logged that day.
+- **Milestones are paid when the quit is next loaded** (the page, Paddie, the
+  mode), not by a cron: they're crossed by time, not by an action.
+  `quit_milestones` is unique per run, so two loads at once can't pay twice.
+- **The mode's rough-patch reason uses the alias only**, never the real name,
+  even with "Paddie can see the real name" on: the mode is in every reply.

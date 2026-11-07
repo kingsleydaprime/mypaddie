@@ -159,3 +159,23 @@ describe("overrides — your call always wins", () => {
     expect(computeMode(input({ now: at("2026-10-08T00:00:00"), override })).mode).toBe("curious");
   });
 });
+
+describe("rough patch on a quit (quit tracker D4)", () => {
+  test("a rough patch makes Paddie soft, naming the quit by its alias", () => {
+    expect(computeMode(input({ roughPatches: ["Project P"] }), DEFAULT_CONFIG)).toEqual({
+      mode: "soft",
+      reasons: [{ kind: "rough_patch", quit: "Project P" }],
+    });
+  });
+
+  test("it beats strict: relapses never make Paddie strict, even with repeat slips elsewhere", () => {
+    const slips = [rhapsody("2026-10-05T07:00:00"), rhapsody("2026-10-06T07:00:00"), rhapsody("2026-10-07T07:00:00")];
+    expect(computeMode(input({ slips }), DEFAULT_CONFIG).mode).toBe("strict");
+    expect(computeMode(input({ slips, roughPatches: ["Project P"] }), DEFAULT_CONFIG).mode).toBe("soft");
+  });
+
+  test("no mercy still wins", () => {
+    const result = computeMode(input({ roughPatches: ["Project P"], override: noMercyOverride() }), DEFAULT_CONFIG);
+    expect(result.mode).toBe("strictest");
+  });
+});

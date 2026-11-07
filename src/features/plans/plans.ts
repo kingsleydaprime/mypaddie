@@ -6,7 +6,7 @@
 export const PLANS = ["free", "plus", "pro"] as const;
 export type PlanId = (typeof PLANS)[number];
 
-export const LIMITED = ["aiApps", "habits", "courses", "commitments", "applications", "funActivities"] as const;
+export const LIMITED = ["aiApps", "habits", "courses", "commitments", "applications", "funActivities", "quits"] as const;
 export type Limited = (typeof LIMITED)[number];
 
 export const FEATURES = ["calendarImport", "studyPlans", "loadAdvice", "builtInChat"] as const;
@@ -25,14 +25,15 @@ export interface PlanInfo {
   comingSoon?: readonly Feature[];
 }
 
-const UNLIMITED: Record<Limited, null> = { aiApps: null, habits: null, courses: null, commitments: null, applications: null, funActivities: null };
+const UNLIMITED: Record<Limited, null> = { aiApps: null, habits: null, courses: null, commitments: null, applications: null, funActivities: null, quits: null };
 
 export const PLAN_INFO: Record<PlanId, PlanInfo> = {
   free: {
     id: "free",
     name: "Free",
     tagline: "Your day, XP, money and nudges.",
-    limits: { aiApps: 1, habits: 5, courses: 1, commitments: 2, applications: 3, funActivities: 10 },
+    // One quit is free: quitting something harmful shouldn't be fully behind a paywall.
+    limits: { aiApps: 1, habits: 5, courses: 1, commitments: 2, applications: 3, funActivities: 10, quits: 1 },
     features: [],
     price: { USD: { monthly: 0, yearly: 0 }, NGN: { monthly: 0, yearly: 0 } },
   },
@@ -65,6 +66,7 @@ const LIMIT_NOUN: Record<Limited, [one: string, many: string]> = {
   commitments: ["job, role or team", "jobs, roles and teams"],
   applications: ["open application", "open applications"],
   funActivities: ["fun list item", "fun list items"],
+  quits: ["habit you're quitting", "habits you're quitting"],
 };
 
 /** "1 course", "3 courses", "Unlimited courses". */

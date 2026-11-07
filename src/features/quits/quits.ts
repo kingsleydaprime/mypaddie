@@ -1,4 +1,4 @@
-import type { Pillar } from "@/shared/domain";
+import { splitXp, type PillarAmount, type PillarWeight } from "@/features/xp/split";
 import { addDays, dayKey, withinLastDays } from "@/shared/time";
 
 /**
@@ -20,13 +20,19 @@ export type QuitUnit = "minutes" | "times";
 
 /**
  * One tracked stretch. A quit has one open period while active. Ending,
- * pausing or raising the cap closes the period; restarting opens a new one.
+ * pausing or changing the cap closes the period; resuming, restarting or the
+ * new cap opens the next one.
  */
 export interface QuitPeriod {
   startedAt: Date;
   endedAt: Date | null;
   /** For `limit`: the cap during this period. Null for `quit`. */
   limitPerDay: number | null;
+  /**
+   * For `limit`: the run carries on from the period before. Set when a cap is
+   * lowered, so past days keep the cap they ran under without losing the streak.
+   */
+  continuesRun?: boolean;
 }
 
 export interface QuitLog {
@@ -65,12 +71,22 @@ export const MILESTONES: readonly { days: number; xp: number }[] = [
 /** +2 for logging a relapse or usage honestly, at most once a local day per quit (D1). */
 export const HONESTY_XP = 2;
 
-export const QUIT_WEIGHTS: readonly { pillar: Pillar; weight: number }[] = [
+export const QUIT_WEIGHTS: readonly PillarWeight[] = [
   { pillar: "character", weight: 60 },
   { pillar: "mental", weight: 40 },
 ];
 
 export const NOTE_MAX = 500;
+
+/** The honesty bonus split across the quit pillars, ready for the ledger. */
+export function honestyXp(): PillarAmount[] {
+  return splitXp(HONESTY_XP, QUIT_WEIGHTS);
+}
+
+/** Milestones due, each with its XP split across the quit pillars. */
+export function milestonePayouts(days: number, paidThisRun: readonly number[]) {
+  return milestonesToPay(days, paidThisRun).map((m) => ({ days: m.days, xp: splitXp(m.xp, QUIT_WEIGHTS) }));
+}
 
 /** Milestones crossed in a run of `days` that haven't been paid for this run yet. */
 export function milestonesToPay(days: number, paidThisRun: readonly number[]): { days: number; xp: number }[] {
@@ -135,6 +151,33 @@ export function validateLog(
 /** Raising the cap starts a new attempt, so a looser cap can't rewrite past over days. Lowering doesn't. */
 export function capChangeStartsNewAttempt(oldCap: number, newCap: number): boolean {
   return newCap > oldCap;
+}
+
+/**
+ * What a cap change does. Either way the open period closes and a new one
+ * opens under the new cap, so every past day keeps the cap it ran under and
+ * the new cap applies from today. Only a lowered cap carries the run on.
+ */
+export function capChange(oldCap: number, newCap: number): "raised" | "lowered" | "unchanged" {
+  if (newCap === oldCap) return "unchanged";
+  return capChangeStartsNewAttempt(oldCap, newCap) ? "raised" : "lowered";
+}
+
+/**
+ * What Paddie may call a quit (D5). The real name only when it's been turned
+ * on for that quit; otherwise the alias, or a neutral phrase.
+ */
+export function aiLabel(quit: { title: string; alias: string | null; showNameToAi: boolean }): string {
+  if (quit.showNameToAi) return quit.title;
+  return quit.alias ?? "a habit you're quitting";
+}
+
+/**
+ * The label for places that show on screen to anyone nearby, or to Paddie in
+ * every reply (the mode's reasons): the alias only, whatever the setting.
+ */
+export function privateLabel(quit: { alias: string | null }): string {
+  return quit.alias ?? "a habit you're quitting";
 }
 
 // ── Progress ─────────────────────────────────────────────────────────
@@ -219,13 +262,18 @@ function limitKindProgress(periods: QuitPeriod[], logs: readonly QuitLog[], now:
   let current = 0;
   let runStartedAt: Date | null = null;
   let todayState: QuitProgress["today"] = null;
+  let run = 0;
+  let runStart: Date = periods[0]?.startedAt ?? now;
+  let lastCounted: string | null = null;
 
   for (const p of periods) {
     const cap = p.limitPerDay ?? 0;
     const open = p.endedAt === null;
     const lastDay = dayKey(p.endedAt ?? now, tz);
-    let run = 0;
-    let runStart: Date = p.startedAt;
+    if (!p.continuesRun) {
+      run = 0;
+      runStart = p.startedAt;
+    }
 
     for (const d of daysFrom(dayKey(p.startedAt, tz), lastDay)) {
       const over = (usage.get(d) ?? 0) > cap;
@@ -237,6 +285,9 @@ function limitKindProgress(periods: QuitPeriod[], logs: readonly QuitLog[], now:
       }
       // Today counts as clean until it goes over, but isn't added until it ends.
       if (!finished(d, today, lastDay, open)) continue;
+      // A day split across two periods (a cap change) is only counted once.
+      if (d === lastCounted) continue;
+      lastCounted = d;
       run++;
       total++;
       longest = Math.max(longest, run);

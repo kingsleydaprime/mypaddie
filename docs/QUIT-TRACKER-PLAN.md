@@ -76,7 +76,10 @@ quit; deleting a quit keeps the XP.
 - **A streak can't be paused.** Pausing stops it, like a relapse: resuming
   starts a new attempt from day 0. Longest and total clean days are kept.
 - Raising the cap starts a new attempt (otherwise a raise would wipe past
-  over days). Lowering it doesn't.
+  over days). Lowering it doesn't: the streak carries on. Either way the new
+  cap applies from the day it's set, and every past day keeps the cap it ran
+  under (each change opens a new period; a lowered one is marked
+  `continues_run`).
 
 **Derived, never stored:** the current streak (from max(started_at, last
 relapse or over day)), the longest streak, the total clean days, and the
@@ -167,7 +170,11 @@ hence at least one is free.
 2. Migration: the four tables, RLS, constraints + pgTAP tests. Update
    `database.types.ts`. **Built 2026-11-07** (`20261119090000_quits.sql`, local).
 3. Repo + server actions; XP through the existing ledger (new `xp_reason`
-   values `quit_milestone` and `quit_honesty`, which needs an enum migration).
+   values `quit_milestone` and `quit_honesty`). **Built 2026-11-07**
+   (`20261120090000_quit_actions.sql`, local): state changes, logs and payouts
+   are Postgres functions so each happens in one transaction. Milestones are
+   paid when the quit is next loaded, since they're crossed by time passing.
+   The rough patch feeds the mode by alias only.
 4. Screens: Others entry, list, quit page, Home line.
 5. MCP tools + server-instruction wording; `what_can_paddie_do` entry.
 6. Patterns ("most were after midnight") once 1–5 are in.

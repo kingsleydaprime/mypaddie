@@ -23,6 +23,8 @@ const COUNTERS: Record<Exclude<Limited, "aiApps">, (db: Db) => PromiseLike<numbe
   commitments: async (db) => (await db.from("commitments").select("id", { count: "exact", head: true }).eq("status", "active")).count ?? 0,
   applications: async (db) => (await db.from("applications").select("id", { count: "exact", head: true }).in("status", ["researching", "preparing"])).count ?? 0,
   funActivities: async (db) => (await db.from("fun_activities").select("id", { count: "exact", head: true })).count ?? 0,
+  // Only active ones: a paused or ended quit doesn't take the free slot.
+  quits: async (db) => (await db.from("quits").select("id", { count: "exact", head: true }).eq("status", "active")).count ?? 0,
 };
 
 /** Room for `n` more at once (all-or-nothing operations like a timetable)? */

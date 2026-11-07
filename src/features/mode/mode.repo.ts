@@ -1,3 +1,4 @@
+import { loadRoughPatches } from "@/features/quits/quits.repo";
 import { loadOpenPastNeeds } from "@/features/tasks/tasks.repo";
 import { isIgnoredNeed } from "@/features/xp/xp";
 import { currentConfig } from "@/shared/config";
@@ -21,12 +22,13 @@ function parseOverride(value: unknown): ModeOverride | null {
 export async function loadMode(db: Db, now: Date, config = currentConfig()): Promise<ModeResult> {
   const since = new Date(now.getTime() - (config.mode.repeatSlipWindowDays + 1) * 86_400_000).toISOString();
 
-  const [slipsRes, checkinRes, overrideRes, pastNeeds] = await Promise.all([
+  const [slipsRes, checkinRes, overrideRes, pastNeeds, roughPatches] = await Promise.all([
     db.from("slips").select("task_id, at, tasks(item_id)").gte("at", since),
     // Only check-ins that rated energy decide a soft day (sleep or mood alone don't).
     db.from("checkins").select("day, energy").eq("day", dayKey(now, config.timeZone)).not("energy", "is", null),
     db.from("settings").select("value").eq("key", OVERRIDE_KEY).maybeSingle(),
     loadOpenPastNeeds(db, now, config),
+    loadRoughPatches(db, now, config.timeZone),
   ]);
   for (const res of [slipsRes, checkinRes, overrideRes]) {
     if (res.error) throw new Error(`loading mode inputs: ${res.error.message}`);
@@ -58,6 +60,7 @@ export async function loadMode(db: Db, now: Date, config = currentConfig()): Pro
       ignoredNeeds,
       checkins: (checkinRes.data ?? []).filter((c): c is { day: string; energy: number } => c.energy !== null),
       override: parseOverride(overrideRes.data?.value),
+      roughPatches,
     },
     config,
   );

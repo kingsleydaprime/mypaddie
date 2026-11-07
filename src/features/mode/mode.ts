@@ -35,11 +35,17 @@ export interface ModeInput {
   ignoredNeeds: readonly IgnoredNeedForMode[];
   checkins: readonly CheckinForMode[];
   override: ModeOverride | null;
+  /**
+   * Quits in a rough patch (2+ relapses or over days in 3 days), by their
+   * private label: the alias, never the real name, since every reply carries this.
+   */
+  roughPatches?: readonly string[];
 }
 
 export type ModeReason =
   | { kind: "override"; mode: "strictest" | "softest"; expiresAt: Date | null }
   | { kind: "low_energy"; energy: number }
+  | { kind: "rough_patch"; quit: string }
   | { kind: "repeated_slip"; key: string; count: number }
   | { kind: "ignored_needs"; count: number }
   | { kind: "recent_slip"; key: string }
@@ -55,8 +61,10 @@ export interface ModeResult {
  * Picks how firm Paddie should be. Precedence, highest first:
  *   1. an active override ("no mercy mode" / "go easy on me") — your call always wins
  *   2. a low-HP day → soft (a rough day is not slacking, even after repeat slips)
- *   3. a repeated slip or a pile of ignored needs → strict
- *   4. otherwise → curious
+ *   3. a rough patch on something they're quitting → soft. Relapses never make
+ *      it strict: shame makes the next one likelier (quit tracker, D4)
+ *   4. a repeated slip or a pile of ignored needs → strict
+ *   5. otherwise → curious
  */
 export function computeMode(input: ModeInput, config: EngineConfig = currentConfig()): ModeResult {
   const { now } = input;
@@ -71,6 +79,10 @@ export function computeMode(input: ModeInput, config: EngineConfig = currentConf
   const todaysCheckin = input.checkins.find((c) => c.day === today);
   if (todaysCheckin && todaysCheckin.energy <= config.mode.lowEnergyMax) {
     return { mode: "soft", reasons: [{ kind: "low_energy", energy: todaysCheckin.energy }] };
+  }
+
+  if (input.roughPatches?.length) {
+    return { mode: "soft", reasons: input.roughPatches.map((quit) => ({ kind: "rough_patch" as const, quit })) };
   }
 
   const strictReasons: ModeReason[] = [];
