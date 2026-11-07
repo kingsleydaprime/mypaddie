@@ -40,16 +40,29 @@ New table `quits` (one per habit being quit):
 | `kind` | `quit` (zero is the goal) or `limit` (stay under a daily cap) |
 | `limit_per_day` | for `limit`: e.g. 60 or 2; null for `quit` |
 | `unit` | for `limit`: `minutes` or `times`; null for `quit` |
-| `started_at` | when the current attempt began; counting starts here |
 | `on_home` | default **false** |
 | `status` | `active` / `paused` / `ended`. Pausing stops the streak: resuming starts a new attempt from day 0, with longest and total kept |
 | `why` | optional: "for my marriage", "to get my mornings back". Shown on a slip |
 | `show_name_to_ai` | default **false**: Paddie sees only the alias (D5) |
 
-New table `quit_logs`: `id`, `user_id`, `quit_id`, `at`, `amount` (null
-for `quit`; minutes or times for `limit`), `note` (≤ 500 chars), `trigger`
-(optional short label, reusing slip categories). For a `quit`, every log is a
-relapse. For a `limit`, a log is usage.
+A quit's `kind` can't change after it's created: relapses and usage mean
+different things, so switching would reinterpret its history.
+
+New table `quit_periods`: `id`, `user_id`, `quit_id`, `started_at`,
+`ended_at` (null while open), `limit_per_day` (the cap it ran under). At most
+one open period per quit. Pausing, ending or raising the cap closes it;
+resuming or restarting opens a new one.
+
+New table `quit_logs`: `id`, `user_id`, `quit_id`, `at` (when it happened,
+can be backdated), `amount` (null for `quit`; minutes or times for `limit`,
+enforced by a trigger), `note` (≤ 500 chars), `cause` (optional short label,
+like a slip's category), `created_at`. For a `quit`, every log is a relapse.
+For a `limit`, a log is usage.
+
+New table `quit_milestones`: one row per milestone paid, unique on
+(`quit_id`, `run_started_at`, `days`), so the same run can never be paid
+twice, even by two requests at once. `xp_log.quit_id` links quit XP to its
+quit; deleting a quit keeps the XP.
 
 **Cut down (`limit`) rules:**
 
@@ -149,10 +162,10 @@ hence at least one is free.
 
 ## Build order (each a commit)
 
-1. `quits.ts` pure functions + tests: streaks for both kinds, over days,
+1. **Built 2026-11-07.** `quits.ts` pure functions + tests: streaks for both kinds, over days,
    totals, milestones per attempt, the honesty cap, the cap-raise rule.
-2. Migration: both tables, RLS, constraints + pgTAP tests. Update
-   `database.types.ts`.
+2. Migration: the four tables, RLS, constraints + pgTAP tests. Update
+   `database.types.ts`. **Built 2026-11-07** (`20261119090000_quits.sql`, local).
 3. Repo + server actions; XP through the existing ledger (new `xp_reason`
    values `quit_milestone` and `quit_honesty`, which needs an enum migration).
 4. Screens: Others entry, list, quit page, Home line.
