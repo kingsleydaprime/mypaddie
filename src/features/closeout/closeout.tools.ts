@@ -88,6 +88,10 @@ export function registerCloseOutTools(server: McpServer) {
           // Outside a request (tests): a relative link still tells them where to go.
         }
         if (args.table) {
+          // Quits stay private (D5): their names and notes are in the download, never sent through chat.
+          if (args.table.startsWith("quit")) {
+            return toolError(`export_data: "${args.table}" is private and only in the download (${origin}/app/export). Use get_quits instead.`);
+          }
           const rows = all[args.table];
           if (!Array.isArray(rows)) return toolError(`export_data: no part called "${args.table}". Parts: ${Object.keys(tables).join(", ")}`);
           return ok(await withMode(db, now, { table: args.table, total: rows.length, rows: rows.slice(0, 500), truncated: rows.length > 500 }));

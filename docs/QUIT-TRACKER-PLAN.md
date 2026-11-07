@@ -135,9 +135,13 @@ user has set "no mercy". An over day on a `limit` counts as a relapse here
 
 ## AI tools (MCP)
 
-- `get_quits`: list with alias, streaks, next milestone. **The real `title` is
-  returned only when `show_name_to_ai` is on** for that quit (D5); otherwise
-  the alias, or "a habit you're quitting" when there's no alias.
+- `get_quits`: list with alias, streaks, next milestone. **The real `title`,
+  and the `why`, are returned only when `show_name_to_ai` is on** for that
+  quit (D5); otherwise the alias, or "a habit you're quitting" when there's no
+  alias. Notes are never returned to Paddie. `export_data` won't return the
+  quit tables' rows through chat (they're in the download).
+- `get_today` carries `quitMilestones` (alias only) on a milestone day: the
+  one time Paddie may raise a quit unprompted.
 - `start_quit`, `update_quit` (alias, why, on_home, pause, end, restart).
 - `log_relapse`: one quit, a time, an optional note, and an amount for
   `limit`. It returns the streak (reset, or still going if under the cap),
@@ -182,6 +186,10 @@ hence at least one is free.
    (`/app/quits`, `/app/quits/[id]`). The history is a pure `quitTimeline`;
    form dates and times are read in the profile's time zone.
 5. MCP tools + server-instruction wording; `what_can_paddie_do` entry.
+   **Built 2026-11-07**: `get_quits`, `start_quit`, `update_quit`,
+   `log_relapse` (area "Quitting and cutting down", listed by
+   `what_can_paddie_do` automatically), `quitMilestones` in `get_today`, and a
+   line in the server instructions. Deleting stays in the app.
 6. Patterns ("most were after midnight") once 1–5 are in.
 7. BLUEPRINT (Features, Data model, MCP tools, the XP rules) and DECISIONS.
 

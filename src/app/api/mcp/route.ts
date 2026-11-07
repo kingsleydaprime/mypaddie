@@ -25,6 +25,7 @@ import { registerModeTools } from "@/features/mode/mode.tools";
 import { registerPantryTools } from "@/features/pantry/pantry.tools";
 import { registerProfileTools } from "@/features/profile/profile.tools";
 import { registerPromiseTools } from "@/features/promises/promises.tools";
+import { registerQuitTools } from "@/features/quits/quits.tools";
 import { registerPlanningTools } from "@/features/planning/planning.tools";
 import { registerMoneyTools } from "@/features/money/money.tools";
 import { registerSettingsTools } from "@/features/settings/settings.tools";
@@ -79,6 +80,7 @@ const handler = createMcpHandler(
     tools.area("School", () => registerCourseTools(server));
     tools.area("Jobs, roles and teams", () => registerCommitmentTools(server));
     tools.area("Promises", () => registerPromiseTools(server));
+    tools.area("Quitting and cutting down", () => registerQuitTools(server));
     tools.area("Settings", () => registerProfileTools(server));
     tools.area("People", () => registerPeopleTools(server));
     tools.area("About me", () => registerSelfTools(server));
@@ -112,9 +114,12 @@ const handler = createMcpHandler(
       "(patterns, triggers, habits, what they're healing from), their library and favourite things, their own lists " +
       "(bucket list, anything), weekly/monthly/quarterly/yearly reviews, year and month themes, achievements, " +
       "routines, a decision log, their values, quotes that keep them going, trends (sleep, mood, screen time, spending…) and personal experiments, " +
-      "check-ins with sleep, mood and screen time, promises, jobs and " +
+      "check-ins with sleep, mood and screen time, promises, habits they're quitting or cutting down (day counters), jobs and " +
       "roles (with history), fun, workouts, pantry, events, applications, updates owed, Google Calendar. Before telling them it can't do something, check your " +
-      "tools or call what_can_paddie_do. If a tool says their plan doesn't include something, tell them exactly that.",
+      "tools or call what_can_paddie_do. If a tool says their plan doesn't include something, tell them exactly that. " +
+      "Quits are private: call one only by the `name` the tools give you (a private name, unless they let you see the real one), " +
+      "never bring one up unprompted except on a milestone day (get_today's `quitMilestones`), and treat a relapse with no " +
+      "shame: log it (log_relapse), name what they kept, and ask for the next clean hour.",
   },
 );
 

@@ -1756,3 +1756,16 @@ think a relapse should drop 0".
   looking over a shoulder rather than for Paddie.
 - **A start date of today means from now**, not from the midnight before; an
   earlier date means from that day's local midnight.
+
+## Quit tracker: what Paddie sees (2026-11-07)
+
+- **The why is hidden with the name.** A why like "it wrecks my mornings" is
+  harmless, but people write the habit into it, so it follows
+  `show_name_to_ai` too.
+- **Notes never go back to Paddie.** Paddie can write one (`log_relapse`) but
+  not read them: they're the user's own words and often name the habit.
+- **`export_data` won't send quit rows through chat.** Counts are listed; the
+  rows are only in the signed-in download. Without this, asking for the
+  `quits` part would have shown every real name.
+- **No delete through Paddie.** Deleting wipes the history for good, so it's
+  only in the app, behind a confirm.

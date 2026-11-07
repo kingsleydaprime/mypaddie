@@ -14,6 +14,7 @@ import { whoToReachOut } from "@/features/people/people";
 import { loadPeople } from "@/features/people/people.repo";
 import { loadSelfForAdvice } from "@/features/self/self.repo";
 import { applyBrokenPromises, loadPromisePicture } from "@/features/promises/promises.repo";
+import { quitMilestonesToday } from "@/features/quits/quits.tools";
 import { loadActiveIdentity } from "@/features/identity/identity.repo";
 import { loadLearning } from "@/features/learning/learning.repo";
 import { activeDay, anyTimeLabel, dayEndsAt } from "@/features/settings/schedule";
@@ -106,7 +107,7 @@ export function registerTodayTools(server: McpServer) {
         const caughtUp = { ...(await catchUp(db, now)), brokenPromises: await applyBrokenPromises(db, now) };
         // Keep imported Google Calendar events fresh (at most every 30 minutes; failures are recorded, not thrown).
         await syncCalendar(db, now).catch(() => null);
-        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun, promises, week, people, self, themes, owed, earned, decisions, values, experimentsDue, mealsToday, status] = await Promise.all([
+        const [tasks, mode, money, capacity, dayTasks, identity, events, learning, schedule, fun, promises, week, people, self, themes, owed, earned, decisions, values, experimentsDue, mealsToday, status, quitMilestones] = await Promise.all([
           loadTasksAroundToday(db, now),
           loadMode(db, now),
           loadMoneyStage(db, now),
@@ -129,6 +130,7 @@ export function registerTodayTools(server: McpServer) {
           dueExperiments(db, now),
           mealsForDay(db, dayKey(now, tz())),
           loadStatus(db, now),
+          quitMilestonesToday(db, now),
         ]);
         const soon = upcoming(events, now, schedule.eventCloseDays, undefined, schedule.eventCloseDays);
         const room = roomOn(dayKey(now, tz()), dayTasks, capacity, now, undefined, activeDay(schedule));
@@ -200,6 +202,8 @@ export function registerTodayTools(server: McpServer) {
             : {}),
           // A review is owed: offer to do it now (prepare_review), briefly. No theme for the new month/year yet? Offer to set one.
           ...(owed.length ? { reviewsOwed: owed.map((o) => ({ period: o.period, label: o.label })) } : {}),
+          // A quit on a milestone day, by its private name. The one time to bring a quit up unprompted: briefly, warmly, once.
+          ...(quitMilestones.length ? { quitMilestones } : {}),
           // Just earned — celebrate it properly, once.
           ...(earned.length ? { newAchievements: earned.map((a) => ({ title: a.title, description: a.description, ...(a.detail ? { for: a.detail } : {}) })) } : {}),
           // Decisions due for a look back: ask how it turned out (review_decision).
