@@ -1,7 +1,8 @@
 # Plan: Quit tracker (bad habits)
 
-Status: **decided, not built** (decisions made 2026-11-07; see the table at
-the end and DECISIONS.md).
+Status: **built** (decided and built 2026-11-07). The rules as they stand are
+in BLUEPRINT.md; this file keeps the plan and the reasoning behind it, with the
+decisions table at the end and the history in DECISIONS.md.
 
 ## Why
 
@@ -195,6 +196,7 @@ hence at least one is free.
    the log that took a day over) and needs 3. Shown on the quit page, in
    `get_quits`, and as `patternHint` from `log_relapse`.
 7. BLUEPRINT (Features, Data model, MCP tools, the XP rules) and DECISIONS.
+   **Done 2026-11-07.**
 
 Rough size: 1–2 days. Steps 1–4 make it usable on its own; step 5 is what
 makes Paddie part of it.

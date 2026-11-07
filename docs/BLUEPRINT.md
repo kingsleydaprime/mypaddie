@@ -58,6 +58,7 @@ XP is whole numbers, split by largest remainder, so the parts always add up to t
 - Bonuses: goal completion 2×, dream milestone 3×, a wish happening +50.
 - Learning sessions earn 1 XP per 5 minutes to the skill's pillar.
 - Promises: kept on their day +15 (Character, Relationships). Broken (not kept, released or renegotiated by the end of the day) −15; keeping it afterwards earns back half, so about −50% net.
+- Quitting: a relapse never costs XP. It sends the day count back to 0, and the best streak, the total clean days and all XP earned stay. Logging a slip honestly earns +2, once per local day per quit. Milestones at 1, 3, 7, 14, 30, 60, 90, 180 and 365 clean days pay 5, 10, 20, 30, 50, 60, 80, 100 and 150, again on every new attempt, once per attempt (Character 60%, Mental 40%). They're paid the first time the quit is looked at after crossing one.
 
 Every gain and deduction is an append-only ledger entry, and the same completion can never pay twice.
 
@@ -175,7 +176,7 @@ Skipping from the app follows the same protocol. Skipping a must-do (a need, or 
 
 The mode is computed by the rules engine from your recent data (skipped needs, repeated slips, logged mood) and returned with every tool result, so the AI adjusts its tone from facts rather than guessing. Your override always wins.
 
-Precedence: override > low-HP day (a check-in with energy 2/5 or lower) > strict (a repeated slip, or 3+ ignored needs in 3 days; a missed routine counts once, however many steps were left) > curious. "Go easy on me" ends at midnight; "no mercy" lasts until switched off. The mode comes back with its reasons.
+Precedence: override > low-HP day (a check-in with energy 2/5 or lower) > rough patch on a quit (soft: 2+ relapses, or 2+ days over a cut-down cap, in the last 3 days; relapses never make paddie strict) > strict (a repeated slip, or 3+ ignored needs in 3 days; a missed routine counts once, however many steps were left) > curious. "Go easy on me" ends at midnight; "no mercy" lasts until switched off. The mode comes back with its reasons.
 
 ### Learning your challenges
 
@@ -272,6 +273,7 @@ These were added after the four-day plan, each because a real day needed it.
 - **Commitments.** Jobs (full-time, part-time, freelance, internship), roles (volunteer, campus ambassador, academic lead), memberships (a students' union, the church choir) and teams. Each has a priority (core, important, optional); its regular sessions (team training, rehearsals, personal training) are recurring tasks, and competitions or meetings are events tied to it. Pausing or ending one gives the time back.
 - **Weekly load.** The next 7 days plus unscheduled hours against the week's capacity: room, tight (80%+) or overloaded (over 100%). Before you take on something new, paddie checks, and if your plate is full it says so and suggests what to pause (optional first, never core), measured against "Who I'm becoming". Advice only; you decide.
 - **Promises.** Who, what, by when. On Today, a must-do from the day before. Tell them in time and move the date, or they let you off, and nothing is lost; patterns ("two broken promises to the same person") are named.
+- **Quitting and cutting down.** A day counter per habit you're breaking. *Quit* means zero is the goal, and every slip is a relapse. *Cut down* means staying under a daily cap in minutes or times: a day only counts against you once it goes over the cap, and today counts as clean until then. Raising the cap starts a new attempt; lowering it keeps the streak, and past days keep the cap they ran under. Pausing or ending stops the streak: resuming starts again from day 0, keeping the best and the total. Days follow your time zone. "I slipped" asks once, can be backdated, and takes an optional cause and note. Once there are 3+ slips, patterns are named when they stand out from chance: "4 of your last 5 slips were after midnight", a weekday or the weekend, or a cause you keep giving. Privacy first: an optional private name ("Project P") is shown everywhere instead of the real one; the quit stays off Home unless you put it there (and then only as a day count, with no slip button); and it never appears in a push notification. Paddie sees only the private name, never the real name or the why unless you turn that on per quit, and never your notes (a cause you keep giving reaches it only inside a pattern line). It brings a quit up unprompted only on a milestone day. Free tracks 1 active quit.
 
 ## For everyone
 
@@ -281,7 +283,7 @@ What changed to let anyone have their own Paddie. Details and reasons are in DEC
 - **First ten minutes**: name, time zone, currency and voice → connect your AI (one URL) → turn on reminders (on iPhone, "Add to Home Screen" first) → "empty your head" into Paddie.
 - **Your own clock and money**: every rule and the nudge job run on each user's time zone; money shows in their currency. No zone saved = Lagos; a broken one = UTC.
 - **Connect your AI**: paste one URL into Claude or ChatGPT; the app registers itself. The consent screen judges by where access really goes, not by the name an app gives itself.
-- **Plans**: Free, Plus ($10 / ₦7,500) and Pro ($20 / ₦15,000), yearly at two months free, students half. Free caps things like habits, courses and AI apps; Plus adds study plans, weekly load advice and Calendar import; Pro adds unlimited AI apps and Paddie's own chat when it lands. Nothing is charged yet (Paystack later).
+- **Plans**: Free, Plus ($10 / ₦7,500) and Pro ($20 / ₦15,000), yearly at two months free, students half. Free caps things like habits, courses, AI apps and active quits (1); Plus adds study plans, weekly load advice and Calendar import; Pro adds unlimited AI apps and Paddie's own chat when it lands. Nothing is charged yet (Paystack later).
 - **Safety**: every table locked to its owner, checked across the whole schema by a test; rate limits on the AI endpoint; download everything or delete your account from Settings; a privacy policy and terms.
 - **Public site**: home, pricing, about, privacy, terms; the header shows "Open app" when you're signed in.
 
@@ -306,7 +308,7 @@ The AI chat calls the MCP server and the phone app calls the app API, but both g
 
 ## Data schema
 
-The database has 45 tables (plus five private ones the API can't reach), all in Postgres (Supabase), and every row belongs to you through row-level security.
+The database has 67 tables (plus five private ones the API can't reach), all in Postgres (Supabase), and every row belongs to you through row-level security.
 
 | Table | Key fields | Purpose |
 | --- | --- | --- |
@@ -347,15 +349,19 @@ Added since the first schema:
 | commitments | Jobs, roles, memberships and teams: kind, role, org, priority, status, unscheduled hours; tasks and events link to them |
 | promises | To whom, what, by when, status (open, kept, released, broken), renegotiations, its task |
 | courses, course\_topics, course\_assessments | Courses (each with its own academic skill), their syllabus, and tests/exams/assignments linked to events or tasks |
+| quits | A habit being quit or cut down: title, alias, kind (quit/limit, fixed once made), unit and cap, status (active/paused/ended), why, on\_home, show\_name\_to\_ai. The title is unique per user, ignoring case |
+| quit\_periods | Tracked stretches: started\_at, ended\_at, the cap during it, and continues\_run (a lowered cap carries the streak on). At most one open per quit. Streaks are derived from these and the logs, never stored |
+| quit\_logs | Relapses (quit) or usage with an amount (cut down): at, amount, cause, note |
+| quit\_milestones | Milestones paid, unique per quit, run start and day, so none pays twice |
 | private.nudges | Every nudge sent, so none repeat (not reachable from the API) |
 
-Tasks also gained a title, base XP, duration, `must_from`, a reminder note, an optional skill link, a topic (study tasks) and a fun-activity link; items gained priority and floor/comfortable amounts; transactions gained void and split markers. The rules that matter are enforced by the database itself: composite `(id, user_id)` foreign keys so a row can't point at someone else's, a commit-time check that weights sum to 100, and a read-only XP ledger.
+Tasks also gained a title, base XP, duration, `must_from`, a reminder note, an optional skill link, a topic (study tasks) and a fun-activity link; items gained priority and floor/comfortable amounts; transactions gained void and split markers; xp\_log gained a quit link (cleared, not deleted, when a quit is deleted, so its XP stays). The rules that matter are enforced by the database itself: composite `(id, user_id)` foreign keys so a row can't point at someone else's, a commit-time check that weights sum to 100, and a read-only XP ledger.
 
 A single `export_all` function dumps every table to JSON so your data is never trapped.
 
 ## MCP tool list
 
-The connector exposes 109 tools — `what_can_paddie_do` lists them all, grouped, with the user's plan. Each one returns the current mode, so the AI always knows how strict to be.
+The connector exposes 156 tools — `what_can_paddie_do` lists them all, grouped, with the user's plan. Each one returns the current mode, so the AI always knows how strict to be.
 
 | Area | Tools |
 | --- | --- |
@@ -380,6 +386,7 @@ The connector exposes 109 tools — `what_can_paddie_do` lists them all, grouped
 | Fun | list\_fun (with suggestions that fit now), add\_fun, update\_fun, log\_fun |
 | Commitments | add\_commitment (with regular sessions), list\_commitments, update\_commitment, check\_load (before taking on more) |
 | Promises | add\_promise, list\_promises, update\_promise (kept, released, renegotiate) |
+| Quitting | get\_quits (streaks, next milestone, patterns; by private name), start\_quit, update\_quit (names, why, Home, cap, pause/end/resume; deleting is app-only), log\_relapse (with a pattern hint). get\_today carries quitMilestones on a milestone day; export\_data never sends quit rows through chat |
 | People | list\_people, add\_person, update\_person, log\_contact |
 | About me | get\_self, add\_self\_note, update\_self\_note |
 | Library and lists | get\_library, save\_media, save\_favorite, get\_lists, create\_list, update\_list |
@@ -394,9 +401,9 @@ The app is designed phone-first as an installable web app (PWA) on Android, with
 
 | Tab | What's on it |
 | --- | --- |
-| Quests | Needs, wants, goals, wishes and dreams, with tier filters and an add button. Me & people (People, About me, Library, Lists), Commitments, Promises, Courses, Fun list, Applications and Updates live here |
+| Quests | Needs, wants, goals, wishes and dreams, with tier filters and an add button. Me & people (People, About me, Library, Lists), Commitments, Promises, Quitting (counters, a quit's page with "I slipped", its patterns and history), Courses, Fun list, Applications and Updates live here |
 | Money | Balance card, current stage, buckets, the gap in deficit mode, quick log, history with void and edit, purchase checks. Pantry lives here |
-| Home (centre) | Your level, the bar to the next one and today's XP (so you stay aware of it), a quote for the day (yours most days, a built-in one otherwise), today's events, and the 3 things that matter right now. Each task has Start/Pause and Done, with Skip, Missed and Cancel (Stop, for a habit) behind ⋯; each event has Start and Done, with Missed and Cancel behind ⋯. Everything else is one tap away, plus Plan my day, Events and today's workout |
+| Home (centre) | Your level, the bar to the next one and today's XP (so you stay aware of it), a quit's day count if you put it on Home ("Project P · day 12"), a quote for the day (yours most days, a built-in one otherwise), today's events, and the 3 things that matter right now. Each task has Start/Pause and Done, with Skip, Missed and Cancel (Stop, for a habit) behind ⋯; each event has Start and Done, with Missed and Cancel behind ⋯. Everything else is one tap away, plus Plan my day, Events and today's workout |
 | History (Others) | Past days as a timeline, newest first, filtered Open / Done / Missed / All over the last 4 weeks (further back on request). Open is the loose ends: tasks still pending on a day that's over, each with Done, Missed and Cancel (cancel drops that day only; a habit keeps running) |
 | Stats | The eleven pillars and levels, learning and training. The detail lives here, behind a tap; Home shows only the overall level and today's XP |
 | Settings | "Who I'm becoming", nudges on/off, schedule, Google Calendar, links to open Claude or ChatGPT, sign out |
